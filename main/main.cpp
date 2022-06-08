@@ -51,7 +51,8 @@ extern "C" void app_main(void) {
 
     //set loglevel for individual tags:
     //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
-    esp_log_level_set("motor-control", ESP_LOG_DEBUG);
+    //esp_log_level_set("motor-control", ESP_LOG_DEBUG);
+    esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
 
 
 
@@ -63,23 +64,31 @@ extern "C" void app_main(void) {
 
     while(1){
 
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+
+        //--- testing joystick class ---
+        joystickData_t data = joystick.getData();
+        ESP_LOGI(TAG, "position=%s, x=%.1f%%, y=%.1f%%, radius=%.1f%%, angle=%.2f",
+                joystickPosStr[(int)data.position], data.x*100, data.y*100, data.radius*100, data.angle);
+
         //--- testing the motor driver ---
         //fade up duty - forward
         //   for (int duty=0; duty<=100; duty+=5) {
         //       motorLeft.setTarget(motorstate_t::FWD, duty);
         //       vTaskDelay(100 / portTICK_PERIOD_MS);
         //   }
-        //
-        //--- testing controlledMotor --- (ramp)
-        //brake for 1 s
-        motorLeft.setTarget(motorstate_t::BRAKE);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        //command 90% - reverse
-        motorLeft.setTarget(motorstate_t::REV, 90);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        //command 100% - forward
-        motorLeft.setTarget(motorstate_t::FWD, 100);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        
+        
+       //--- testing controlledMotor --- (ramp)
+       // //brake for 1 s
+       // motorLeft.setTarget(motorstate_t::BRAKE);
+       // vTaskDelay(1000 / portTICK_PERIOD_MS);
+       // //command 90% - reverse
+       // motorLeft.setTarget(motorstate_t::REV, 90);
+       // vTaskDelay(5000 / portTICK_PERIOD_MS);
+       // //command 100% - forward
+       // motorLeft.setTarget(motorstate_t::FWD, 100);
+       // vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     }
 
