@@ -12,8 +12,23 @@ extern "C"
 #include "motordrivers.hpp"
 
 
+//-------------------------------------
+//-------- struct  declarations -------
+//-------------------------------------
 
+//struct for sending command for one motor in the queue
+struct motorCommand_t {
+    motorstate_t state;
+    float duty;
+};
 
+//struct containing commands for two motors
+typedef struct motorCommands_t {
+    motorCommand_t left;
+    motorCommand_t right;
+} motorCommands_t;
+
+//struct with all config parameters for a motor regarding ramp and current limit
 typedef struct motorctl_config_t {
     uint32_t msFade; //acceleration of the motor (ms it should take from 0 to 100%)
     float currentMax;
@@ -57,11 +72,6 @@ class controlledMotor {
         uint32_t ramp;
         int64_t timestampLastRunUs;
 
-        //structs for sending commands in the queue
-        struct motorCommand_t {
-            motorstate_t state;
-            float duty;
-        };
         struct motorCommand_t commandReceive = {};
         struct motorCommand_t commandSend = {};
 

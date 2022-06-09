@@ -11,6 +11,7 @@ extern "C"
 }
 
 #include <cmath>
+#include "motorctl.hpp" //for deklaration of motorCommands_t struct
 
 
 //======================================
@@ -20,7 +21,6 @@ extern "C"
 // - scales the adc input to coordinates with detailed tolerances
 // - calculates angle and radius
 // - defines an enum with position information
-
 
 //--------------------------------------------
 //---- struct, enum, variable deklarations ---
@@ -99,3 +99,12 @@ class evaluatedJoystick {
         float y;
 };
 
+
+
+
+
+//============================================
+//========= joystick_CommandsDriving =========
+//============================================
+//function that generates commands for both motors from the joystick data
+motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick);

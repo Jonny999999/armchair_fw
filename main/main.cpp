@@ -28,11 +28,12 @@ static const char * TAG = "main";
 //====================================
 //task for handling the motors (ramp, current limit, driver)
 void task_motorctl( void * pvParameters ){
-    ESP_LOGI("motorctl-task", "starting handle loop...");
+    ESP_LOGI(TAG, "starting handle loop...");
     while(1){
+        motorRight.handle();
         motorLeft.handle();
         //10khz -> T=100us
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
 
@@ -42,17 +43,24 @@ void task_motorctl( void * pvParameters ){
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
+    //enable 5V volate regulator
+    gpio_pad_select_gpio(GPIO_NUM_17);                                                  
+    gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_17, 1);                                                      
+
 
     //-------------------------------
     //---------- log level ----------
     //-------------------------------
     //set loglevel for all tags:
-    esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("*", ESP_LOG_WARN);
 
     //set loglevel for individual tags:
     //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
     //esp_log_level_set("motor-control", ESP_LOG_DEBUG);
-    esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
+    //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
+    esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
+
 
 
 
@@ -64,18 +72,27 @@ extern "C" void app_main(void) {
 
     while(1){
 
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(400 / portTICK_PERIOD_MS);
+
+        //--- testing joystick commands ---
+        motorCommands_t commands = joystick_generateCommandsDriving(joystick);
+        motorRight.setTarget(commands.right.state, commands.right.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
+        motorLeft.setTarget(commands.left.state, commands.left.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
+        //motorRight.setTarget(commands.right.state, commands.right.duty);
+
+        
+
 
         //--- testing joystick class ---
-        joystickData_t data = joystick.getData();
-        ESP_LOGI(TAG, "position=%s, x=%.1f%%, y=%.1f%%, radius=%.1f%%, angle=%.2f",
-                joystickPosStr[(int)data.position], data.x*100, data.y*100, data.radius*100, data.angle);
+        //joystickData_t data = joystick.getData();
+        //ESP_LOGI(TAG, "position=%s, x=%.1f%%, y=%.1f%%, radius=%.1f%%, angle=%.2f",
+        //        joystickPosStr[(int)data.position], data.x*100, data.y*100, data.radius*100, data.angle);
 
         //--- testing the motor driver ---
         //fade up duty - forward
         //   for (int duty=0; duty<=100; duty+=5) {
         //       motorLeft.setTarget(motorstate_t::FWD, duty);
-        //       vTaskDelay(100 / portTICK_PERIOD_MS);
+        //       vTaskDelay(100 / portTICK_PERIOD_MS); 
         //   }
         
         

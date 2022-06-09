@@ -4,8 +4,9 @@
 //definition of string array to be able to convert state enum to readable string
 const char* joystickPosStr[7] = {"CENTER", "Y_AXIS", "X_AXIS", "TOP_RIGHT", "TOP_LEFT", "BOTTOM_LEFT", "BOTTOM_RIGHT"};
 
-//tag for logging
+//tags for logging
 static const char * TAG = "evaluatedJoystick";
+static const char * TAG_CMD = "joystickCommands";
 
 
 
@@ -58,9 +59,9 @@ int evaluatedJoystick::readAdc(adc1_channel_t adc_channel, bool inverted) {
 
     //return original or inverted result
     if (inverted) {
-        return adc_reading;
-    } else {
         return 4095 - adc_reading;
+    } else {
+        return adc_reading;
     }
 }
 
@@ -186,3 +187,99 @@ void evaluatedJoystick::defineCenter(){
 
 
 
+
+
+
+//============================================
+//========= joystick_CommandsDriving =========
+//============================================
+//function that generates commands for both motors from the joystick data
+motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick){
+
+
+    //struct with current data of the joystick
+    //typedef struct joystickData_t {
+    //    joystickPos_t position;
+    //    float x;
+    //    float y;
+    //    float radius;
+    //    float angle;
+    //} joystickData_t;
+
+
+    joystickData_t data = joystick.getData();
+    motorCommands_t commands;
+    float dutyMax = 60; //TODO add this to config, make changeable during runtime
+
+    float dutyOffset = 5; //immedeately starts with this duty, TODO add this to config
+    float dutyRange = dutyMax - dutyOffset;
+    float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
+
+    switch (data.position){
+
+        case joystickPos_t::CENTER:
+            commands.left.state = motorstate_t::IDLE;
+            commands.right.state = motorstate_t::IDLE;
+            commands.left.duty = 0;
+            commands.right.duty = 0;
+            break;
+
+        case joystickPos_t::Y_AXIS:
+            if (data.y > 0){
+                commands.left.state = motorstate_t::FWD;
+                commands.right.state = motorstate_t::FWD;
+            } else {
+                commands.left.state = motorstate_t::REV;
+                commands.right.state = motorstate_t::REV;
+            }
+            commands.left.duty = fabs(data.y) * dutyRange + dutyOffset;
+            commands.right.duty = commands.left.duty;
+            break;
+
+        case joystickPos_t::X_AXIS:
+            if (data.x > 0) {
+                commands.left.state = motorstate_t::FWD;
+                commands.right.state = motorstate_t::REV;
+            } else {
+                commands.left.state = motorstate_t::REV;
+                commands.right.state = motorstate_t::FWD;
+            }
+            commands.left.duty = fabs(data.x) * dutyRange + dutyOffset;
+            commands.right.duty = commands.left.duty;
+            break;
+
+        case joystickPos_t::TOP_RIGHT:
+            commands.left.state = motorstate_t::FWD;
+            commands.right.state = motorstate_t::FWD;
+            commands.left.duty = data.radius * dutyRange + dutyOffset;
+            commands.right.duty = data.radius * dutyRange - data.radius*dutyRange*(1-ratio) + dutyOffset;
+            break;
+
+        case joystickPos_t::TOP_LEFT:
+            commands.left.state = motorstate_t::FWD;
+            commands.right.state = motorstate_t::FWD;
+            commands.left.duty =  data.radius * dutyRange - data.radius*dutyRange*(1-ratio) + dutyOffset;
+            commands.right.duty = data.radius * dutyRange + dutyOffset;
+            break;
+
+        case joystickPos_t::BOTTOM_LEFT:
+            commands.left.state = motorstate_t::REV;
+            commands.right.state = motorstate_t::REV;
+            commands.left.duty = data.radius * dutyRange + dutyOffset;
+            commands.right.duty = data.radius * dutyRange - data.radius*dutyRange*(1-ratio) + dutyOffset; //TODO remove offset? allow one motor only
+            break;
+
+        case joystickPos_t::BOTTOM_RIGHT:
+            commands.left.state = motorstate_t::REV;
+            commands.right.state = motorstate_t::REV;
+            commands.left.duty = data.radius * dutyRange - data.radius*dutyRange*(1-ratio) + dutyOffset; //TODO remove offset? allow one motor only
+            commands.right.duty =  data.radius * dutyRange + dutyOffset;
+            break;
+    }
+
+    ESP_LOGI(TAG_CMD, "generated commands from data: state=%s, angle=%.3f, ratio=%.3f/%.3f, radius=%.2f, x=%.2f, y=%.2f",
+            joystickPosStr[(int)data.position], data.angle, ratio, (1-ratio), data.radius, data.x, data.y);
+    ESP_LOGI(TAG_CMD, "motor left: state=%s, duty=%.3f", motorstateStr[(int)commands.left.state], commands.left.duty);
+    ESP_LOGI(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
+    return commands;
+}
