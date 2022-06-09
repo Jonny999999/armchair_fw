@@ -3,11 +3,11 @@
 //-----------------------------------
 //------- motor configuration -------
 //-----------------------------------
-//configure motor driver
+//--- configure left motor ---
 single100a_config_t configDriverLeft = {
-    .gpio_pwm = GPIO_NUM_14,
-    .gpio_a = GPIO_NUM_12,
-    .gpio_b = GPIO_NUM_13,
+    .gpio_pwm = GPIO_NUM_26,
+    .gpio_a = GPIO_NUM_16,
+    .gpio_b = GPIO_NUM_4,
     .ledc_timer = LEDC_TIMER_0,
     .ledc_channel = LEDC_CHANNEL_0,
     .abInverted = true,
@@ -15,14 +15,27 @@ single100a_config_t configDriverLeft = {
     .pwmFreq = 10000
 };
 
+//--- configure right motor ---
+single100a_config_t configDriverRight = {
+    .gpio_pwm = GPIO_NUM_27,
+    .gpio_a = GPIO_NUM_18,
+    .gpio_b = GPIO_NUM_14,
+    .ledc_timer = LEDC_TIMER_1,
+    .ledc_channel = LEDC_CHANNEL_1,
+    .abInverted = false,
+    .resolution = LEDC_TIMER_11_BIT,
+    .pwmFreq = 10000
+};
+
 //configure motor contol
-motorctl_config_t configControlLeft = {
+motorctl_config_t configMotorControl = {
     .msFade = 3000,
     .currentMax = 10
 };
 
-//create controlled motor
-controlledMotor motorLeft(configDriverLeft, configControlLeft);
+//create controlled motor instances
+controlledMotor motorLeft(configDriverLeft, configMotorControl);
+controlledMotor motorRight(configDriverRight, configMotorControl);
 
 
 
