@@ -1,2 +1,2 @@
-idf_component_register(SRCS "main.cpp" "motordrivers.cpp" "motorctl.cpp" "config.cpp" "joystick.cpp" "buzzer.cpp"
+idf_component_register(SRCS "main.cpp" "motordrivers.cpp" "motorctl.cpp" "config.cpp" "joystick.cpp" "buzzer.cpp" "control.cpp" "button.cpp"
                     INCLUDE_DIRS ".")

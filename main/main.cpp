@@ -15,6 +15,8 @@ extern "C"
 }
 
 #include "config.hpp"
+#include "control.hpp" 
+#include "button.hpp"
 
 //tag for logging
 static const char * TAG = "main";
@@ -31,7 +33,7 @@ void task_motorctl( void * pvParameters ){
         motorRight.handle();
         motorLeft.handle();
         //10khz -> T=100us
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 }
 
@@ -51,6 +53,19 @@ void task_buzzer( void * pvParameters ){
 
 
 
+//======================================
+//============ button task =============
+//======================================
+void task_button( void * pvParameters ){
+    ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
+    //create button instance
+    buttonCommands commandButton(&buttonJoystick, &buzzer);
+    //start handle loop
+    commandButton.startHandleLoop();
+}
+
+
+
 //=================================
 //=========== app_main ============
 //=================================
@@ -61,22 +76,26 @@ extern "C" void app_main(void) {
     gpio_set_level(GPIO_NUM_17, 1);                                                      
 
 
+
     //-------------------------------
     //---------- log level ----------
     //-------------------------------
     //set loglevel for all tags:
     esp_log_level_set("*", ESP_LOG_WARN);
-
     //set loglevel for individual tags:
+    esp_log_level_set("main", ESP_LOG_INFO);
     //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
     //esp_log_level_set("motor-control", ESP_LOG_DEBUG);
     //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
+    esp_log_level_set("button", ESP_LOG_INFO);
+
 
 
     //----------------------------------------------
     //--- create task for controlling the motors ---
     //----------------------------------------------
+    //task that receives commands, handles ramp and current limit and executes commands using the motordriver function
     xTaskCreate(&task_motorctl, "task_motor-control", 2048, NULL, 5, NULL);
 
     //------------------------------
@@ -84,33 +103,46 @@ extern "C" void app_main(void) {
     //------------------------------
     xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 5, NULL);
 
+    //-------------------------------
+    //--- create task for control ---
+    //-------------------------------
+    //task that generates motor commands depending on the current mode and sends those to motorctl task (task_control is defined in control.cpp)
+    xTaskCreate(&task_control, "task_control", 2048, NULL, 5, NULL);
+
+    //------------------------------
+    //--- create task for button ---
+    //------------------------------
+    //task that evaluates and processes the button input and runs the configured commands
+    xTaskCreate(&task_button, "task_buzzer", 2048, NULL, 5, NULL);
+
+
     //beep at startup
     buzzer.beep(3, 70, 50);
 
 
     while(1){
 
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
 
-        buttonJoystick.handle();
 
-        //--- testing button ---
-        if (buttonJoystick.risingEdge){
-            ESP_LOGI(TAG, "button pressed, was released for %d ms", buttonJoystick.msReleased);
-            buzzer.beep(2, 100, 50);
+       //--- testing button ---
+       //buttonJoystick.handle();
+       // if (buttonJoystick.risingEdge){
+       //     ESP_LOGI(TAG, "button pressed, was released for %d ms", buttonJoystick.msReleased);
+       //     buzzer.beep(2, 100, 50);
 
-        }else if (buttonJoystick.fallingEdge){
-            ESP_LOGI(TAG, "button released, was pressed for %d ms", buttonJoystick.msPressed);
-            buzzer.beep(1, 200, 0);
-        }
+       // }else if (buttonJoystick.fallingEdge){
+       //     ESP_LOGI(TAG, "button released, was pressed for %d ms", buttonJoystick.msPressed);
+       //     buzzer.beep(1, 200, 0);
+       // }
 
 
 
         //--- testing joystick commands ---
-        motorCommands_t commands = joystick_generateCommandsDriving(joystick);
-        motorRight.setTarget(commands.right.state, commands.right.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
-        motorLeft.setTarget(commands.left.state, commands.left.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
-        //motorRight.setTarget(commands.right.state, commands.right.duty);
+       // motorCommands_t commands = joystick_generateCommandsDriving(joystick);
+       // motorRight.setTarget(commands.right.state, commands.right.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
+       // motorLeft.setTarget(commands.left.state, commands.left.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
+       // //motorRight.setTarget(commands.right.state, commands.right.duty);
 
         
 
