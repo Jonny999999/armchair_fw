@@ -68,3 +68,6 @@ evaluatedJoystick joystick(configJoystick);
 
 //create global evaluated switch instance for button next to joystick
 gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_33, true, false); //pullup true, not inverted (switch to GND use pullup of controller)
+                                                               
+//create buzzer object on pin 12 with gap between queued events of 100ms 
+buzzer_t buzzer(GPIO_NUM_12, 100);

@@ -14,8 +14,6 @@ extern "C"
 
 }
 
-#include "motordrivers.hpp"
-#include "motorctl.hpp"
 #include "config.hpp"
 
 //tag for logging
@@ -35,6 +33,20 @@ void task_motorctl( void * pvParameters ){
         //10khz -> T=100us
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
+}
+
+
+
+//======================================
+//============ buzzer task =============
+//======================================
+//TODO: move the task creation to buzzer class (buzzer.cpp)
+//e.g. only have function buzzer.createTask() in app_main
+void task_buzzer( void * pvParameters ){
+    ESP_LOGI("task_buzzer", "Start of buzzer task...");
+        //run function that waits for a beep events to arrive in the queue
+        //and processes them
+        buzzer.processQueue();
 }
 
 
@@ -62,12 +74,18 @@ extern "C" void app_main(void) {
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
 
 
-
-
     //----------------------------------------------
     //--- create task for controlling the motors ---
     //----------------------------------------------
     xTaskCreate(&task_motorctl, "task_motor-control", 2048, NULL, 5, NULL);
+
+    //------------------------------
+    //--- create task for buzzer ---
+    //------------------------------
+    xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 5, NULL);
+
+    //beep at startup
+    buzzer.beep(3, 70, 50);
 
 
     while(1){
@@ -79,8 +97,11 @@ extern "C" void app_main(void) {
         //--- testing button ---
         if (buttonJoystick.risingEdge){
             ESP_LOGI(TAG, "button pressed, was released for %d ms", buttonJoystick.msReleased);
+            buzzer.beep(2, 100, 50);
+
         }else if (buttonJoystick.fallingEdge){
             ESP_LOGI(TAG, "button released, was pressed for %d ms", buttonJoystick.msPressed);
+            buzzer.beep(1, 200, 0);
         }
 
 
