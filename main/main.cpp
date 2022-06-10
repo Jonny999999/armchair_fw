@@ -59,7 +59,7 @@ extern "C" void app_main(void) {
     //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
     //esp_log_level_set("motor-control", ESP_LOG_DEBUG);
     //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
-    esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
+    //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
 
 
 
@@ -72,7 +72,18 @@ extern "C" void app_main(void) {
 
     while(1){
 
-        vTaskDelay(400 / portTICK_PERIOD_MS);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+
+        buttonJoystick.handle();
+
+        //--- testing button ---
+        if (buttonJoystick.risingEdge){
+            ESP_LOGI(TAG, "button pressed, was released for %d ms", buttonJoystick.msReleased);
+        }else if (buttonJoystick.fallingEdge){
+            ESP_LOGI(TAG, "button released, was pressed for %d ms", buttonJoystick.msPressed);
+        }
+
+
 
         //--- testing joystick commands ---
         motorCommands_t commands = joystick_generateCommandsDriving(joystick);

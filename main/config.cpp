@@ -65,3 +65,6 @@ joystick_config_t configJoystick = {
 
 //create global joystic instance
 evaluatedJoystick joystick(configJoystick);
+
+//create global evaluated switch instance for button next to joystick
+gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_33, true, false); //pullup true, not inverted (switch to GND use pullup of controller)
