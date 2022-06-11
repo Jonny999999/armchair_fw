@@ -53,13 +53,24 @@ void task_buzzer( void * pvParameters ){
 
 
 
+//=======================================
+//============ control task =============
+//=======================================
+void task_control( void * pvParameters ){
+    ESP_LOGI(TAG, "Initializing controlledArmchair and starting handle loop");
+    //start handle loop (control object declared in config.hpp)
+    control.startHandleLoop();
+}
+
+
+
 //======================================
 //============ button task =============
 //======================================
 void task_button( void * pvParameters ){
     ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
     //create button instance
-    buttonCommands commandButton(&buttonJoystick, &buzzer);
+    buttonCommands commandButton(&buttonJoystick, &control, &buzzer);
     //start handle loop
     commandButton.startHandleLoop();
 }
@@ -106,7 +117,7 @@ extern "C" void app_main(void) {
     //-------------------------------
     //--- create task for control ---
     //-------------------------------
-    //task that generates motor commands depending on the current mode and sends those to motorctl task (task_control is defined in control.cpp)
+    //task that generates motor commands depending on the current mode and sends those to motorctl task
     xTaskCreate(&task_control, "task_control", 2048, NULL, 5, NULL);
 
     //------------------------------

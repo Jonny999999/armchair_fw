@@ -2,6 +2,7 @@
 
 #include "gpio_evaluateSwitch.hpp"
 #include "buzzer.hpp"
+#include "control.hpp"
 
 
 
@@ -14,6 +15,7 @@ class buttonCommands {
         //--- constructor ---
         buttonCommands (
                 gpio_evaluatedSwitch * button_f,
+                controlledArmchair * control_f,
                 buzzer_t * buzzer_f
                 ); 
 
@@ -28,6 +30,7 @@ class buttonCommands {
 
         //--- objects ---
         gpio_evaluatedSwitch* button;
+        controlledArmchair * control;
         buzzer_t* buzzer;
 
         //--- variables ---

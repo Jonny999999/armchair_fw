@@ -71,3 +71,6 @@ gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_33, true, false); //pullup true, no
                                                                
 //create buzzer object on pin 12 with gap between queued events of 100ms 
 buzzer_t buzzer(GPIO_NUM_12, 100);
+
+//create global control object
+controlledArmchair control(&buzzer, &motorLeft, &motorRight);

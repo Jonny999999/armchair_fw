@@ -6,6 +6,7 @@
 
 #include "gpio_evaluateSwitch.hpp"
 #include "buzzer.hpp"
+#include "control.hpp"
 
 
 //create global controlledMotor instances for both motors
@@ -20,3 +21,7 @@ extern gpio_evaluatedSwitch buttonJoystick;
 
 //create global buzzer object
 extern buzzer_t buzzer;
+
+//create global control object
+extern controlledArmchair control;
+

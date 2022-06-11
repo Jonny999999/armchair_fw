@@ -7,7 +7,6 @@ extern "C"
 #include "esp_log.h"
 }
 
-#include "control.hpp"
 #include "button.hpp"
 
 
@@ -20,9 +19,10 @@ static const char * TAG = "button";
 //-----------------------------
 //-------- constructor --------
 //-----------------------------
-buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, buzzer_t * buzzer_f ){
+buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, controlledArmchair * control_f, buzzer_t * buzzer_f ){
     //copy object pointers
     button = button_f;
+    control = control_f;
     buzzer = buzzer_f;
     //TODO declare / configure evaluatedSwitch here instead of config (unnecessary that button object is globally available - only used here)?
 }
@@ -47,15 +47,13 @@ void buttonCommands::action (uint8_t count){
             break;
 
         case 2:
-            ESP_LOGW(TAG, "cmd %d: switching to IDLE", count);
-            control_changeMode(controlMode_t::IDLE);
-            buzzer->beep(1,1000,1);
+            ESP_LOGW(TAG, "cmd %d: toggle IDLE", count);
+            control->toggleIdle(); //toggle between idle and previous/default mode
             break;
 
-        case 3:
-            ESP_LOGW(TAG, "cmd %d: switching to JOYSTICK", count);
-            control_changeMode(controlMode_t::JOYSTICK);
-            buzzer->beep(2,400,100);
+        case 6:
+            ESP_LOGW(TAG, "cmd %d: toggle between MASSAGE and JOYSTICK", count);
+            control->toggleModes(controlMode_t::MASSAGE, controlMode_t::JOYSTICK); //toggle between MASSAGE and JOYSTICK mode
             break;
     }
 }
