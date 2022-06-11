@@ -42,6 +42,7 @@ class controlledMotor {
         controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control); //constructor with structs for configuring motordriver and parameters for control TODO: add configuration for currentsensor
         void handle(); //controls motor duty with fade and current limiting feature (has to be run frequently by another task)
         void setTarget(motorstate_t state_f, float duty_f = 0); //adds target command to queue for handle function
+        motorCommand_t getStatus(); //get current status of the motor (returns struct with state and duty)
 
 
     private:

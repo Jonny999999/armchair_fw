@@ -74,3 +74,17 @@ buzzer_t buzzer(GPIO_NUM_12, 100);
 
 //create global control object
 controlledArmchair control(&buzzer, &motorLeft, &motorRight);
+
+
+//configure fan contol
+fan_config_t configFanLeft = {
+    .gpio_fan = GPIO_NUM_2,
+    .msRun = 5000,
+    .dutyThreshold = 35
+};
+fan_config_t configFanRight = {
+    .gpio_fan = GPIO_NUM_15,
+    .msRun = 5000,
+    .dutyThreshold = 35
+};
+

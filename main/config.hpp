@@ -7,6 +7,7 @@
 #include "gpio_evaluateSwitch.hpp"
 #include "buzzer.hpp"
 #include "control.hpp"
+#include "fan.hpp"
 
 
 //create global controlledMotor instances for both motors
@@ -24,4 +25,8 @@ extern buzzer_t buzzer;
 
 //create global control object
 extern controlledArmchair control;
+
+//configuration for fans
+extern fan_config_t configFanLeft;
+extern fan_config_t configFanRight;
 

@@ -77,6 +77,24 @@ void task_button( void * pvParameters ){
 
 
 
+//=======================================
+//============== fan task ===============
+//=======================================
+void task_fans( void * pvParameters ){
+    ESP_LOGI(TAG, "Initializing fans and starting fan handle loop");
+    //create fan instances with config defined in config.cpp
+    controlledFan fanLeft(configFanLeft, &motorLeft);
+    controlledFan fanRight(configFanRight, &motorRight);
+    //repeatedly run fan handle functions in a slow loop
+    while(1){
+        fanLeft.handle();
+        fanRight.handle();
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
+
+
 //=================================
 //=========== app_main ============
 //=================================
@@ -100,6 +118,8 @@ extern "C" void app_main(void) {
     //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
+    esp_log_level_set("control", ESP_LOG_INFO);
+    esp_log_level_set("fan-control", ESP_LOG_DEBUG);
 
 
 
@@ -124,7 +144,13 @@ extern "C" void app_main(void) {
     //--- create task for button ---
     //------------------------------
     //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_button, "task_buzzer", 2048, NULL, 5, NULL);
+    xTaskCreate(&task_button, "task_button", 2048, NULL, 5, NULL);
+
+    //-----------------------------------
+    //--- create task for fan control ---
+    //-----------------------------------
+    //task that evaluates and processes the button input and runs the configured commands
+    xTaskCreate(&task_fans, "task_fans", 2048, NULL, 5, NULL);
 
 
     //beep at startup

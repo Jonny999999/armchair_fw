@@ -95,3 +95,18 @@ void controlledMotor::setTarget(motorstate_t state_f, float duty_f){
 
 }
 
+
+
+//===============================
+//========== getStatus ==========
+//===============================
+//function which returns the current status of the motor in a motorCommand_t struct
+motorCommand_t controlledMotor::getStatus(){
+    motorCommand_t status = {
+        .state = state,
+        .duty = dutyNow
+    };
+    //TODO: mutex
+    return status;
+};
+
