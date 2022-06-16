@@ -12,6 +12,7 @@ extern "C"
 
 #include "driver/ledc.h"
 
+#include "wifi.h"
 }
 
 #include "config.hpp"
@@ -105,6 +106,9 @@ extern "C" void app_main(void) {
     gpio_set_level(GPIO_NUM_17, 1);                                                      
 
 
+    //initialize nvs-flash and netif (needed for wifi)
+    wifi_initNvs_initNetif();
+
 
     //-------------------------------
     //---------- log level ----------
@@ -119,10 +123,10 @@ extern "C" void app_main(void) {
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
     esp_log_level_set("control", ESP_LOG_INFO);
-    esp_log_level_set("fan-control", ESP_LOG_DEBUG);
+    esp_log_level_set("fan-control", ESP_LOG_INFO);
+    esp_log_level_set("wifi", ESP_LOG_INFO);
 
-
-
+    
     //----------------------------------------------
     //--- create task for controlling the motors ---
     //----------------------------------------------
@@ -159,7 +163,24 @@ extern "C" void app_main(void) {
 
     while(1){
 
+
+
         vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        //--- testing wifi functions ---
+        ESP_LOGI(TAG, "creating AP");
+        wifi_init_ap(); //start accesspoint
+        vTaskDelay(15000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "stopping wifi");
+        wifi_deinit_ap();  //stop wifi access point
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "connecting to wifi");
+        wifi_init_client(); //connect to existing wifi
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "stopping wifi");
+        wifi_deinit_client(); //stop wifi client
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
 
 
        //--- testing button ---
