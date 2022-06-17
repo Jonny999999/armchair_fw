@@ -12,12 +12,15 @@ extern "C"
 
 #include "driver/ledc.h"
 
+//custom C files
 #include "wifi.h"
 }
 
+//custom C++ files
 #include "config.hpp"
 #include "control.hpp" 
 #include "button.hpp"
+#include "http.hpp"
 
 //tag for logging
 static const char * TAG = "main";
@@ -106,25 +109,25 @@ extern "C" void app_main(void) {
     gpio_set_level(GPIO_NUM_17, 1);                                                      
 
 
-    //initialize nvs-flash and netif (needed for wifi)
-    wifi_initNvs_initNetif();
-
 
     //-------------------------------
     //---------- log level ----------
     //-------------------------------
     //set loglevel for all tags:
     esp_log_level_set("*", ESP_LOG_WARN);
-    //set loglevel for individual tags:
+
+    //--- set loglevel for individual tags ---
     esp_log_level_set("main", ESP_LOG_INFO);
+    esp_log_level_set("buzzer", ESP_LOG_ERROR);
     //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
-    //esp_log_level_set("motor-control", ESP_LOG_DEBUG);
+    esp_log_level_set("motor-control", ESP_LOG_INFO);
     //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
-    esp_log_level_set("control", ESP_LOG_INFO);
+    esp_log_level_set("control", ESP_LOG_DEBUG);
     esp_log_level_set("fan-control", ESP_LOG_INFO);
     esp_log_level_set("wifi", ESP_LOG_INFO);
+    esp_log_level_set("http", ESP_LOG_INFO);
 
     
     //----------------------------------------------
@@ -161,25 +164,55 @@ extern "C" void app_main(void) {
     buzzer.beep(3, 70, 50);
 
 
+    //--- initialize nvs-flash and netif (needed for wifi) ---
+    wifi_initNvs_initNetif();
+
+
+    //--- initialize and start wifi ---
+    //FIXME: run wifi_init_client or wifi_init_ap as intended from control.cpp when switching state 
+    //currently commented out because of error "assert failed: xQueueSemaphoreTake queue.c:1549 (pxQueue->uxItemSize == 0)" when calling control->changeMode from button.cpp
+    //when calling control.changeMode(http) from main.cpp it worked without error for some reason?
+    ESP_LOGI(TAG,"starting wifi...");
+    //wifi_init_client(); //connect to existing wifi
+    wifi_init_ap(); //start access point
+    ESP_LOGI(TAG,"done starting wifi");
+
+
+    //--- testing http server ---
+    //    wifi_init_client(); //connect to existing wifi
+    //    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    //    ESP_LOGI(TAG, "initializing http server");
+    //    http_init_server();
+    
+
+    //--- testing force http mode after startup ---
+        //control.changeMode(controlMode_t::HTTP);
+
+
     while(1){
 
+       vTaskDelay(500 / portTICK_PERIOD_MS);
 
+       // //--- testing functions at mode change HTTP ---
+       // control.changeMode(controlMode_t::HTTP);
+       // vTaskDelay(10000 / portTICK_PERIOD_MS);
+       // control.changeMode(controlMode_t::IDLE);
+       // vTaskDelay(10000 / portTICK_PERIOD_MS);
 
-        vTaskDelay(500 / portTICK_PERIOD_MS);
 
         //--- testing wifi functions ---
-        ESP_LOGI(TAG, "creating AP");
-        wifi_init_ap(); //start accesspoint
-        vTaskDelay(15000 / portTICK_PERIOD_MS);
-        ESP_LOGI(TAG, "stopping wifi");
-        wifi_deinit_ap();  //stop wifi access point
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        ESP_LOGI(TAG, "connecting to wifi");
-        wifi_init_client(); //connect to existing wifi
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
-        ESP_LOGI(TAG, "stopping wifi");
-        wifi_deinit_client(); //stop wifi client
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+       // ESP_LOGI(TAG, "creating AP");
+       // wifi_init_ap(); //start accesspoint
+       // vTaskDelay(15000 / portTICK_PERIOD_MS);
+       // ESP_LOGI(TAG, "stopping wifi");
+       // wifi_deinit_ap();  //stop wifi access point
+       // vTaskDelay(5000 / portTICK_PERIOD_MS);
+       // ESP_LOGI(TAG, "connecting to wifi");
+       // wifi_init_client(); //connect to existing wifi
+       // vTaskDelay(10000 / portTICK_PERIOD_MS);
+       // ESP_LOGI(TAG, "stopping wifi");
+       // wifi_deinit_client(); //stop wifi client
+       // vTaskDelay(5000 / portTICK_PERIOD_MS);
 
 
 

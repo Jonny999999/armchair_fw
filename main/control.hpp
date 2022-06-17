@@ -6,9 +6,9 @@
 
 
 //enum that decides how the motors get controlled
-enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, MQTT, BLUETOOTH, AUTO};
+enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO};
 //extern controlMode_t mode;
-extern const char* controlModeStr[6];
+extern const char* controlModeStr[7];
 
 
 

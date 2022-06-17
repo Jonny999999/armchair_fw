@@ -51,6 +51,11 @@ void buttonCommands::action (uint8_t count){
             control->toggleIdle(); //toggle between idle and previous/default mode
             break;
 
+        case 4:
+            ESP_LOGW(TAG, "cmd %d: toggle between HTTP and JOYSTICK", count);
+            control->toggleModes(controlMode_t::HTTP, controlMode_t::JOYSTICK); //toggle between HTTP and JOYSTICK mode
+            break;
+
         case 6:
             ESP_LOGW(TAG, "cmd %d: toggle between MASSAGE and JOYSTICK", count);
             control->toggleModes(controlMode_t::MASSAGE, controlMode_t::JOYSTICK); //toggle between MASSAGE and JOYSTICK mode
