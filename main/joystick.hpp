@@ -107,4 +107,13 @@ class evaluatedJoystick {
 //========= joystick_CommandsDriving =========
 //============================================
 //function that generates commands for both motors from the joystick data
-motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick);
+//motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick);
+motorCommands_t joystick_generateCommandsDriving(joystickData_t data );
+
+
+
+//============================================
+//========= joystick_CommandsDriving =========
+//============================================
+//function that defines and returns enum joystickPos from x and y coordinates
+joystickPos_t joystick_evaluatePosition(float x, float y);

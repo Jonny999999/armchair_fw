@@ -135,37 +135,8 @@ joystickData_t evaluatedJoystick::getData() {
     //calculate angle
     data.angle = (atan(data.y/data.x) * 180) / 3.141;
 
-
     //define position
-    //--- center ---
-    if((fabs(x) == 0) && (fabs(y) == 0)){ 
-        data.position = joystickPos_t::CENTER;
-    }
-    //--- x axis ---
-    else if(fabs(y) == 0){
-        data.position = joystickPos_t::X_AXIS;
-    }
-    //--- y axis ---
-    else if(fabs(x) == 0){
-        data.position = joystickPos_t::Y_AXIS;
-    }
-    //--- top right ---
-    else if(x > 0 && y > 0){
-        data.position = joystickPos_t::TOP_RIGHT;
-    }
-    //--- top left ---
-    else if(x < 0 && y > 0){
-        data.position = joystickPos_t::TOP_LEFT;
-    }
-    //--- bottom left ---
-    else if(x < 0 && y < 0){
-        data.position = joystickPos_t::BOTTOM_LEFT;
-    }
-    //--- bottom right ---
-    else if(x > 0 && y < 0){
-        data.position = joystickPos_t::BOTTOM_RIGHT;
-    }
-
+    data.position = joystick_evaluatePosition(x, y);
 
     return data;
 }
@@ -188,13 +159,55 @@ void evaluatedJoystick::defineCenter(){
 
 
 
+//=============================================
+//========= joystick_evaluatePosition =========
+//=============================================
+//function that defines and returns enum joystickPos from x and y coordinates
+joystickPos_t joystick_evaluatePosition(float x, float y){
+    //define position
+    //--- center ---
+    if((fabs(x) == 0) && (fabs(y) == 0)){ 
+        return joystickPos_t::CENTER;
+    }
+    //--- x axis ---
+    else if(fabs(y) == 0){
+        return joystickPos_t::X_AXIS;
+    }
+    //--- y axis ---
+    else if(fabs(x) == 0){
+        return joystickPos_t::Y_AXIS;
+    }
+    //--- top right ---
+    else if(x > 0 && y > 0){
+        return joystickPos_t::TOP_RIGHT;
+    }
+    //--- top left ---
+    else if(x < 0 && y > 0){
+        return joystickPos_t::TOP_LEFT;
+    }
+    //--- bottom left ---
+    else if(x < 0 && y < 0){
+        return joystickPos_t::BOTTOM_LEFT;
+    }
+    //--- bottom right ---
+    else if(x > 0 && y < 0){
+        return joystickPos_t::BOTTOM_RIGHT;
+    }
+    //--- other ---
+    else {
+        return joystickPos_t::CENTER;
+    }
+
+}
+
+
 
 
 //============================================
 //========= joystick_CommandsDriving =========
 //============================================
 //function that generates commands for both motors from the joystick data
-motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick){
+motorCommands_t joystick_generateCommandsDriving(joystickData_t data){
 
 
     //struct with current data of the joystick
@@ -207,7 +220,6 @@ motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick){
     //} joystickData_t;
 
 
-    joystickData_t data = joystick.getData();
     motorCommands_t commands;
     float dutyMax = 60; //TODO add this to config, make changeable during runtime
 

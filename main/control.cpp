@@ -53,7 +53,10 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::JOYSTICK:
-                commands = joystick_generateCommandsDriving(joystick);
+                //generate motor commands
+                //pass joystick data from getData method of evaluatedJoystick to generateCommandsDriving function
+                commands = joystick_generateCommandsDriving(joystick.getData());
+                //TODO: pass pointer to joystick object to control class instead of accessing it directly globally
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
