@@ -50,12 +50,13 @@ void controlledArmchair::startHandleLoop() {
         switch(mode) {
             default:
                 mode = controlMode_t::IDLE;
-                vTaskDelay(200 / portTICK_PERIOD_MS);
                 break;
 
             case controlMode_t::IDLE:
-                motorRight->setTarget(motorstate_t::IDLE, 0); 
-                motorLeft->setTarget(motorstate_t::IDLE, 0); 
+                //copy preset commands for idling both motors
+                commands = cmds_bothMotorsIdle;
+                motorRight->setTarget(commands.right.state, commands.right.duty); 
+                motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 vTaskDelay(200 / portTICK_PERIOD_MS);
                 break;
 
@@ -81,19 +82,35 @@ void controlledArmchair::startHandleLoop() {
                 //create emptry struct for receiving data from http function
                 joystickData_t dataRead = { };
 
-                //get joystick data from queue
+                //--- get joystick data from queue ---
                 if( xQueueReceive( joystickDataQueue, &dataRead, pdMS_TO_TICKS(500) ) ) {
-                    ESP_LOGD(TAG, "received data from http queue: x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
+                    //reset timestamp lastAction
+                    http_timestamp_lastData = esp_log_timestamp();
+
+                    ESP_LOGD(TAG, "received data from http queue -> generating commands\n x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
                             dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
 
+                    //--- generate motor commands ---
                     //pass received joystick data from http queue to generatecommands function from joystick.hpp
                     commands = joystick_generateCommandsDriving(dataRead);
-                    ESP_LOGD(TAG, "generated motor commands");
-                    //apply commands to motor control objects
+
+                    //--- apply commands to motors ---
                     //TODO make motorctl.setTarget also accept motorcommand struct directly
                     motorRight->setTarget(commands.right.state, commands.right.duty); 
                     motorLeft->setTarget(commands.left.state, commands.left.duty); 
+                }
 
+                //--- timeout ---
+                //turn off motors when motor still on and no new data received for some time
+                if (
+                        (esp_log_timestamp() - http_timestamp_lastData > 3000) //no data received for x seconds
+                        && (commands.left.state != motorstate_t::IDLE || commands.right.state != motorstate_t::IDLE) //at least one motor is still running
+                   ){
+                    ESP_LOGE(TAG, "TIMEOUT - no data received for 3s -> stopping motors");
+                    //copy preset commands for idling both motors
+                    commands = cmds_bothMotorsIdle;
+                    motorRight->setTarget(commands.right.state, commands.right.duty); 
+                    motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 }
 
                 break;

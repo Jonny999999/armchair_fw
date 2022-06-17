@@ -21,7 +21,7 @@ extern "C"
 static const char * TAG = "http";
 static httpd_handle_t server = NULL;
 
-QueueHandle_t joystickDataQueue = xQueueCreate( 20, sizeof( struct joystickData_t ) );
+QueueHandle_t joystickDataQueue = xQueueCreate( 1, sizeof( struct joystickData_t ) );
 
 
 //joystickData_t http_readFromJoystickQueue
@@ -148,9 +148,9 @@ esp_err_t on_joystick_url(httpd_req_t *req)
 
 
     //--- send data to control task via queue ---
-      xQueueSend( joystickDataQueue, ( void * )&data, ( TickType_t ) 0 );
-
-
+    //xQueueSend( joystickDataQueue, ( void * )&data, ( TickType_t ) 0 );
+    //changed to length = 1  -> overwrite - older values are no longer relevant
+    xQueueOverwrite( joystickDataQueue, ( void * )&data );
 
 
     //--- return http response ---

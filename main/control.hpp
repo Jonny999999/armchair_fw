@@ -50,11 +50,24 @@ class controlledArmchair {
         //struct for motor commands returned by generate functions of each mode
         motorCommands_t commands;
 
+        //variables for http mode
+        uint32_t http_timestamp_lastData = 0;
+
         //definition of mode enum
         controlMode_t mode = controlMode_t::IDLE;
 
         //variable to store mode when toggling IDLE mode 
         controlMode_t modePrevious = controlMode_t::JOYSTICK; //default mode
+
+        //command preset for idling motors
+        const motorCommand_t cmd_motorIdle = {
+            .state = motorstate_t::IDLE,
+            .duty = 0
+        };
+        const motorCommands_t cmds_bothMotorsIdle = {
+            .left = cmd_motorIdle,
+            .right = cmd_motorIdle
+        };
 };
 
 
