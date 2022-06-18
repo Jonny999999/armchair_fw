@@ -183,6 +183,21 @@ void wifi_init_client(void)
     s_wifi_event_group = xEventGroupCreate();
     sta = esp_netif_create_default_wifi_sta();
 
+
+
+    //set static ip
+    esp_netif_dhcpc_stop(sta);
+
+    esp_netif_ip_info_t ip_info;
+    IP4_ADDR(&ip_info.ip, 10, 0, 0, 66);
+   	IP4_ADDR(&ip_info.gw, 10, 0, 0, 1);
+   	IP4_ADDR(&ip_info.netmask, 255, 255, 0, 0);
+
+    esp_netif_set_ip_info(sta, &ip_info);
+
+
+
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
