@@ -9,6 +9,7 @@ extern "C"
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
+#include "esp_spiffs.h"    
 
 #include "driver/ledc.h"
 
@@ -100,6 +101,29 @@ void task_fans( void * pvParameters ){
 
 
 //=================================
+//========== init spiffs ==========
+//=================================
+//initialize spi flash filesystem (used for webserver)
+void init_spiffs(){
+    ESP_LOGI(TAG, "init spiffs");
+    esp_vfs_spiffs_conf_t esp_vfs_spiffs_conf = {
+        .base_path = "/spiffs",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = true};
+    esp_vfs_spiffs_register(&esp_vfs_spiffs_conf);
+
+    size_t total = 0;
+    size_t used = 0;
+    esp_spiffs_info(NULL, &total, &used);
+
+    ESP_LOGI(TAG, "SPIFFS: total %d, used %d", total, used);
+    esp_vfs_spiffs_unregister(NULL);
+}
+
+
+
+//=================================
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
@@ -167,6 +191,8 @@ extern "C" void app_main(void) {
     //--- initialize nvs-flash and netif (needed for wifi) ---
     wifi_initNvs_initNetif();
 
+    //--- initialize spiffs ---
+    init_spiffs();
 
     //--- initialize and start wifi ---
     //FIXME: run wifi_init_client or wifi_init_ap as intended from control.cpp when switching state 

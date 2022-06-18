@@ -190,11 +190,11 @@ void http_init_server()
       };
   httpd_register_uri_handler(server, &joystick_url);
 
-//  httpd_uri_t default_url = {
-//      .uri = "/*",
-//      .method = HTTP_GET,
-//      .handler = on_default_url};
-//  httpd_register_uri_handler(server, &default_url);
+  httpd_uri_t default_url = {
+      .uri = "/*",
+      .method = HTTP_GET,
+      .handler = on_default_url};
+  httpd_register_uri_handler(server, &default_url);
 
 //  httpd_uri_t socket_joystick_url = {
 //      .uri = "/ws-api/joystick",

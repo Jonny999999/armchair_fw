@@ -15,10 +15,31 @@ yay -S esp-idf #alternatively clone the esp-idf repository from github
 ```
 git clone git@github.com:Jonny999999/armchair_fw
 ```
+### Instal node packages
+For the react app packages have to be installed with npm TODO: add this to cmake?
+```
+cd react-app
+npm install
+```
 
 
 
 # Compilation
+## react-webapp
+For the webapp to work on the esp32 it has to be built.
+When flashing, the folder react-app/build is flashed to siffs (which is used as webroot) onto the esp32.
+The following command builds the react webapp and creates this folder
+TODO: add this to flash target with cmake?
+```bash
+cd react-app
+#compile
+npm run build
+#remove unwanted license file (filename too long for spiffs)
+rm build/static/js/main.8f9aec76.js.LICENSE.txt
+```
+Note: Use `npm start` for starting the webapp locally for testing
+
+## esp project
 ### Set up environment
 ```bash
 source /opt/esp-idf/export.sh
@@ -76,7 +97,19 @@ A diagram which shows what components are connected to which terminals of the pc
 
 # Usage
 ## Switch functions
-**previous functions - not implemented yet**
+**Currently implemented**
+| Count | Action |
+| --- | ---|
+| 1 | |
+| 2 | toggle IDLE mode |
+| 3 | |
+| 4 | toggle between HTTP and JOYSTICK mode|
+| 5 | |
+| 6 | toggle between MASSAGE and JOYSTICK mode |
+| 7 | |
+
+
+**previous functions - not implemented**
 | Count | Action |
 | --- | ---|
 | 1 | define joystick center |
