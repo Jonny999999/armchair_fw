@@ -10,6 +10,7 @@ function App() {
     const [angle_html, setAngle_html] = useState(0);
     const [x_html, setX_html] = useState(0);
     const [y_html, setY_html] = useState(0);
+    const [ip, setIp] = useState("10.0.0.66");
     const [radius_html, setRadius_html] = useState(0);
 
 
@@ -19,6 +20,7 @@ function App() {
     //===============================
     const decimalPlaces = 3;
     const joystickSize = 200; //affects scaling of coordinates and size of joystick on website
+    const throttle = 300; //throtthe interval the joystick sends data while moving (ms)
     const toleranceSnapToZeroPer = 20;//percentage of moveable range the joystick can be moved from the axix and value stays at 0
 
 
@@ -37,7 +39,7 @@ function App() {
         const range = joystickSize/2 - tolerance;
         let result = 0;
 
-        console.log("value:",input,"tolerance:",tolerance,"   range:",range);
+        //console.log("value:",input,"tolerance:",tolerance,"   range:",range);
 
         //input positive and above 'snap to zero' threshold
         if ( input > 0 && input > tolerance ){
@@ -53,7 +55,7 @@ function App() {
         }
 
         //return result
-        console.log("result:", result, "\n");
+        //console.log("result:", result, "\n");
         return result;
     }
 
@@ -76,9 +78,10 @@ function App() {
         json = json.replace(regex2, '$1')
         //console.log("json removed quotes:", json);
 
+        //--- API  url / ip ---
         //await fetch("http://10.0.1.69/api/joystick", {
         //await fetch("http://10.0.1.72/api/joystick", {
-        await fetch("http://192.168.4.1/api/joystick", {
+        await fetch("api/joystick", {
             method: "POST",
             //apparently browser sends OPTIONS request before actual POST request, this OPTIONS request was not handled by esp32
             //also the custom set Access-Control-Allow-Origin header in esp32 url header was not read because of that
@@ -89,7 +92,8 @@ function App() {
                 "Content-Type": "text/plain",
             },
             body: json,
-        });
+        })
+            //.then((response) => console.log(response));
     };
 
 
@@ -150,7 +154,6 @@ function App() {
 
 
 
-
     //=============================
     //======== return html ========
     //=============================
@@ -167,7 +170,7 @@ function App() {
                     sticky={false} 
                     baseColor="red" 
                     stickColor="blue" 
-                    throttle={200}
+                    throttle={throttle}
                     move={handleMove} 
                     stop={handleStop}
                 >
@@ -180,6 +183,14 @@ function App() {
                 </ul>
             </div>
         </div>
+
+      {/*
+      buttons for changing the api IP
+      <div>
+      <a>current ip used: {ip}</a>
+      <button onClick={() => {setIp("10.0.0.66")}} >10.0.0.66 (BKA-network)</button>
+      </div>
+      */}
     
         </>
     );
