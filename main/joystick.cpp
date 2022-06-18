@@ -221,7 +221,7 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data){
 
 
     motorCommands_t commands;
-    float dutyMax = 60; //TODO add this to config, make changeable during runtime
+    float dutyMax = 94; //TODO add this to config, make changeable during runtime
 
     float dutyOffset = 5; //immedeately starts with this duty, TODO add this to config
     float dutyRange = dutyMax - dutyOffset;

@@ -29,7 +29,7 @@ single100a_config_t configDriverRight = {
 
 //configure motor contol
 motorctl_config_t configMotorControl = {
-    .msFade = 3000,
+    .msFade = 900,
     .currentMax = 10
 };
 

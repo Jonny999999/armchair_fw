@@ -42,8 +42,11 @@ void buttonCommands::action (uint8_t count){
             break;
 
         case 1:
-            ESP_LOGW(TAG, "running command for count 1");
-            buzzer->beep(1,500,1);
+            ESP_LOGW(TAG, "RESTART");
+            buzzer->beep(1,1000,1);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            esp_restart();
+
             break;
 
         case 2:
