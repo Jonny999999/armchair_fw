@@ -33,7 +33,7 @@ function App() {
     // - snaps 0 zero for a given tolerance in percent
     // - rounds value do given decimal places
     // - TODO: add threshold it snaps to 1 / -1 (100%) toleranceEnd
-    const ScaleCoordinate = (input) => {
+    const ScaleCoordinateTolerance = (input) => {
         //calc tolerance threshold and available range
         const tolerance = joystickSize/2 * toleranceSnapToZeroPer/100;
         const range = joystickSize/2 - tolerance;
@@ -59,6 +59,15 @@ function App() {
         return result;
     }
 
+
+
+    //----------------------------------------
+    //----------- Scale coordinate -----------
+    //----------------------------------------
+    //simply scale coordinate from joystick to a value of -1 to 1 without applying any tolerances
+    const ScaleCoordinate = (input) => {
+        return ( input / (joystickSize/2) ).toFixed(decimalPlaces);
+    }
 
 
 
@@ -106,13 +115,19 @@ function App() {
     //evaluate coordinates and send to esp32
     const handleMove = (e) => {
         //console.log("data from joystick-element X:" + e.x + " Y:" + e.y + " distance:" + e.distance);
-        //calculate needed variables
+        
+        //--- convert coordinates ---
+        //Note: tolerance (snap to zero) now handled by controller -> send raw coordinates
+        //const x = ScaleCoordinateTolerance(e.x);
+        //const y = ScaleCoordinateTolerance(e.y);
         const x = ScaleCoordinate(e.x);
         const y = ScaleCoordinate(e.y);
+        //--- scale radius ---
         const radius = (e.distance / 100).toFixed(5);
+        //--- calculate angle ---
         const angle = ( Math.atan( y / x ) * 180 / Math.PI ).toFixed(2);
 
-        //crate object with necessary data
+        //create object with necessary data
         const joystick_data={
             x: x,
             y: y,

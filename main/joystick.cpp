@@ -68,50 +68,6 @@ int evaluatedJoystick::readAdc(adc1_channel_t adc_channel, bool inverted) {
 
 
 
-//----------------------------
-//------ getCoordinate -------
-//----------------------------
-//function to read voltage at a gpio pin and scale it to a value from -1 to 1 using the given thresholds and tolerances
-float evaluatedJoystick::getCoordinate(adc1_channel_t adc_channel, bool inverted, int min, int max, int center, int tolerance_zero, int tolerance_end) {
-
-    float coordinate = 0;
-
-    //read voltage from adc
-    int input = readAdc(adc_channel, inverted);
-
-    //define coordinate value considering the different tolerances
-    //--- center ---
-    if ((input < center+tolerance_zero) && (input > center-tolerance_zero) ) { //adc value is inside tolerance around center threshold
-        coordinate = 0;
-    }
-    //--- maximum ---
-    else if (input > max-tolerance_end) {
-        coordinate = 1;
-    }
-    //--- minimum ---
-    else if (input < min+tolerance_end) {
-        coordinate = -1;
-    }
-    //--- positive area ---
-    else if (input > center) {
-        float range = max - center - tolerance_zero - tolerance_end;
-        coordinate = (input - center - tolerance_end) / range;
-    }
-    //--- negative area ---
-    else if (input < center) {
-        float range = (center - min - tolerance_zero - tolerance_end);
-        coordinate = -(center-input - tolerance_end) / range;
-    }
-
-    ESP_LOGD(TAG, "coordinate=%.3f, input=%d/4095, isInverted=%d", coordinate, input, inverted);
-    //return coordinate (-1 to 1)
-    return coordinate;
-
-}
-
-
-
-
 //-------------------------------
 //---------- getData ------------
 //-------------------------------
@@ -120,10 +76,11 @@ joystickData_t evaluatedJoystick::getData() {
     //get coordinates
     //TODO individual tolerances for each axis? Otherwise some parameters can be removed
     ESP_LOGD(TAG, "getting X coodrinate...");
-    float x = getCoordinate(config.adc_x, config.x_inverted, config.x_min, config.x_max, x_center,  config.tolerance_zero, config.tolerance_end);
+    float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), config.x_min, config.x_max, x_center,  config.tolerance_zero, config.tolerance_end);
     data.x = x;
+
     ESP_LOGD(TAG, "getting Y coodrinate...");
-    float y = getCoordinate(config.adc_y, config.y_inverted, config.y_min, config.y_max, y_center,  config.tolerance_zero, config.tolerance_end);
+    float y = scaleCoordinate(readAdc(config.adc_y, config.y_inverted), config.y_min, config.y_max, y_center,  config.tolerance_zero, config.tolerance_end);
     data.y = y;
 
     //calculate radius
@@ -154,6 +111,53 @@ void evaluatedJoystick::defineCenter(){
     y_center = readAdc(config.adc_y, config.y_inverted);
 
     ESP_LOGW(TAG, "defined center to x=%d, y=%d", x_center, y_center);
+}
+
+
+
+
+
+
+//==============================
+//====== scaleCoordinate =======
+//==============================
+//function that scales an input value (e.g. from adc pin) to a value from -1 to 1 using the given thresholds and tolerances
+float scaleCoordinate(float input, float min, float max, float center, float tolerance_zero_per, float tolerance_end_per) {
+
+    float coordinate = 0;
+
+    //convert tolerance percentages to actual values of range
+    double tolerance_zero = (max-min) * tolerance_zero_per / 100;
+    double tolerance_end = (max-min) * tolerance_end_per / 100;
+
+    //define coordinate value considering the different tolerances
+    //--- center ---
+    if ((input < center+tolerance_zero) && (input > center-tolerance_zero) ) { //adc value is inside tolerance around center threshold
+        coordinate = 0;
+    }
+    //--- maximum ---
+    else if (input > max-tolerance_end) {
+        coordinate = 1;
+    }
+    //--- minimum ---
+    else if (input < min+tolerance_end) {
+        coordinate = -1;
+    }
+    //--- positive area ---
+    else if (input > center) {
+        float range = max - center - tolerance_zero - tolerance_end;
+        coordinate = (input - center - tolerance_zero - tolerance_end) / range;
+    }
+    //--- negative area ---
+    else if (input < center) {
+        float range = (center - min - tolerance_zero - tolerance_end);
+        coordinate = -(center-input - tolerance_zero - tolerance_end) / range;
+    }
+
+    ESP_LOGD(TAG, "scaled coordinate from %.3f to %.3f", input, coordinate);
+    //return coordinate (-1 to 1)
+    return coordinate;
+
 }
 
 

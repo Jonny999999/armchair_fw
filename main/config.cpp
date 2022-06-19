@@ -27,7 +27,7 @@ single100a_config_t configDriverRight = {
     .pwmFreq = 10000
 };
 
-//configure motor contol
+//--- configure motor contol ---
 motorctl_config_t configMotorControl = {
     .msFade = 900,
     .currentMax = 10
@@ -40,16 +40,17 @@ controlledMotor motorRight(configDriverRight, configMotorControl);
 
 
 
+
 //--------------------------------------
 //------- joystick configuration -------
 //--------------------------------------
 joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
-    //range around center-threshold of each axis the coordinates stays at 0 (adc value 0-4095)
-    .tolerance_zero = 100,
-    //threshold the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (adc value 0-4095)
-    .tolerance_end = 80,
+    //range around center-threshold of each axis the coordinates stays at 0 (percentage of available range 0-100)
+    .tolerance_zero = 7,
+    //threshold the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (percentage of available range 0-100)
+    .tolerance_end = 5, 
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
     .tolerance_radius = 0.05,
 
@@ -63,6 +64,27 @@ joystick_config_t configJoystick = {
     .y_inverted = true
 };
 
+
+
+//----------------------------
+//--- configure fan contol ---
+//----------------------------
+fan_config_t configFanLeft = {
+    .gpio_fan = GPIO_NUM_2,
+    .msRun = 5000,
+    .dutyThreshold = 35
+};
+fan_config_t configFanRight = {
+    .gpio_fan = GPIO_NUM_15,
+    .msRun = 5000,
+    .dutyThreshold = 35
+};
+
+
+
+//=================================
+//===== create global objects =====
+//=================================
 //create global joystic instance
 evaluatedJoystick joystick(configJoystick);
 
@@ -76,15 +98,4 @@ buzzer_t buzzer(GPIO_NUM_12, 100);
 controlledArmchair control(&buzzer, &motorLeft, &motorRight);
 
 
-//configure fan contol
-fan_config_t configFanLeft = {
-    .gpio_fan = GPIO_NUM_2,
-    .msRun = 5000,
-    .dutyThreshold = 35
-};
-fan_config_t configFanRight = {
-    .gpio_fan = GPIO_NUM_15,
-    .msRun = 5000,
-    .dutyThreshold = 35
-};
 

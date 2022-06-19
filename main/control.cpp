@@ -87,11 +87,21 @@ void controlledArmchair::startHandleLoop() {
                     //reset timestamp lastAction
                     http_timestamp_lastData = esp_log_timestamp();
 
-                    ESP_LOGD(TAG, "received data from http queue -> generating commands\n x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
+                    ESP_LOGD(TAG, "received data (from queue): x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
                             dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
+
+                    //--- scale coordinates ---
+                    //note: scaleCoordinate function currently can not handle negative input -> add offset to input
+                    // scaleCoordinate(input, min, max, center, tolerance_zero_per, tolerance_end_per)
+                    dataRead.x = scaleCoordinate(dataRead.x+1, 0, 2, 1, 5, 2); //TODO: move tolerance to config (virtualJoystick or control_Config_t?)
+                    dataRead.y = scaleCoordinate(dataRead.y+1, 0, 2, 1, 5, 2);
+                    //--- calculate radius with new coordinates ---
+                    dataRead.radius = sqrt(pow(dataRead.x,2) + pow(dataRead.y,2));
+                    ESP_LOGD(TAG, "processed/scaled data: x=%.3f  y=%.3f  radius=%.3f", dataRead.x, dataRead.y, dataRead.radius);
 
                     //--- generate motor commands ---
                     //pass received joystick data from http queue to generatecommands function from joystick.hpp
+                    ESP_LOGV(TAG, "generating commands...");
                     commands = joystick_generateCommandsDriving(dataRead);
 
                     //--- apply commands to motors ---
@@ -103,7 +113,7 @@ void controlledArmchair::startHandleLoop() {
                 //--- timeout ---
                 //turn off motors when motor still on and no new data received for some time
                 if (
-                        (esp_log_timestamp() - http_timestamp_lastData > 3000) //no data received for x seconds
+                        (esp_log_timestamp() - http_timestamp_lastData > 3000) //no data received for x seconds //TODO: move timeout to config
                         && (commands.left.state != motorstate_t::IDLE || commands.right.state != motorstate_t::IDLE) //at least one motor is still running
                    ){
                     ESP_LOGE(TAG, "TIMEOUT - no data received for 3s -> stopping motors");
