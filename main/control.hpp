@@ -39,7 +39,14 @@ class controlledArmchair {
         //function that toggles between two modes, but prefers first argument if entirely different mode is currently active
         void toggleModes(controlMode_t modePrimary, controlMode_t modeSecondary);
 
+        //function that restarts timer which initiates the automatic timeout (switch to IDLE) after certain time of inactivity
+        void resetTimeout();
+
     private:
+
+        //--- functions ---
+        //function that evaluates whether there is no activity/change on the motor duty for a certain time, if so a switch to IDLE is issued. - has to be run repeatedly in a slow interval
+        void handleTimeout();
 
         //--- objects ---
         buzzer_t* buzzer;
@@ -68,6 +75,14 @@ class controlledArmchair {
             .left = cmd_motorIdle,
             .right = cmd_motorIdle
         };
+
+        //variable for slow loop
+        uint32_t timestamp_SlowLoopLastRun = 0;
+
+        //variables for detecting timeout (switch to idle, after inactivity)
+        float dutyLeft_lastActivity = 0;
+        float dutyRight_lastActivity = 0;
+        uint32_t timestamp_lastActivity = 0;
 };
 
 

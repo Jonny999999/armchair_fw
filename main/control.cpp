@@ -126,6 +126,78 @@ void controlledArmchair::startHandleLoop() {
                 break;
                 //TODO: add other modes here
         }
+
+
+        //-----------------------
+        //------ slow loop ------
+        //-----------------------
+        //this section is run about every 5s (+500ms)
+        if (esp_log_timestamp() - timestamp_SlowLoopLastRun > 5000) {
+            ESP_LOGV(TAG, "running slow loop... time since last run: %.1fs", (float)(esp_log_timestamp() - timestamp_SlowLoopLastRun)/1000);
+            timestamp_SlowLoopLastRun = esp_log_timestamp();
+
+            //run function which detects timeout (switch to idle)
+            handleTimeout();
+        }
+
+    }//end while(1)
+}//end startHandleLoop
+
+
+
+//-----------------------------------
+//---------- resetTimeout -----------
+//-----------------------------------
+void controlledArmchair::resetTimeout(){
+    //TODO mutex
+    timestamp_lastActivity = esp_log_timestamp();
+}
+
+
+
+//------------------------------------
+//---------- handleTimeout -----------
+//------------------------------------
+uint32_t msTimeout = 30000; //TODO move this to config #####################
+float inactivityTolerance = 10; //percentage the duty can vary since last timeout check and still counts as incative
+
+//local function that checks whether two values differ more than a given tolerance
+bool validateActivity(float dutyOld, float dutyNow, float tolerance){
+    float dutyDelta = dutyNow - dutyOld;
+    if (fabs(dutyDelta) < tolerance) {
+        return false; //no significant activity detected
+    } else {
+        return true; //there was activity
+    }
+}
+
+//function that evaluates whether there is no activity/change on the motor duty for a certain time. If so, a switch to IDLE is issued. - has to be run repeatedly in a slow interval
+void controlledArmchair::handleTimeout(){
+    //check for timeout only when not idling already
+    if (mode != controlMode_t::IDLE) {
+        //get current duty from controlled motor objects
+        float dutyLeftNow = motorLeft->getStatus().duty;
+        float dutyRightNow = motorRight->getStatus().duty;
+
+        //activity detected on any of the two motors
+        if (validateActivity(dutyLeft_lastActivity, dutyLeftNow, inactivityTolerance) 
+                || validateActivity(dutyRight_lastActivity, dutyRightNow, inactivityTolerance)
+           ){
+            ESP_LOGD(TAG, "timeout check: detected [activity] since last check -> reset");
+            //reset last duty and timestamp
+            timestamp_lastActivity = esp_log_timestamp(); 
+            dutyLeft_lastActivity = dutyLeftNow;
+            dutyRight_lastActivity = dutyRightNow;
+        }
+        //no activity on any motor and msTimeout exceeded
+        else if (esp_log_timestamp() - timestamp_lastActivity > msTimeout){
+            ESP_LOGI(TAG, "timeout check: [TIMEOUT], no activity for more than %.ds  -> switch to idle", msTimeout/1000);
+            //toggle to idle mode
+            toggleIdle();
+        }
+        else {
+            ESP_LOGD(TAG, "timeout check: [inactive], last activity %.1f seconds ago", (float)(esp_log_timestamp() - timestamp_lastActivity)/1000);
+        }
     }
 }
 
@@ -136,6 +208,9 @@ void controlledArmchair::startHandleLoop() {
 //-----------------------------------
 //function to change to a specified control mode
 void controlledArmchair::changeMode(controlMode_t modeNew) {
+    //reset timeout timer
+    resetTimeout();
+
     //copy previous mode
     controlMode_t modePrevious = mode;
 
@@ -169,6 +244,10 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
     switch(modeNew){
         default:
             ESP_LOGI(TAG, "noting to execute when changing TO this mode");
+            break;
+
+        case controlMode_t::IDLE:
+            buzzer->beep(1, 1500, 0);
             break;
 
         case controlMode_t::HTTP:
@@ -207,12 +286,11 @@ void controlledArmchair::toggleIdle() {
     if (mode == controlMode_t::IDLE){
         changeMode(modePrevious); //restore previous mode, or default if not switched yet
         buzzer->beep(2, 200, 100);
-        ESP_LOGW(TAG, "switched mode from IDLE to %s", controlModeStr[(int)mode]);
+        ESP_LOGW(TAG, "toggle idle: switched mode from IDLE to %s", controlModeStr[(int)mode]);
     } else {
         modePrevious = mode; //store current mode
         changeMode(controlMode_t::IDLE); //set mode to IDLE
-        buzzer->beep(1, 1000, 0);
-        ESP_LOGW(TAG, "switched mode from IDLE to %s", controlModeStr[(int)mode]);
+        ESP_LOGW(TAG, "toggle idle: switched mode from %s to IDLE", controlModeStr[(int)mode]);
     }
 }
 
