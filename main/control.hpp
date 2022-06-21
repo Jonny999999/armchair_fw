@@ -20,7 +20,8 @@ typedef struct control_config_t {
     uint32_t timeoutMs;         //time of inactivity after which the mode gets switched to IDLE
     float timeoutTolerancePer;  //percentage the duty can vary between timeout checks considered still inactive
     //--- http mode ---
-    float http_toleranceZeroPer;//percentage around joystick axis the coordinate snaps to 0
+    float http_toleranceZeroX_Per;//percentage around joystick axis the coordinate snaps to 0
+    float http_toleranceZeroY_Per;
     float http_toleranceEndPer; //percentage before joystick end the coordinate snaps to 1/-1
     uint32_t http_timeoutMs;    //time no new data was received before the motors get turned off
 } control_config_t;

@@ -146,15 +146,15 @@ float scaleCoordinate(float input, float min, float max, float center, float tol
     //--- positive area ---
     else if (input > center) {
         float range = max - center - tolerance_zero - tolerance_end;
-        coordinate = (input - center - tolerance_zero - tolerance_end) / range;
+        coordinate = (input - center - tolerance_zero) / range;
     }
     //--- negative area ---
     else if (input < center) {
         float range = (center - min - tolerance_zero - tolerance_end);
-        coordinate = -(center-input - tolerance_zero - tolerance_end) / range;
+        coordinate = -(center-input - tolerance_zero) / range;
     }
 
-    ESP_LOGD(TAG, "scaled coordinate from %.3f to %.3f", input, coordinate);
+    ESP_LOGD(TAG, "scaled coordinate from %.3f to %.3f, tolZero=%.3f, tolEnd=%.3f", input, coordinate, tolerance_zero, tolerance_end);
     //return coordinate (-1 to 1)
     return coordinate;
 

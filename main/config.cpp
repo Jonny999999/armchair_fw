@@ -45,10 +45,11 @@ controlledMotor motorRight(configDriverRight, configMotorControl);
 control_config_t configControl = {
     .defaultMode = controlMode_t::JOYSTICK, //default mode after startup and toggling IDLE
     //--- timeout ---    
-    .timeoutMs = 30*1000,        //time of inactivity after which the mode gets switched to IDLE
+    .timeoutMs = 5*60*1000,      //time of inactivity after which the mode gets switched to IDLE
     .timeoutTolerancePer = 5,    //percentage the duty can vary between timeout checks considered still inactive
     //--- http mode ---
-    .http_toleranceZeroPer = 5,  //percentage around joystick axis the coordinate snaps to 0
+    .http_toleranceZeroX_Per = 3,  //percentage around joystick axis the coordinate snaps to 0
+    .http_toleranceZeroY_Per = 10,
     .http_toleranceEndPer = 2,   //percentage before joystick end the coordinate snaps to 1/-1
     .http_timeoutMs = 3000       //time no new data was received before the motors get turned off
 

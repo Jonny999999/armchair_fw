@@ -136,7 +136,7 @@ esp_err_t on_joystick_url(httpd_req_t *req)
     data.angle = static_cast<float>(angle_json->valuedouble);
 
     //--- evaluate joystick position enum ---
-    data.position = joystick_evaluatePosition(data.x, data.y);
+    //data.position = joystick_evaluatePosition(data.x, data.y);
 
 
     //log received and parsed values

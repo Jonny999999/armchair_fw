@@ -100,15 +100,19 @@ void controlledArmchair::startHandleLoop() {
                     //--- scale coordinates ---
                     //note: scaleCoordinate function currently can not handle negative input -> added offset to input
                     // scaleCoordinate(input, min, max, center, tolerance_zero_per, tolerance_end_per)
-                    dataRead.x = scaleCoordinate(dataRead.x+1, 0, 2, 1, config.http_toleranceZeroPer, config.http_toleranceEndPer); 
-                    dataRead.y = scaleCoordinate(dataRead.y+1, 0, 2, 1, config.http_toleranceZeroPer, config.http_toleranceEndPer);
-                    //--- calculate radius with new coordinates ---
+                    dataRead.x = scaleCoordinate(dataRead.x+1, 0, 2, 1, config.http_toleranceZeroX_Per, config.http_toleranceEndPer); 
+                    dataRead.y = scaleCoordinate(dataRead.y+1, 0, 2, 1, config.http_toleranceZeroY_Per, config.http_toleranceEndPer);
+                    //--- re-calculate radius, angle and position with new/scaled coordinates ---
                     dataRead.radius = sqrt(pow(dataRead.x,2) + pow(dataRead.y,2));
+                    dataRead.angle = (atan(dataRead.y/dataRead.x) * 180) / 3.141;
+                    dataRead.position = joystick_evaluatePosition(dataRead.x, dataRead.y);
+
                     ESP_LOGD(TAG, "processed/scaled data: x=%.3f  y=%.3f  radius=%.3f", dataRead.x, dataRead.y, dataRead.radius);
 
                     //--- generate motor commands ---
                     //pass received joystick data from http queue to generatecommands function from joystick.hpp
                     ESP_LOGV(TAG, "generating commands...");
+                    ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
                     commands = joystick_generateCommandsDriving(dataRead);
 
                     //--- apply commands to motors ---
