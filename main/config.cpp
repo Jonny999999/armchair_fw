@@ -39,6 +39,21 @@ controlledMotor motorRight(configDriverRight, configMotorControl);
 
 
 
+//------------------------------
+//------- control config -------
+//------------------------------
+control_config_t configControl = {
+    .defaultMode = controlMode_t::JOYSTICK, //default mode after startup and toggling IDLE
+    //--- timeout ---    
+    .timeoutMs = 30*1000,        //time of inactivity after which the mode gets switched to IDLE
+    .timeoutTolerancePer = 5,    //percentage the duty can vary between timeout checks considered still inactive
+    //--- http mode ---
+    .http_toleranceZeroPer = 5,  //percentage around joystick axis the coordinate snaps to 0
+    .http_toleranceEndPer = 2,   //percentage before joystick end the coordinate snaps to 1/-1
+    .http_timeoutMs = 3000       //time no new data was received before the motors get turned off
+
+};
+
 
 
 //--------------------------------------
@@ -95,7 +110,7 @@ gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_33, true, false); //pullup true, no
 buzzer_t buzzer(GPIO_NUM_12, 100);
 
 //create global control object
-controlledArmchair control(&buzzer, &motorLeft, &motorRight);
+controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight);
 
 
 

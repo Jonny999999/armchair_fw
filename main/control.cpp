@@ -24,15 +24,21 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
 //-------- constructor --------
 //-----------------------------
 controlledArmchair::controlledArmchair (
+        control_config_t config_f,
         buzzer_t * buzzer_f,
         controlledMotor* motorLeft_f,
         controlledMotor* motorRight_f
         ){
 
+    //copy configuration
+    config = config_f;
     //copy object pointers
     buzzer = buzzer_f;
     motorLeft = motorLeft_f;
     motorRight = motorRight_f;
+    //set default mode from config
+    modePrevious = config.defaultMode;
+    
     //TODO declare / configure controlled motors here instead of config (unnecessary that button object is globally available - only used here)?
 }
 
@@ -79,6 +85,7 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::HTTP:
+                //TODO: outsource this code to http.cpp?
                 //create emptry struct for receiving data from http function
                 joystickData_t dataRead = { };
 
@@ -91,10 +98,10 @@ void controlledArmchair::startHandleLoop() {
                             dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
 
                     //--- scale coordinates ---
-                    //note: scaleCoordinate function currently can not handle negative input -> add offset to input
+                    //note: scaleCoordinate function currently can not handle negative input -> added offset to input
                     // scaleCoordinate(input, min, max, center, tolerance_zero_per, tolerance_end_per)
-                    dataRead.x = scaleCoordinate(dataRead.x+1, 0, 2, 1, 5, 2); //TODO: move tolerance to config (virtualJoystick or control_Config_t?)
-                    dataRead.y = scaleCoordinate(dataRead.y+1, 0, 2, 1, 5, 2);
+                    dataRead.x = scaleCoordinate(dataRead.x+1, 0, 2, 1, config.http_toleranceZeroPer, config.http_toleranceEndPer); 
+                    dataRead.y = scaleCoordinate(dataRead.y+1, 0, 2, 1, config.http_toleranceZeroPer, config.http_toleranceEndPer);
                     //--- calculate radius with new coordinates ---
                     dataRead.radius = sqrt(pow(dataRead.x,2) + pow(dataRead.y,2));
                     ESP_LOGD(TAG, "processed/scaled data: x=%.3f  y=%.3f  radius=%.3f", dataRead.x, dataRead.y, dataRead.radius);
@@ -113,7 +120,7 @@ void controlledArmchair::startHandleLoop() {
                 //--- timeout ---
                 //turn off motors when motor still on and no new data received for some time
                 if (
-                        (esp_log_timestamp() - http_timestamp_lastData > 3000) //no data received for x seconds //TODO: move timeout to config
+                        (esp_log_timestamp() - http_timestamp_lastData > config.http_timeoutMs) //no data received for x seconds 
                         && (commands.left.state != motorstate_t::IDLE || commands.right.state != motorstate_t::IDLE) //at least one motor is still running
                    ){
                     ESP_LOGE(TAG, "TIMEOUT - no data received for 3s -> stopping motors");
@@ -124,6 +131,7 @@ void controlledArmchair::startHandleLoop() {
                 }
 
                 break;
+
                 //TODO: add other modes here
         }
 
@@ -158,7 +166,6 @@ void controlledArmchair::resetTimeout(){
 //------------------------------------
 //---------- handleTimeout -----------
 //------------------------------------
-uint32_t msTimeout = 30000; //TODO move this to config #####################
 float inactivityTolerance = 10; //percentage the duty can vary since last timeout check and still counts as incative
 
 //local function that checks whether two values differ more than a given tolerance
@@ -190,8 +197,8 @@ void controlledArmchair::handleTimeout(){
             dutyRight_lastActivity = dutyRightNow;
         }
         //no activity on any motor and msTimeout exceeded
-        else if (esp_log_timestamp() - timestamp_lastActivity > msTimeout){
-            ESP_LOGI(TAG, "timeout check: [TIMEOUT], no activity for more than %.ds  -> switch to idle", msTimeout/1000);
+        else if (esp_log_timestamp() - timestamp_lastActivity > config.timeoutMs){
+            ESP_LOGI(TAG, "timeout check: [TIMEOUT], no activity for more than %.ds  -> switch to idle", config.timeoutMs/1000);
             //toggle to idle mode
             toggleIdle();
         }

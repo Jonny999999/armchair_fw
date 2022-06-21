@@ -5,10 +5,26 @@
 #include "buzzer.hpp"
 
 
+//--------------------------------------------
+//---- struct, enum, variable declarations ---
+//--------------------------------------------
 //enum that decides how the motors get controlled
 enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO};
-//extern controlMode_t mode;
+//string array representing the mode enum (for printing the state as string)
 extern const char* controlModeStr[7];
+
+//struct with config parameters
+typedef struct control_config_t {
+    controlMode_t defaultMode;  //default mode after startup and toggling IDLE
+    //--- timeout ---
+    uint32_t timeoutMs;         //time of inactivity after which the mode gets switched to IDLE
+    float timeoutTolerancePer;  //percentage the duty can vary between timeout checks considered still inactive
+    //--- http mode ---
+    float http_toleranceZeroPer;//percentage around joystick axis the coordinate snaps to 0
+    float http_toleranceEndPer; //percentage before joystick end the coordinate snaps to 1/-1
+    uint32_t http_timeoutMs;    //time no new data was received before the motors get turned off
+} control_config_t;
+
 
 
 
@@ -21,6 +37,7 @@ class controlledArmchair {
     public:
         //--- constructor ---
         controlledArmchair (
+                control_config_t config_f,
                 buzzer_t* buzzer_f,
                 controlledMotor* motorLeft_f,
                 controlledMotor* motorRight_f
@@ -56,6 +73,8 @@ class controlledArmchair {
         //---variables ---
         //struct for motor commands returned by generate functions of each mode
         motorCommands_t commands;
+        //struct with config parameters
+        control_config_t config;
 
         //variables for http mode
         uint32_t http_timestamp_lastData = 0;
@@ -64,7 +83,7 @@ class controlledArmchair {
         controlMode_t mode = controlMode_t::IDLE;
 
         //variable to store mode when toggling IDLE mode 
-        controlMode_t modePrevious = controlMode_t::JOYSTICK; //default mode
+        controlMode_t modePrevious; //default mode
 
         //command preset for idling motors
         const motorCommand_t cmd_motorIdle = {
