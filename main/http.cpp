@@ -3,7 +3,6 @@ extern "C"
 #include <stdio.h>
 #include "mdns.h"
 #include "cJSON.h"
-#include "esp_http_server.h"
 #include "esp_spiffs.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
@@ -14,14 +13,13 @@ extern "C"
 }
 
 #include "http.hpp"
-#include "joystick.hpp"
+#include "config.hpp"
 
 
 //tag for logging
 static const char * TAG = "http";
 static httpd_handle_t server = NULL;
 
-QueueHandle_t joystickDataQueue = xQueueCreate( 1, sizeof( struct joystickData_t ) );
 
 
 //joystickData_t http_readFromJoystickQueue
@@ -99,12 +97,25 @@ static esp_err_t on_default_url(httpd_req_t *req)
 
 
 
-//===============================
-//====== joystick endpoint ======
-//===============================
-//function that is called when data is received with post request at /api/joystick
-esp_err_t on_joystick_url(httpd_req_t *req)
-{
+//==============================
+//===== httpJoystick class =====
+//==============================
+//-----------------------
+//----- constructor -----
+//-----------------------
+httpJoystick::httpJoystick( httpJoystick_config_t config_f ){
+    //copy config struct
+    config = config_f;
+    //initialize queue for joystick data
+    QueueHandle_t joystickDataQueue = xQueueCreate( 1, sizeof( struct joystickData_t ) );
+}
+
+
+//--------------------------
+//---- receiveHttpData -----
+//--------------------------
+//joystick endpoint - function that is called when data is received with post request at /api/joystick
+esp_err_t httpJoystick::receiveHttpData(httpd_req_t *req){ 
     //--- add header ---
     //to allow cross origin (otherwise browser fails when app is running on another host)
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -134,29 +145,76 @@ esp_err_t on_joystick_url(httpd_req_t *req)
     data.y = static_cast<float>(y_json->valuedouble);
     data.radius = static_cast<float>(radius_json->valuedouble);
     data.angle = static_cast<float>(angle_json->valuedouble);
-
-    //--- evaluate joystick position enum ---
-    //data.position = joystick_evaluatePosition(data.x, data.y);
-
-
     //log received and parsed values
-    ESP_LOGI(TAG, "parsed values from received json: \n x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
+    ESP_LOGI(TAG, "received values: x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
             data.x, data.y, data.radius, data.angle);
+
+    // scaleCoordinate(input, min, max, center, tolerance_zero_per, tolerance_end_per)
+    data.x = scaleCoordinate(data.x+1, 0, 2, 1, config.toleranceZeroX_Per, config.toleranceEndPer); 
+    data.y = scaleCoordinate(data.y+1, 0, 2, 1, config.toleranceZeroY_Per, config.toleranceEndPer);
+
+    //--- re-calculate radius, angle and position with new/scaled coordinates ---
+    data.radius = sqrt(pow(data.x,2) + pow(data.y,2));
+    data.angle = (atan(data.y/data.x) * 180) / 3.141;
+    data.position = joystick_evaluatePosition(data.x, data.y);
+    //log processed values
+    ESP_LOGI(TAG, "processed values: x=%.3f  y=%.3f  radius=%.3f  angle=%.3f  pos=%s",
+            data.x, data.y, data.radius, data.angle, joystickPosStr[(int)data.position]);
 
     //--- free memory ---
     cJSON_Delete(payload);
-
 
     //--- send data to control task via queue ---
     //xQueueSend( joystickDataQueue, ( void * )&data, ( TickType_t ) 0 );
     //changed to length = 1  -> overwrite - older values are no longer relevant
     xQueueOverwrite( joystickDataQueue, ( void * )&data );
 
-
     //--- return http response ---
     httpd_resp_set_status(req, "204 NO CONTENT");
     httpd_resp_send(req, NULL, 0);
+
     return ESP_OK;
+}
+
+
+//-------------------
+//----- getData -----
+//-------------------
+//wait for and return joystick data from queue, if timeout return NULL
+joystickData_t httpJoystick::getData(){
+
+    //--- get joystick data from queue ---
+    if( xQueueReceive( joystickDataQueue, &dataRead, pdMS_TO_TICKS(config.timeoutMs) ) ) {
+
+        ESP_LOGD(TAG, "getData: received data (from queue): x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
+                dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
+    }
+    //--- timeout ---
+    //no new data received within configured timeout
+    else { 
+        //send error message when last received data did NOT result in CENTER position
+        if (dataRead.position != joystickPos_t::CENTER) {
+            //change data to "joystick center" data to stop the motors
+            dataRead = dataCenter;
+            ESP_LOGE(TAG, "TIMEOUT - no data received for 3s -> set to center");
+        }
+    }
+    return dataRead;
+}
+
+
+
+//--------------------------------------------
+//--- receiveHttpData for httpJoystickMain ---
+//--------------------------------------------
+//function that wraps pointer to member function of httpJoystickMain instance in a "normal" function which the webserver can run on joystick URL
+
+//declare pointer to receiveHttpData method of httpJoystick class
+esp_err_t (httpJoystick::*pointerToReceiveFunc)(httpd_req_t *req) = &httpJoystick::receiveHttpData;
+
+esp_err_t on_joystick_url(httpd_req_t *req){
+    //run pointer to receiveHttpData function of httpJoystickMain instance
+    return (httpJoystickMain.*pointerToReceiveFunc)(req);
 }
 
 
@@ -168,9 +226,6 @@ esp_err_t on_joystick_url(httpd_req_t *req)
 //function that initializes http server and configures available urls
 void http_init_server()
 {
-
-
-
 
     //configure webserver
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();

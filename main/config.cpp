@@ -48,11 +48,19 @@ control_config_t configControl = {
     .timeoutMs = 5*60*1000,      //time of inactivity after which the mode gets switched to IDLE
     .timeoutTolerancePer = 5,    //percentage the duty can vary between timeout checks considered still inactive
     //--- http mode ---
-    .http_toleranceZeroX_Per = 3,  //percentage around joystick axis the coordinate snaps to 0
-    .http_toleranceZeroY_Per = 10,
-    .http_toleranceEndPer = 2,   //percentage before joystick end the coordinate snaps to 1/-1
-    .http_timeoutMs = 3000       //time no new data was received before the motors get turned off
 
+};
+
+
+
+//-------------------------------
+//----- httpJoystick config -----
+//-------------------------------
+httpJoystick_config_t configHttpJoystickMain{
+    .toleranceZeroX_Per = 3,  //percentage around joystick axis the coordinate snaps to 0
+    .toleranceZeroY_Per = 10,
+    .toleranceEndPer = 2,   //percentage before joystick end the coordinate snaps to 1/-1
+    .timeoutMs = 3000       //time no new data was received before the motors get turned off
 };
 
 
@@ -110,8 +118,11 @@ gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_33, true, false); //pullup true, no
 //create buzzer object on pin 12 with gap between queued events of 100ms 
 buzzer_t buzzer(GPIO_NUM_12, 100);
 
+//create global httpJoystick object
+httpJoystick httpJoystickMain(configHttpJoystickMain);
+
 //create global control object
-controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight);
+controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &httpJoystickMain);
 
 
 

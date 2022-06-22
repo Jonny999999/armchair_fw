@@ -12,7 +12,6 @@ extern "C"
 
 #include "config.hpp"
 #include "control.hpp"
-#include "http.hpp"
 
 
 //tag for logging
@@ -27,7 +26,8 @@ controlledArmchair::controlledArmchair (
         control_config_t config_f,
         buzzer_t * buzzer_f,
         controlledMotor* motorLeft_f,
-        controlledMotor* motorRight_f
+        controlledMotor* motorRight_f,
+        httpJoystick* httpJoystick_f
         ){
 
     //copy configuration
@@ -36,6 +36,7 @@ controlledArmchair::controlledArmchair (
     buzzer = buzzer_f;
     motorLeft = motorLeft_f;
     motorRight = motorRight_f;
+    httpJoystickMain_l = httpJoystick_f;
     //set default mode from config
     modePrevious = config.defaultMode;
     
@@ -85,58 +86,25 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::HTTP:
-                //TODO: outsource this code to http.cpp?
                 //create emptry struct for receiving data from http function
                 joystickData_t dataRead = { };
 
                 //--- get joystick data from queue ---
-                if( xQueueReceive( joystickDataQueue, &dataRead, pdMS_TO_TICKS(500) ) ) {
-                    //reset timestamp lastAction
-                    http_timestamp_lastData = esp_log_timestamp();
+                //Note this function waits several seconds (httpconfig.timeoutMs) for data to arrive, otherwise Center data or NULL is returned
+                //TODO: as described above, when changing modes it might delay a few seconds for the change to apply
+                dataRead = httpJoystickMain_l->getData();
+                //--- generate motor commands ---
+                ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
+                //Note: timeout (no data received) is handled in getData method
+                commands = joystick_generateCommandsDriving(dataRead);
 
-                    ESP_LOGD(TAG, "received data (from queue): x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
-                            dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
+                //--- apply commands to motors ---
+                //TODO make motorctl.setTarget also accept motorcommand struct directly
+                motorRight->setTarget(commands.right.state, commands.right.duty); 
+                motorLeft->setTarget(commands.left.state, commands.left.duty); 
+               break;
 
-                    //--- scale coordinates ---
-                    //note: scaleCoordinate function currently can not handle negative input -> added offset to input
-                    // scaleCoordinate(input, min, max, center, tolerance_zero_per, tolerance_end_per)
-                    dataRead.x = scaleCoordinate(dataRead.x+1, 0, 2, 1, config.http_toleranceZeroX_Per, config.http_toleranceEndPer); 
-                    dataRead.y = scaleCoordinate(dataRead.y+1, 0, 2, 1, config.http_toleranceZeroY_Per, config.http_toleranceEndPer);
-                    //--- re-calculate radius, angle and position with new/scaled coordinates ---
-                    dataRead.radius = sqrt(pow(dataRead.x,2) + pow(dataRead.y,2));
-                    dataRead.angle = (atan(dataRead.y/dataRead.x) * 180) / 3.141;
-                    dataRead.position = joystick_evaluatePosition(dataRead.x, dataRead.y);
-
-                    ESP_LOGD(TAG, "processed/scaled data: x=%.3f  y=%.3f  radius=%.3f", dataRead.x, dataRead.y, dataRead.radius);
-
-                    //--- generate motor commands ---
-                    //pass received joystick data from http queue to generatecommands function from joystick.hpp
-                    ESP_LOGV(TAG, "generating commands...");
-                    ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
-                    commands = joystick_generateCommandsDriving(dataRead);
-
-                    //--- apply commands to motors ---
-                    //TODO make motorctl.setTarget also accept motorcommand struct directly
-                    motorRight->setTarget(commands.right.state, commands.right.duty); 
-                    motorLeft->setTarget(commands.left.state, commands.left.duty); 
-                }
-
-                //--- timeout ---
-                //turn off motors when motor still on and no new data received for some time
-                if (
-                        (esp_log_timestamp() - http_timestamp_lastData > config.http_timeoutMs) //no data received for x seconds 
-                        && (commands.left.state != motorstate_t::IDLE || commands.right.state != motorstate_t::IDLE) //at least one motor is still running
-                   ){
-                    ESP_LOGE(TAG, "TIMEOUT - no data received for 3s -> stopping motors");
-                    //copy preset commands for idling both motors
-                    commands = cmds_bothMotorsIdle;
-                    motorRight->setTarget(commands.right.state, commands.right.duty); 
-                    motorLeft->setTarget(commands.left.state, commands.left.duty); 
-                }
-
-                break;
-
-                //TODO: add other modes here
+              //  //TODO: add other modes here
         }
 
 

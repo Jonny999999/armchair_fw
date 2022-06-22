@@ -8,6 +8,7 @@
 #include "buzzer.hpp"
 #include "control.hpp"
 #include "fan.hpp"
+#include "http.hpp"
 
 
 //create global controlledMotor instances for both motors
@@ -25,6 +26,9 @@ extern buzzer_t buzzer;
 
 //create global control object
 extern controlledArmchair control;
+
+//create global httpJoystick object
+extern httpJoystick httpJoystickMain;
 
 //configuration for fans
 extern fan_config_t configFanLeft;
