@@ -31,10 +31,11 @@ typedef struct joystick_config_t {
     adc1_channel_t adc_x;
     adc1_channel_t adc_y;
 
-    //range around center-threshold of each axis the coordinates stays at 0 (adc value 0-4095)
-    int tolerance_zero;
-    //threshold the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (adc value 0-4095)
-    int tolerance_end;
+    //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
+    int tolerance_zeroX_per;
+    int tolerance_zeroY_per;
+    //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
+    int tolerance_end_per;
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
     float tolerance_radius;
 

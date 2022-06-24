@@ -71,10 +71,11 @@ httpJoystick_config_t configHttpJoystickMain{
 joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
-    //range around center-threshold of each axis the coordinates stays at 0 (percentage of available range 0-100)
-    .tolerance_zero = 7,
-    //threshold the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (percentage of available range 0-100)
-    .tolerance_end = 5, 
+    //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
+    .tolerance_zeroX_per = 7,
+    .tolerance_zeroY_per = 3,
+    //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
+    .tolerance_end_per = 5, 
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
     .tolerance_radius = 0.05,
 

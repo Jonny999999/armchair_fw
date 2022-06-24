@@ -76,11 +76,11 @@ joystickData_t evaluatedJoystick::getData() {
     //get coordinates
     //TODO individual tolerances for each axis? Otherwise some parameters can be removed
     ESP_LOGD(TAG, "getting X coodrinate...");
-    float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), config.x_min, config.x_max, x_center,  config.tolerance_zero, config.tolerance_end);
+    float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), config.x_min, config.x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
     data.x = x;
 
     ESP_LOGD(TAG, "getting Y coodrinate...");
-    float y = scaleCoordinate(readAdc(config.adc_y, config.y_inverted), config.y_min, config.y_max, y_center,  config.tolerance_zero, config.tolerance_end);
+    float y = scaleCoordinate(readAdc(config.adc_y, config.y_inverted), config.y_min, config.y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
     data.y = y;
 
     //calculate radius
