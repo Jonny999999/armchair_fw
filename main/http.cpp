@@ -133,8 +133,6 @@ esp_err_t httpJoystick::receiveHttpData(httpd_req_t *req){
     //--- extract relevant items from json object ---
     cJSON *x_json = cJSON_GetObjectItem(payload, "x");  
     cJSON *y_json = cJSON_GetObjectItem(payload, "y");  
-    cJSON *radius_json = cJSON_GetObjectItem(payload, "radius");  
-    cJSON *angle_json = cJSON_GetObjectItem(payload, "angle");  
 
     //--- save items to struct ---
     joystickData_t data = { };
@@ -143,20 +141,26 @@ esp_err_t httpJoystick::receiveHttpData(httpd_req_t *req){
     //convert json to double to float
     data.x = static_cast<float>(x_json->valuedouble);
     data.y = static_cast<float>(y_json->valuedouble);
-    data.radius = static_cast<float>(radius_json->valuedouble);
-    data.angle = static_cast<float>(angle_json->valuedouble);
     //log received and parsed values
-    ESP_LOGI(TAG, "received values: x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
-            data.x, data.y, data.radius, data.angle);
+    ESP_LOGI(TAG, "received values: x=%.3f  y=%.3f",
+            data.x, data.y);
 
     // scaleCoordinate(input, min, max, center, tolerance_zero_per, tolerance_end_per)
     data.x = scaleCoordinate(data.x+1, 0, 2, 1, config.toleranceZeroX_Per, config.toleranceEndPer); 
     data.y = scaleCoordinate(data.y+1, 0, 2, 1, config.toleranceZeroY_Per, config.toleranceEndPer);
 
-    //--- re-calculate radius, angle and position with new/scaled coordinates ---
+    //--- calculate radius with new/scaled coordinates ---
     data.radius = sqrt(pow(data.x,2) + pow(data.y,2));
+    //TODO: radius tolerance? (as in original joystick func)
+    //limit radius to 1
+    if (data.radius > 1) {
+        data.radius = 1;
+    }
+    //--- calculate angle ---
     data.angle = (atan(data.y/data.x) * 180) / 3.141;
+    //--- evaluate position ---
     data.position = joystick_evaluatePosition(data.x, data.y);
+
     //log processed values
     ESP_LOGI(TAG, "processed values: x=%.3f  y=%.3f  radius=%.3f  angle=%.3f  pos=%s",
             data.x, data.y, data.radius, data.angle, joystickPosStr[(int)data.position]);
