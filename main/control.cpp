@@ -79,9 +79,12 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::MASSAGE:
-                motorRight->setTarget(motorstate_t::IDLE, 0); 
-                motorLeft->setTarget(motorstate_t::IDLE, 0); 
-                //TODO add actual command generation here
+                //generate motor commands
+                //pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
+                commands = joystick_generateCommandsShaking(joystick.getData());
+                //apply motor commands
+                motorRight->setTarget(commands.right.state, commands.right.duty); 
+                motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 vTaskDelay(20 / portTICK_PERIOD_MS);
                 break;
 

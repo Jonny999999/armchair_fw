@@ -299,3 +299,121 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data){
     ESP_LOGI(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
     return commands;
 }
+
+
+
+//============================================
+//========= joystick_CommandsShaking =========
+//============================================
+//--- variable declarations ---
+uint32_t shake_timestamp_turnedOn = 0;
+uint32_t shake_timestamp_turnedOff = 0;
+bool shake_state = false;
+
+//--- configure shake mode --- TODO: move this to config
+uint32_t shake_msOffMax = 90;
+uint32_t shake_msOnMax = 180;
+float dutyShake = 60;
+
+//function that generates commands for both motors from the joystick data
+motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
+
+
+    //struct with current data of the joystick
+    //typedef struct joystickData_t {
+    //    joystickPos_t position;
+    //    float x;
+    //    float y;
+    //    float radius;
+    //    float angle;
+    //} joystickData_t;
+
+
+    motorCommands_t commands;
+    float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
+
+    //--- calculate on/off duration ---
+    uint32_t msOn = shake_msOnMax * data.radius;
+    uint32_t msOff = shake_msOffMax * data.radius;
+
+    //--- evaluate state (on/off) ---
+    if (data.radius > 0 ){
+        //currently off
+        if (shake_state == false){
+            //off long enough
+            if (esp_log_timestamp() - shake_timestamp_turnedOff > msOff) {
+                //turn on
+                shake_state = true;
+                shake_timestamp_turnedOn = esp_log_timestamp();
+            }
+        } 
+        //currently on
+        else {
+            //on long enough
+            if (esp_log_timestamp() - shake_timestamp_turnedOn > msOn) {
+                //turn off
+                shake_state = false;
+                shake_timestamp_turnedOff = esp_log_timestamp();
+            }
+        }
+    } 
+    //joystick is at center
+    else {
+        shake_state = false;
+        shake_timestamp_turnedOff = esp_log_timestamp();
+    }
+
+
+
+
+
+    if (shake_state){
+        switch (data.position){
+
+            default:
+                commands.left.state = motorstate_t::IDLE;
+                commands.right.state = motorstate_t::IDLE;
+                commands.left.duty = 0;
+                commands.right.duty = 0;
+                break;
+
+            case joystickPos_t::Y_AXIS:
+                if (data.y > 0){
+                    commands.left.state = motorstate_t::FWD;
+                    commands.right.state = motorstate_t::FWD;
+                } else {
+                    commands.left.state = motorstate_t::REV;
+                    commands.right.state = motorstate_t::REV;
+                }
+                //set duty to shake
+                commands.left.duty = dutyShake;
+                commands.right.duty = dutyShake;
+                break;
+
+            case joystickPos_t::X_AXIS:
+                if (data.x > 0) {
+                    commands.left.state = motorstate_t::FWD;
+                    commands.right.state = motorstate_t::REV;
+                } else {
+                    commands.left.state = motorstate_t::REV;
+                    commands.right.state = motorstate_t::FWD;
+                }
+                //set duty to shake
+                commands.left.duty = dutyShake;
+                commands.right.duty = dutyShake;
+                break;
+        }
+    } else { //shake state off
+        commands.left.state = motorstate_t::IDLE;
+        commands.right.state = motorstate_t::IDLE;
+        commands.left.duty = 0;
+        commands.right.duty = 0;
+    }
+
+
+    ESP_LOGI(TAG_CMD, "generated commands from data: state=%s, angle=%.3f, ratio=%.3f/%.3f, radius=%.2f, x=%.2f, y=%.2f",
+            joystickPosStr[(int)data.position], data.angle, ratio, (1-ratio), data.radius, data.x, data.y);
+    ESP_LOGI(TAG_CMD, "motor left: state=%s, duty=%.3f", motorstateStr[(int)commands.left.state], commands.left.duty);
+    ESP_LOGI(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
+    return commands;
+}
