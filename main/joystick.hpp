@@ -31,10 +31,11 @@ typedef struct joystick_config_t {
     adc1_channel_t adc_x;
     adc1_channel_t adc_y;
 
-    //range around center-threshold of each axis the coordinates stays at 0 (adc value 0-4095)
-    int tolerance_zero;
-    //threshold the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (adc value 0-4095)
-    int tolerance_end;
+    //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
+    int tolerance_zeroX_per;
+    int tolerance_zeroY_per;
+    //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
+    int tolerance_end_per;
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
     float tolerance_radius;
 
@@ -86,8 +87,6 @@ class evaluatedJoystick {
         void init();
         //read adc while making multiple samples with option to invert the result
         int readAdc(adc1_channel_t adc_channel, bool inverted = false); 
-        //read input voltage and scale to value from -1 to 1 using the given thresholds and tolerances
-        float getCoordinate(adc1_channel_t adc_channel, bool inverted, int min, int max, int center, int tolerance_zero, int tolerance_end);
 
         //--- variables ---
         joystick_config_t config;
@@ -111,9 +110,15 @@ class evaluatedJoystick {
 motorCommands_t joystick_generateCommandsDriving(joystickData_t data );
 
 
+//==============================
+//====== scaleCoordinate =======
+//==============================
+//function that scales an input value (e.g. from adc pin) to a value from -1 to 1 using the giben thresholds and tolerances
+float scaleCoordinate(float input, float min, float max, float center, float tolerance_zero_per, float tolerance_end_per);
 
-//============================================
-//========= joystick_CommandsDriving =========
-//============================================
+
+//=============================================
+//========= joystick_evaluatePosition =========
+//=============================================
 //function that defines and returns enum joystickPos from x and y coordinates
 joystickPos_t joystick_evaluatePosition(float x, float y);

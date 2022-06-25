@@ -27,7 +27,7 @@ single100a_config_t configDriverRight = {
     .pwmFreq = 10000
 };
 
-//configure motor contol
+//--- configure motor contol ---
 motorctl_config_t configMotorControl = {
     .msFade = 900,
     .currentMax = 10
@@ -39,6 +39,31 @@ controlledMotor motorRight(configDriverRight, configMotorControl);
 
 
 
+//------------------------------
+//------- control config -------
+//------------------------------
+control_config_t configControl = {
+    .defaultMode = controlMode_t::JOYSTICK, //default mode after startup and toggling IDLE
+    //--- timeout ---    
+    .timeoutMs = 5*60*1000,      //time of inactivity after which the mode gets switched to IDLE
+    .timeoutTolerancePer = 5,    //percentage the duty can vary between timeout checks considered still inactive
+    //--- http mode ---
+
+};
+
+
+
+//-------------------------------
+//----- httpJoystick config -----
+//-------------------------------
+httpJoystick_config_t configHttpJoystickMain{
+    .toleranceZeroX_Per = 3,  //percentage around joystick axis the coordinate snaps to 0
+    .toleranceZeroY_Per = 10,
+    .toleranceEndPer = 2,   //percentage before joystick end the coordinate snaps to 1/-1
+    .timeoutMs = 3000       //time no new data was received before the motors get turned off
+};
+
+
 
 //--------------------------------------
 //------- joystick configuration -------
@@ -46,10 +71,11 @@ controlledMotor motorRight(configDriverRight, configMotorControl);
 joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
-    //range around center-threshold of each axis the coordinates stays at 0 (adc value 0-4095)
-    .tolerance_zero = 100,
-    //threshold the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (adc value 0-4095)
-    .tolerance_end = 80,
+    //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
+    .tolerance_zeroX_per = 7,
+    .tolerance_zeroY_per = 3,
+    //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
+    .tolerance_end_per = 5, 
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
     .tolerance_radius = 0.05,
 
@@ -63,20 +89,11 @@ joystick_config_t configJoystick = {
     .y_inverted = true
 };
 
-//create global joystic instance
-evaluatedJoystick joystick(configJoystick);
-
-//create global evaluated switch instance for button next to joystick
-gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_33, true, false); //pullup true, not inverted (switch to GND use pullup of controller)
-                                                               
-//create buzzer object on pin 12 with gap between queued events of 100ms 
-buzzer_t buzzer(GPIO_NUM_12, 100);
-
-//create global control object
-controlledArmchair control(&buzzer, &motorLeft, &motorRight);
 
 
-//configure fan contol
+//----------------------------
+//--- configure fan contol ---
+//----------------------------
 fan_config_t configFanLeft = {
     .gpio_fan = GPIO_NUM_2,
     .msRun = 5000,
@@ -87,4 +104,26 @@ fan_config_t configFanRight = {
     .msRun = 5000,
     .dutyThreshold = 35
 };
+
+
+
+//=================================
+//===== create global objects =====
+//=================================
+//create global joystic instance
+evaluatedJoystick joystick(configJoystick);
+
+//create global evaluated switch instance for button next to joystick
+gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_33, true, false); //pullup true, not inverted (switch to GND use pullup of controller)
+                                                               
+//create buzzer object on pin 12 with gap between queued events of 100ms 
+buzzer_t buzzer(GPIO_NUM_12, 100);
+
+//create global httpJoystick object
+httpJoystick httpJoystickMain(configHttpJoystickMain);
+
+//create global control object
+controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &httpJoystickMain);
+
+
 

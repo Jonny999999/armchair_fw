@@ -169,7 +169,7 @@ extern "C" void app_main(void) {
     //--- create task for control ---
     //-------------------------------
     //task that generates motor commands depending on the current mode and sends those to motorctl task
-    xTaskCreate(&task_control, "task_control", 2048, NULL, 5, NULL);
+    xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
 
     //------------------------------
     //--- create task for button ---

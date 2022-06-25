@@ -7,11 +7,9 @@ import React, { useState} from 'react';
 
 function App() {
     //declare variables that can be used and updated in html
-    const [angle_html, setAngle_html] = useState(0);
     const [x_html, setX_html] = useState(0);
     const [y_html, setY_html] = useState(0);
     const [ip, setIp] = useState("10.0.0.66");
-    const [radius_html, setRadius_html] = useState(0);
 
 
 
@@ -19,7 +17,7 @@ function App() {
     //=========== config ============
     //===============================
     const decimalPlaces = 3;
-    const joystickSize = 200; //affects scaling of coordinates and size of joystick on website
+    const joystickSize = 250; //affects scaling of coordinates and size of joystick on website
     const throttle = 300; //throtthe interval the joystick sends data while moving (ms)
     const toleranceSnapToZeroPer = 20;//percentage of moveable range the joystick can be moved from the axix and value stays at 0
 
@@ -33,7 +31,7 @@ function App() {
     // - snaps 0 zero for a given tolerance in percent
     // - rounds value do given decimal places
     // - TODO: add threshold it snaps to 1 / -1 (100%) toleranceEnd
-    const ScaleCoordinate = (input) => {
+    const ScaleCoordinateTolerance = (input) => {
         //calc tolerance threshold and available range
         const tolerance = joystickSize/2 * toleranceSnapToZeroPer/100;
         const range = joystickSize/2 - tolerance;
@@ -59,6 +57,15 @@ function App() {
         return result;
     }
 
+
+
+    //----------------------------------------
+    //----------- Scale coordinate -----------
+    //----------------------------------------
+    //simply scale coordinate from joystick to a value of -1 to 1 without applying any tolerances
+    const ScaleCoordinate = (input) => {
+        return ( input / (joystickSize/2) ).toFixed(decimalPlaces);
+    }
 
 
 
@@ -106,27 +113,26 @@ function App() {
     //evaluate coordinates and send to esp32
     const handleMove = (e) => {
         //console.log("data from joystick-element X:" + e.x + " Y:" + e.y + " distance:" + e.distance);
-        //calculate needed variables
+        
+        //--- convert coordinates ---
+        //Note: tolerance (snap to zero) now handled by controller -> send raw coordinates
+        //const x = ScaleCoordinateTolerance(e.x);
+        //const y = ScaleCoordinateTolerance(e.y);
         const x = ScaleCoordinate(e.x);
         const y = ScaleCoordinate(e.y);
-        const radius = (e.distance / 100).toFixed(5);
-        const angle = ( Math.atan( y / x ) * 180 / Math.PI ).toFixed(2);
 
-        //crate object with necessary data
+        //create object with necessary data
         const joystick_data={
             x: x,
-            y: y,
-            radius: radius, 
-            angle: angle
+            y: y
         }
+
         //send object with joystick data as json to controller
         httpSendObject(joystick_data);
 
         //update variables for html
         setX_html(joystick_data.x);
         setY_html(joystick_data.y);
-        setRadius_html(joystick_data.radius);
-        setAngle_html(joystick_data.angle);
     };
 
 
@@ -139,15 +145,11 @@ function App() {
         const joystick_data={
             x: 0,
             y: 0,
-            radius: 0,
-            angle: 0
         }
 
         //update variables for html
         setX_html(0);
         setY_html(0);
-        setRadius_html(0);
-        setAngle_html(0);
         //send object with joystick data as json to controller
         httpSendObject(joystick_data);
     };
@@ -162,14 +164,14 @@ function App() {
 
         <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh'}}>
             <div>
-                <div style={{position: 'absolute', top: '0'}}>
-                    <h1>Joystick ctl</h1>
+                <div style={{position: 'absolute', top: '0', left: '0', width: '100%'}}>
+                    <h1 style={{width:'100%', textAlign:'center'}}>Armchair ctl</h1>
                 </div>
                 <Joystick 
                     size={joystickSize} 
                     sticky={false} 
-                    baseColor="red" 
-                    stickColor="blue" 
+                    baseColor="#8d0801" 
+                    stickColor="#708d81" 
                     throttle={throttle}
                     move={handleMove} 
                     stop={handleStop}
@@ -178,8 +180,6 @@ function App() {
                 <ul>
                     <li> x={x_html} </li>
                     <li> y={y_html} </li>
-                    <li> radius={radius_html} </li>
-                    <li> angle={angle_html} </li>
                 </ul>
             </div>
         </div>
