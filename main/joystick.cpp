@@ -163,6 +163,35 @@ float scaleCoordinate(float input, float min, float max, float center, float tol
 
 
 
+//===========================================
+//====== joystick_scaleCoordinatesExp =======
+//===========================================
+//local function that scales the absolute value of a variable exponentionally
+float scaleExp(float value, float exponent){
+    float result = powf(fabs(value), exponent);
+    if (value >= 0) {
+        return result;
+    } else {
+        return -result;
+    }
+}
+//function that updates a joystickData object with exponentionally scaling applied to coordinates
+void joystick_scaleCoordinatesExp(joystickData_t * data, float exponent){
+    //scale x and y coordinate
+    data->x = scaleExp(data->x, exponent);
+    data->y = scaleExp(data->y, exponent);
+    //re-calculate radius
+    data->radius = sqrt(pow(data->x,2) + pow(data->y,2));
+    if (data->radius > 1-0.07) {//FIXME hardcoded radius tolerance
+        data->radius = 1;
+    }
+}
+
+
+
+
+
+
 //=============================================
 //========= joystick_evaluatePosition =========
 //=============================================
@@ -227,7 +256,7 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data){
     motorCommands_t commands;
     float dutyMax = 94; //TODO add this to config, make changeable during runtime
 
-    float dutyOffset = 5; //immedeately starts with this duty, TODO add this to config
+    float dutyOffset = 10; //immedeately starts with this duty, TODO add this to config
     float dutyRange = dutyMax - dutyOffset;
     float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
 

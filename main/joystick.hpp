@@ -127,6 +127,15 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data );
 float scaleCoordinate(float input, float min, float max, float center, float tolerance_zero_per, float tolerance_end_per);
 
 
+
+//===========================================
+//====== joystick_scaleCoordinatesExp =======
+//===========================================
+//function that updates a joystickData object with exponentionally scaling applied to coordinates
+void joystick_scaleCoordinatesExp(joystickData_t * data, float exponent);
+
+
+
 //=============================================
 //========= joystick_evaluatePosition =========
 //=============================================

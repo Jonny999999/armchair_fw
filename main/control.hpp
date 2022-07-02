@@ -75,6 +75,9 @@ class controlledArmchair {
         //struct with config parameters
         control_config_t config;
 
+        //store joystick data
+        joystickData_t stickData;
+
         //variables for http mode
         uint32_t http_timestamp_lastData = 0;
 

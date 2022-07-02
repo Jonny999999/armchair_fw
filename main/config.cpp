@@ -72,8 +72,8 @@ joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
     //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
-    .tolerance_zeroX_per = 7,
-    .tolerance_zeroY_per = 3,
+    .tolerance_zeroX_per = 3,
+    .tolerance_zeroY_per = 7,
     //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
     .tolerance_end_per = 5, 
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)

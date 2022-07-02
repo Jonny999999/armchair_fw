@@ -68,9 +68,12 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::JOYSTICK:
+                //get current joystick data with getData method of evaluatedJoystick
+                stickData = joystick.getData();
+                //additionaly scale coordinates exponentionally (more detail in slower area)
+                joystick_scaleCoordinatesExp(&stickData, 2); //TODO: add scaling exponent to config
                 //generate motor commands
-                //pass joystick data from getData method of evaluatedJoystick to generateCommandsDriving function
-                commands = joystick_generateCommandsDriving(joystick.getData());
+                commands = joystick_generateCommandsDriving(stickData);
                 //TODO: pass pointer to joystick object to control class instead of accessing it directly globally
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
@@ -89,17 +92,16 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::HTTP:
-                //create emptry struct for receiving data from http function
-                joystickData_t dataRead = { };
-
                 //--- get joystick data from queue ---
                 //Note this function waits several seconds (httpconfig.timeoutMs) for data to arrive, otherwise Center data or NULL is returned
                 //TODO: as described above, when changing modes it might delay a few seconds for the change to apply
-                dataRead = httpJoystickMain_l->getData();
+                stickData = httpJoystickMain_l->getData();
+                //scale coordinates additionally (more detail in slower area)
+                joystick_scaleCoordinatesExp(&stickData, 2); //TODO: add scaling exponent to config
+                ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
                 //--- generate motor commands ---
-                ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
                 //Note: timeout (no data received) is handled in getData method
-                commands = joystick_generateCommandsDriving(dataRead);
+                commands = joystick_generateCommandsDriving(stickData);
 
                 //--- apply commands to motors ---
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
