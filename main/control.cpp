@@ -70,8 +70,8 @@ void controlledArmchair::startHandleLoop() {
             case controlMode_t::JOYSTICK:
                 //get current joystick data with getData method of evaluatedJoystick
                 stickData = joystick.getData();
-                //additionaly scale coordinates exponentionally (more detail in slower area)
-                joystick_scaleCoordinatesExp(&stickData, 2); //TODO: add scaling exponent to config
+                //additionaly scale coordinates (more detail in slower area)
+                joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.35); //TODO: add scaling parameters to config
                 //generate motor commands
                 commands = joystick_generateCommandsDriving(stickData);
                 //TODO: pass pointer to joystick object to control class instead of accessing it directly globally
@@ -97,7 +97,7 @@ void controlledArmchair::startHandleLoop() {
                 //TODO: as described above, when changing modes it might delay a few seconds for the change to apply
                 stickData = httpJoystickMain_l->getData();
                 //scale coordinates additionally (more detail in slower area)
-                joystick_scaleCoordinatesExp(&stickData, 2); //TODO: add scaling exponent to config
+                joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.4); //TODO: add scaling parameters to config
                 ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
                 //--- generate motor commands ---
                 //Note: timeout (no data received) is handled in getData method

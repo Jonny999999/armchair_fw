@@ -57,10 +57,10 @@ control_config_t configControl = {
 //----- httpJoystick config -----
 //-------------------------------
 httpJoystick_config_t configHttpJoystickMain{
-    .toleranceZeroX_Per = 3,  //percentage around joystick axis the coordinate snaps to 0
-    .toleranceZeroY_Per = 10,
+    .toleranceZeroX_Per = 1,  //percentage around joystick axis the coordinate snaps to 0
+    .toleranceZeroY_Per = 6,
     .toleranceEndPer = 2,   //percentage before joystick end the coordinate snaps to 1/-1
-    .timeoutMs = 3000       //time no new data was received before the motors get turned off
+    .timeoutMs = 2500       //time no new data was received before the motors get turned off
 };
 
 

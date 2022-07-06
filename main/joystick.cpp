@@ -190,6 +190,44 @@ void joystick_scaleCoordinatesExp(joystickData_t * data, float exponent){
 
 
 
+//==============================================
+//====== joystick_scaleCoordinatesLinear =======
+//==============================================
+//local function that scales value from -1-1 to -1-1 with two different slopes before and after a specified point
+//slope1: for value from 0 to pointX -> scale linear from  0 to pointY
+//slope2: for value from pointX to 1 -> scale linear from pointY to 1
+float scaleLinPoint(float value, float pointX, float pointY){
+    float result;
+    if (fabs(value) <= pointX) {
+        //--- scale on line from 0 to point ---
+        result = fabs(value) * (pointY/pointX);
+    } else {
+        //--- scale on line from point to 1 ---
+        float m = (1-pointY) / (1-pointX);
+        result = fabs(value) * m + (1 - m);
+    }
+
+    //--- return result with same sign as input ---
+    if (value >= 0) {
+        return result;
+    } else {
+        return -result;
+    }
+}
+//function that updates a joystickData object with linear scaling applied to coordinates
+//e.g. use to use more joystick resolution for lower speeds
+void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float pointY){
+    //scale x and y coordinate
+    data->x = scaleLinPoint(data->x, pointX, pointY);
+    data->y = scaleLinPoint(data->y, pointX, pointY);
+    //re-calculate radius
+    data->radius = sqrt(pow(data->x,2) + pow(data->y,2));
+    if (data->radius > 1-0.07) {//FIXME hardcoded radius tolerance
+        data->radius = 1;
+    }
+}
+
+
 
 
 //=============================================

@@ -132,7 +132,21 @@ float scaleCoordinate(float input, float min, float max, float center, float tol
 //====== joystick_scaleCoordinatesExp =======
 //===========================================
 //function that updates a joystickData object with exponentionally scaling applied to coordinates
+//e.g. use to use more joystick resolution for lower speeds
 void joystick_scaleCoordinatesExp(joystickData_t * data, float exponent);
+
+
+
+//==============================================
+//====== joystick_scaleCoordinatesLinear =======
+//==============================================
+//function that updates a joystickData object with linear scaling applied to coordinates
+//scales coordinates with two different slopes before and after a specified point
+//slope1: for value from 0 to pointX -> scale linear from  0 to pointY
+//slope2: for value from pointX to 1 -> scale linear from pointY to 1
+//=> best to draw the lines and point in a graph
+//e.g. use to use more joystick resolution for lower speeds
+void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float pointY);
 
 
 
