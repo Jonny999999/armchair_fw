@@ -68,4 +68,6 @@ class httpJoystick{
             .radius = 0,
             .angle = 0
         };
+        //store last joystick position for position hysteresis
+        joystickPos_t stickPosPrevious = joystickPos_t::CENTER;
 };

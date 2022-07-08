@@ -96,6 +96,8 @@ class evaluatedJoystick {
         joystickData_t data;
         float x;
         float y;
+        //store last joystick position for position hysteresis
+        joystickPos_t stickPosPrevious = joystickPos_t::CENTER;
 };
 
 
@@ -154,4 +156,5 @@ void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float 
 //========= joystick_evaluatePosition =========
 //=============================================
 //function that defines and returns enum joystickPos from x and y coordinates
-joystickPos_t joystick_evaluatePosition(float x, float y);
+//joystickPos_t joystick_evaluatePosition(float x, float y);
+joystickPos_t joystick_evaluatePosition(float x, float y, joystickPos_t* prevPos);

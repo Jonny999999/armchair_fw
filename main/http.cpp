@@ -159,7 +159,7 @@ esp_err_t httpJoystick::receiveHttpData(httpd_req_t *req){
     //--- calculate angle ---
     data.angle = (atan(data.y/data.x) * 180) / 3.141;
     //--- evaluate position ---
-    data.position = joystick_evaluatePosition(data.x, data.y);
+    data.position = joystick_evaluatePosition(data.x, data.y, &stickPosPrevious);
 
     //log processed values
     ESP_LOGI(TAG, "processed values: x=%.3f  y=%.3f  radius=%.3f  angle=%.3f  pos=%s",
