@@ -93,7 +93,7 @@ joystickData_t evaluatedJoystick::getData() {
     data.angle = (atan(data.y/data.x) * 180) / 3.141;
 
     //define position
-    data.position = joystick_evaluatePosition(x, y, &stickPosPrevious);
+    data.position = joystick_evaluatePosition(x, y);
 
     return data;
 }
@@ -234,67 +234,41 @@ void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float 
 //========= joystick_evaluatePosition =========
 //=============================================
 //function that defines and returns enum joystickPos from x and y coordinates
-joystickPos_t joystick_evaluatePosition(float x, float y, joystickPos_t* prevPos){
-    joystickPos_t newPos;
+joystickPos_t joystick_evaluatePosition(float x, float y){
     //define position
     //--- center ---
     if((fabs(x) == 0) && (fabs(y) == 0)){ 
-        newPos = joystickPos_t::CENTER;
+        return joystickPos_t::CENTER;
     }
     //--- x axis ---
     else if(fabs(y) == 0){
-        newPos = joystickPos_t::X_AXIS;
+        return joystickPos_t::X_AXIS;
     }
     //--- y axis ---
     else if(fabs(x) == 0){
-        newPos = joystickPos_t::Y_AXIS;
+        return joystickPos_t::Y_AXIS;
     }
     //--- top right ---
     else if(x > 0 && y > 0){
-        newPos = joystickPos_t::TOP_RIGHT;
+        return joystickPos_t::TOP_RIGHT;
     }
     //--- top left ---
     else if(x < 0 && y > 0){
-        newPos = joystickPos_t::TOP_LEFT;
+        return joystickPos_t::TOP_LEFT;
     }
     //--- bottom left ---
     else if(x < 0 && y < 0){
-        newPos = joystickPos_t::BOTTOM_LEFT;
+        return joystickPos_t::BOTTOM_LEFT;
     }
     //--- bottom right ---
     else if(x > 0 && y < 0){
-        newPos = joystickPos_t::BOTTOM_RIGHT;
+        return joystickPos_t::BOTTOM_RIGHT;
     }
     //--- other ---
     else {
-        newPos = joystickPos_t::CENTER;
+        return joystickPos_t::CENTER;
     }
 
-
-
-    //--- apply hysteresis on change from X-AXIS ---
-    //=> prevent frequent switching between X-AXIS and other positions
-    //otherwise this results in a very jerky motor action when in driving mode
-    float xAxisHyst = 0.2;
-
-    //change in position
-    if (newPos != *prevPos) {
-
-        //switched FROM x-axis to other position
-        if(*prevPos == joystickPos_t::X_AXIS) { //switch FROM X_AXIS
-
-            //verify coordinate changed more than hysteresis
-            if (fabs(y) < xAxisHyst) { //less offset than hysteresis
-                newPos = joystickPos_t::X_AXIS; //stay at X_AXIS position
-            } else { //switch is valid (enough change)
-                *prevPos = newPos;
-            }
-
-        } else { //switched to any other position
-                *prevPos = newPos;
-        }
-    }
-    return newPos;
 }
 
 
