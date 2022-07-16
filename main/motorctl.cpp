@@ -46,9 +46,16 @@ void controlledMotor::handle(){
     }
 
     //--- calculate increment ---
-    //calculate increment with passed time since last run and configured fade time
+    //calculate increment for fading UP with passed time since last run and configured fade time
     int64_t usPassed = esp_timer_get_time() - timestampLastRunUs;
-    dutyIncrement = ( usPassed / ((float)config.msFade * 1000) ) * 100; //TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    dutyIncrementUp = ( usPassed / ((float)config.msFadeUp * 1000) ) * 100; //TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    //calculate increment for fading DOWN with passed time since last run and configured fade time
+    if (config.msFadeDown > 0){
+        dutyIncrementDown = ( usPassed / ((float)config.msFadeDown * 1000) ) * 100; 
+    } else {
+        dutyIncrementDown = 100;
+    }
+
 
     //--- calculate difference ---
     dutyDelta = dutyTarget - dutyNow;
@@ -56,14 +63,24 @@ void controlledMotor::handle(){
     //negative: need to decrease
 
     //--- fade up ---
-    if(dutyDelta > dutyIncrement){ //target duty his higher than current duty -> fade up
-        ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrement, (int)usPassed);
-        dutyNow += dutyIncrement; //increase duty by increment
+    if(dutyDelta > dutyIncrementUp){ //target duty his higher than current duty -> fade up
+        ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementUp, (int)usPassed);
+        dutyNow += dutyIncrementUp; //increase duty by increment
 
     //--- set lower ---
-    } else { //target duty is lower than current duty -> immediately set to target
-        ESP_LOGV(TAG, "*setting to target*: target=%.2f%% - previous=%.2f%% ", dutyTarget, dutyNow);
-        dutyNow = dutyTarget; //set target duty
+    //} else { //target duty is lower than current duty -> immediately set to target
+    //    ESP_LOGV(TAG, "*setting to target*: target=%.2f%% - previous=%.2f%% ", dutyTarget, dutyNow);
+    //    dutyNow = dutyTarget; //set target duty
+    //}
+    
+    //--- fade down ---
+    } else { //target duty is lower than current duty -> fade down
+        ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementDown, (int)usPassed);
+        if (dutyTarget < dutyIncrementDown){ //immediately set to target when closer than increment (avoid negative duty)
+            dutyNow = dutyTarget;
+        } else {
+            dutyNow -= dutyIncrementDown; //decrease duty by increment
+        }
     }
 
     //--- apply to motor ---
