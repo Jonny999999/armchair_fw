@@ -43,12 +43,28 @@ void controlledMotor::handle(){
         ESP_LOGD(TAG, "Read command from queue: state=%s, duty=%.2f", motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
         dutyTarget = commandReceive.duty;
+
+        //--- convert duty ---
+        //define target duty (-100 to 100) from provided duty and motorstate
+        switch(commandReceive.state){
+            case motorstate_t::BRAKE:
+            case motorstate_t::IDLE:
+                dutyTarget = 0;
+                break;
+            case motorstate_t::FWD:
+                dutyTarget = fabs(commandReceive.duty);
+                break;
+            case motorstate_t::REV:
+                dutyTarget = - fabs(commandReceive.duty);
+                break;
+        }
     }
 
     //--- calculate increment ---
     //calculate increment for fading UP with passed time since last run and configured fade time
     int64_t usPassed = esp_timer_get_time() - timestampLastRunUs;
     dutyIncrementUp = ( usPassed / ((float)config.msFadeUp * 1000) ) * 100; //TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+
     //calculate increment for fading DOWN with passed time since last run and configured fade time
     if (config.msFadeDown > 0){
         dutyIncrementDown = ( usPassed / ((float)config.msFadeDown * 1000) ) * 100; 
@@ -72,7 +88,7 @@ void controlledMotor::handle(){
     //    ESP_LOGV(TAG, "*setting to target*: target=%.2f%% - previous=%.2f%% ", dutyTarget, dutyNow);
     //    dutyNow = dutyTarget; //set target duty
     //}
-    
+
     //--- fade down ---
     } else { //target duty is lower than current duty -> fade down
         ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementDown, (int)usPassed);
@@ -82,11 +98,25 @@ void controlledMotor::handle(){
             dutyNow -= dutyIncrementDown; //decrease duty by increment
         }
     }
-
+    
     //--- apply to motor ---
+    //convert duty -100 to 100 back to motorstate and duty 0-100
     //apply target duty and state to motor driver
-    motor.set(state, dutyNow);
-
+    //forward
+    if(dutyNow > 0){
+        motor.set(motorstate_t::FWD, dutyNow);
+    }
+    //reverse
+    else if (dutyNow < 0){
+        motor.set(motorstate_t::REV, fabs(dutyNow));
+    }
+    //idle
+    //TODO: add BRAKE case!!!
+    else {
+        motor.set(motorstate_t::IDLE, 0);
+    }
+    
+    
     //--- update timestamp ---
     timestampLastRunUs = esp_timer_get_time(); //update timestamp last run with current timestamp in microseconds
 
