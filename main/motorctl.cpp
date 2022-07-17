@@ -46,8 +46,13 @@ void controlledMotor::handle(){
 
         //--- convert duty ---
         //define target duty (-100 to 100) from provided duty and motorstate
+        //this value is more suitable for the fading algorithm
         switch(commandReceive.state){
             case motorstate_t::BRAKE:
+                //update state
+                state = motorstate_t::BRAKE;
+                dutyTarget = 0;
+                break;
             case motorstate_t::IDLE:
                 dutyTarget = 0;
                 break;
@@ -72,6 +77,16 @@ void controlledMotor::handle(){
         dutyIncrementDown = 100;
     }
 
+    
+    //--- BRAKE ---
+    //brake immediately, update state, duty and exit this cycle of handle function
+    if (state == motorstate_t::BRAKE){
+                motor.set(motorstate_t::BRAKE, 0);
+                dutyNow = 0;
+                return; //no need to run the fade algorithm
+    }
+
+
 
     //--- calculate difference ---
     dutyDelta = dutyTarget - dutyNow;
@@ -79,42 +94,45 @@ void controlledMotor::handle(){
     //negative: need to decrease
 
     //--- fade up ---
-    if(dutyDelta > dutyIncrementUp){ //target duty his higher than current duty -> fade up
+    //dutyDelta is higher than IncrementUp -> fade up
+    if(dutyDelta > dutyIncrementUp){
         ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementUp, (int)usPassed);
         dutyNow += dutyIncrementUp; //increase duty by increment
-
-    //--- set lower ---
-    //} else { //target duty is lower than current duty -> immediately set to target
-    //    ESP_LOGV(TAG, "*setting to target*: target=%.2f%% - previous=%.2f%% ", dutyTarget, dutyNow);
-    //    dutyNow = dutyTarget; //set target duty
-    //}
+    }
 
     //--- fade down ---
-    } else { //target duty is lower than current duty -> fade down
-        ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementDown, (int)usPassed);
-        if (dutyTarget < dutyIncrementDown){ //immediately set to target when closer than increment (avoid negative duty)
-            dutyNow = dutyTarget;
-        } else {
-            dutyNow -= dutyIncrementDown; //decrease duty by increment
-        }
+    //dutyDelta is more negative than -IncrementDown -> fade down
+    else if (dutyDelta < -dutyIncrementDown){
+        ESP_LOGV(TAG, "*fading down*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementDown, (int)usPassed);
+        dutyNow -= dutyIncrementDown; //decrease duty by increment
+    }
+
+    //--- set to target ---
+    //duty is already very close to target (closer than IncrementUp or IncrementDown)
+    else{ 
+        //immediately set to target duty
+        dutyNow = dutyTarget;
     }
     
-    //--- apply to motor ---
-    //convert duty -100 to 100 back to motorstate and duty 0-100
+
+    //define motorstate from converted duty -100 to 100
     //apply target duty and state to motor driver
     //forward
     if(dutyNow > 0){
-        motor.set(motorstate_t::FWD, dutyNow);
+        state = motorstate_t::FWD;
     }
     //reverse
     else if (dutyNow < 0){
-        motor.set(motorstate_t::REV, fabs(dutyNow));
+        state = motorstate_t::REV;
     }
     //idle
-    //TODO: add BRAKE case!!!
     else {
-        motor.set(motorstate_t::IDLE, 0);
+        state = motorstate_t::IDLE;
     }
+
+    //--- apply to motor ---
+    motor.set(state, fabs(dutyNow));
+    //note: BRAKE state is handled earlier
     
     
     //--- update timestamp ---
