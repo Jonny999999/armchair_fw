@@ -30,8 +30,8 @@ typedef struct motorCommands_t {
 
 //struct with all config parameters for a motor regarding ramp and current limit
 typedef struct motorctl_config_t {
-    uint32_t msFadeUp; //acceleration of the motor (ms it should take from 0% to 100%)
-    uint32_t msFadeDown; //acceleration of the motor (ms it should take from 100% to 0%)
+    uint32_t msFadeAccel; //acceleration of the motor (ms it takes from 0% to 100%)
+    uint32_t msFadeDecel; //deceleration of the motor (ms it takes from 100% to 0%)
     float currentMax;
 } motorctl_config_t;
 
@@ -68,8 +68,8 @@ class controlledMotor {
 
         float dutyTarget;
         float dutyNow;
-        float dutyIncrementUp;
-        float dutyIncrementDown;
+        float dutyIncrementAccel;
+        float dutyIncrementDecel;
         float dutyDelta;
 
         uint32_t ramp;
