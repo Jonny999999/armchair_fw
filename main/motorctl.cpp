@@ -122,14 +122,13 @@ void controlledMotor::handle(){
         if (dutyNow < 0) { //reverse, decelerating
             fade(&dutyNow, dutyTarget, dutyIncrementDecel);
         }
-        else if (dutyNow > 0) { //forward, accelerating
+        else if (dutyNow >= 0) { //forward, accelerating
             fade(&dutyNow, dutyTarget, dutyIncrementAccel);
         }
     }
     else if (dutyDelta < 0) { //difference negative -> decreasing duty (100 -> -100)
-        if (dutyNow < 0) { //reverse, accelerating
+        if (dutyNow <= 0) { //reverse, accelerating
             fade(&dutyNow, dutyTarget, - dutyIncrementAccel);
-
         }
         else if (&dutyNow > 0) { //forward, decelerating
             fade(&dutyNow, dutyTarget, - dutyIncrementDecel);
