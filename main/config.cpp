@@ -29,7 +29,8 @@ single100a_config_t configDriverRight = {
 
 //--- configure motor contol ---
 motorctl_config_t configMotorControl = {
-    .msFade = 900,
+    .msFadeAccel = 1300, //acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 800, //deceleration of the motor (ms it takes from 100% to 0%)
     .currentMax = 10
 };
 

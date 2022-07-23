@@ -11,6 +11,9 @@ static const char * TAG = "motor-control";
 controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control): motor(config_driver) {
     //copy parameters for controlling the motor
     config = config_control;
+    //copy configured default fading durations to actually used variables
+    msFadeAccel = config.msFadeAccel;
+    msFadeDecel = config.msFadeDecel;
 
     init();
     //TODO: add currentsensor object here
@@ -23,6 +26,26 @@ controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_co
 //============================
 void controlledMotor::init(){
     commandQueue = xQueueCreate( 1, sizeof( struct motorCommand_t ) );
+}
+
+
+
+//----------------
+//----- fade -----
+//----------------
+//local function that fades a variable
+//- increments a variable (pointer) by given value
+//- sets to target if already closer than increment
+//TODO this needs testing
+void fade(float * dutyNow, float dutyTarget, float dutyIncrement){
+    float dutyDelta = dutyTarget - *dutyNow; 
+    if ( fabs(dutyDelta) > fabs(dutyIncrement) ) { //check if already close to target
+        *dutyNow = *dutyNow + dutyIncrement;
+    }
+    //already closer to target than increment
+    else {
+        *dutyNow = dutyTarget;
+    }
 }
 
 
@@ -43,33 +66,129 @@ void controlledMotor::handle(){
         ESP_LOGD(TAG, "Read command from queue: state=%s, duty=%.2f", motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
         dutyTarget = commandReceive.duty;
+
+        //--- convert duty ---
+        //define target duty (-100 to 100) from provided duty and motorstate
+        //this value is more suitable for the fading algorithm
+        switch(commandReceive.state){
+            case motorstate_t::BRAKE:
+                //update state
+                state = motorstate_t::BRAKE;
+                dutyTarget = 0;
+                break;
+            case motorstate_t::IDLE:
+                dutyTarget = 0;
+                break;
+            case motorstate_t::FWD:
+                dutyTarget = fabs(commandReceive.duty);
+                break;
+            case motorstate_t::REV:
+                dutyTarget = - fabs(commandReceive.duty);
+                break;
+        }
     }
 
+
     //--- calculate increment ---
-    //calculate increment with passed time since last run and configured fade time
+    //calculate increment for fading UP with passed time since last run and configured fade time
     int64_t usPassed = esp_timer_get_time() - timestampLastRunUs;
-    dutyIncrement = ( usPassed / ((float)config.msFade * 1000) ) * 100; //TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    if (msFadeAccel > 0){
+    dutyIncrementAccel = ( usPassed / ((float)msFadeAccel * 1000) ) * 100; //TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    } else {
+        dutyIncrementAccel = 100;
+    }
+
+    //calculate increment for fading DOWN with passed time since last run and configured fade time
+    if (msFadeDecel > 0){
+        dutyIncrementDecel = ( usPassed / ((float)msFadeDecel * 1000) ) * 100; 
+    } else {
+        dutyIncrementDecel = 100;
+    }
+
+    
+    //--- BRAKE ---
+    //brake immediately, update state, duty and exit this cycle of handle function
+    if (state == motorstate_t::BRAKE){
+                motor.set(motorstate_t::BRAKE, 0);
+                dutyNow = 0;
+                return; //no need to run the fade algorithm
+    }
+
+
 
     //--- calculate difference ---
     dutyDelta = dutyTarget - dutyNow;
     //positive: need to increase by that value
     //negative: need to decrease
 
-    //--- fade up ---
-    if(dutyDelta > dutyIncrement){ //target duty his higher than current duty -> fade up
-        ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrement, (int)usPassed);
-        dutyNow += dutyIncrement; //increase duty by increment
 
-    //--- set lower ---
-    } else { //target duty is lower than current duty -> immediately set to target
-        ESP_LOGV(TAG, "*setting to target*: target=%.2f%% - previous=%.2f%% ", dutyTarget, dutyNow);
-        dutyNow = dutyTarget; //set target duty
+
+    //--- fade duty to target (up and down) ---
+    //TODO: this needs optimization (can be more clear and/or simpler)
+    if (dutyDelta > 0) { //difference positive -> increasing duty (-100 -> 100)
+        if (dutyNow < 0) { //reverse, decelerating
+            fade(&dutyNow, dutyTarget, dutyIncrementDecel);
+        }
+        else if (dutyNow >= 0) { //forward, accelerating
+            fade(&dutyNow, dutyTarget, dutyIncrementAccel);
+        }
+    }
+    else if (dutyDelta < 0) { //difference negative -> decreasing duty (100 -> -100)
+        if (dutyNow <= 0) { //reverse, accelerating
+            fade(&dutyNow, dutyTarget, - dutyIncrementAccel);
+        }
+        else if (dutyNow > 0) { //forward, decelerating
+            fade(&dutyNow, dutyTarget, - dutyIncrementDecel);
+        }
+    }
+
+
+
+    //previous approach: (resulted in bug where accel/decel fade is swaped in reverse)
+//    //--- fade up ---
+//    //dutyDelta is higher than IncrementUp -> fade up
+//    if(dutyDelta > dutyIncrementUp){
+//        ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementUp, (int)usPassed);
+//        dutyNow += dutyIncrementUp; //increase duty by increment
+//    }
+//
+//    //--- fade down ---
+//    //dutyDelta is more negative than -IncrementDown -> fade down
+//    else if (dutyDelta < -dutyIncrementDown){
+//        ESP_LOGV(TAG, "*fading down*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementDown, (int)usPassed);
+//
+//        dutyNow -= dutyIncrementDown; //decrease duty by increment
+//    }
+//
+//    //--- set to target ---
+//    //duty is already very close to target (closer than IncrementUp or IncrementDown)
+//    else{ 
+//        //immediately set to target duty
+//        dutyNow = dutyTarget;
+//    }
+    
+
+
+    //define motorstate from converted duty -100 to 100
+    //apply target duty and state to motor driver
+    //forward
+    if(dutyNow > 0){
+        state = motorstate_t::FWD;
+    }
+    //reverse
+    else if (dutyNow < 0){
+        state = motorstate_t::REV;
+    }
+    //idle
+    else {
+        state = motorstate_t::IDLE;
     }
 
     //--- apply to motor ---
-    //apply target duty and state to motor driver
-    motor.set(state, dutyNow);
-
+    motor.set(state, fabs(dutyNow));
+    //note: BRAKE state is handled earlier
+    
+    
     //--- update timestamp ---
     timestampLastRunUs = esp_timer_get_time(); //update timestamp last run with current timestamp in microseconds
 
@@ -109,4 +228,77 @@ motorCommand_t controlledMotor::getStatus(){
     //TODO: mutex
     return status;
 };
+
+
+
+//===============================
+//=========== setFade ===========
+//===============================
+//function for editing or enabling the fading/ramp of the motor control
+
+//set/update fading duration/amount
+void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew){
+    //TODO: mutex for msFade variable also used in handle function
+    switch(fadeType){
+        case fadeType_t::ACCEL:
+            msFadeAccel = msFadeNew; 
+            break;
+        case fadeType_t::DECEL:
+            msFadeDecel = msFadeNew;
+            break;
+    }
+}
+
+
+//enable (set to default value) or disable fading
+void controlledMotor::setFade(fadeType_t fadeType, bool enabled){
+    uint32_t msFadeNew = 0; //define new fade time as default disabled
+    if(enabled){ //enable
+        //set to default/configured value
+        switch(fadeType){
+            case fadeType_t::ACCEL:
+                msFadeNew = config.msFadeAccel;
+                break;
+            case fadeType_t::DECEL:
+                msFadeNew = config.msFadeDecel;
+                break;
+        }
+    }
+    //apply new Fade value
+    setFade(fadeType, msFadeNew); 
+}
+
+
+
+//==================================
+//=========== toggleFade ===========
+//==================================
+//toggle fading between OFF and default value
+bool controlledMotor::toggleFade(fadeType_t fadeType){
+    uint32_t msFadeNew = 0;
+    bool enabled = false;
+    switch(fadeType){
+        case fadeType_t::ACCEL:
+            if (msFadeAccel == 0){
+                msFadeNew = config.msFadeAccel;
+                enabled = true;
+            } else {
+                msFadeNew = 0;
+            }
+            break;
+        case fadeType_t::DECEL:
+            if (msFadeDecel == 0){
+                msFadeNew = config.msFadeAccel;
+                enabled = true;
+            } else {
+                msFadeNew = 0;
+            }
+            break;
+    }
+    //apply new Fade value
+    setFade(fadeType, msFadeNew); 
+
+    //return new state (fading enabled/disabled)
+    return enabled;
+}
 
