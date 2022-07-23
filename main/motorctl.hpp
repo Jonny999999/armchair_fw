@@ -13,7 +13,7 @@ extern "C"
 
 
 //-------------------------------------
-//-------- struct  declarations -------
+//-------- struct/type  declarations -------
 //-------------------------------------
 
 //struct for sending command for one motor in the queue
@@ -35,6 +35,10 @@ typedef struct motorctl_config_t {
     float currentMax;
 } motorctl_config_t;
 
+//enum fade type (acceleration, deceleration)
+//e.g. used for specifying which fading should be modified with setFade, togleFade functions
+enum class fadeType_t {ACCEL, DECEL};
+
 
 
 class controlledMotor {
@@ -44,6 +48,10 @@ class controlledMotor {
         void handle(); //controls motor duty with fade and current limiting feature (has to be run frequently by another task)
         void setTarget(motorstate_t state_f, float duty_f = 0); //adds target command to queue for handle function
         motorCommand_t getStatus(); //get current status of the motor (returns struct with state and duty)
+
+        void setFade(fadeType_t fadeType, bool enabled); //enable/disable acceleration or deceleration fading
+        void setFade(fadeType_t fadeType, uint32_t msFadeNew); //set acceleration or deceleration fade time
+        bool toggleFade(fadeType_t fadeType); //toggle acceleration or deceleration on/off
 
 
     private:
@@ -60,7 +68,7 @@ class controlledMotor {
         //--- variables ---
         //struct for storing control specific parameters
         motorctl_config_t config;
-
+        
         motorstate_t state = motorstate_t::IDLE;
 
         float currentMax;
@@ -72,12 +80,13 @@ class controlledMotor {
         float dutyIncrementDecel;
         float dutyDelta;
 
+        uint32_t msFadeAccel;
+        uint32_t msFadeDecel;
+
         uint32_t ramp;
         int64_t timestampLastRunUs;
 
         struct motorCommand_t commandReceive = {};
         struct motorCommand_t commandSend = {};
-
-
 
 };

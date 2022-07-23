@@ -11,6 +11,9 @@ static const char * TAG = "motor-control";
 controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control): motor(config_driver) {
     //copy parameters for controlling the motor
     config = config_control;
+    //copy configured default fading durations to actually used variables
+    msFadeAccel = config.msFadeAccel;
+    msFadeDecel = config.msFadeDecel;
 
     init();
     //TODO: add currentsensor object here
@@ -89,11 +92,15 @@ void controlledMotor::handle(){
     //--- calculate increment ---
     //calculate increment for fading UP with passed time since last run and configured fade time
     int64_t usPassed = esp_timer_get_time() - timestampLastRunUs;
-    dutyIncrementAccel = ( usPassed / ((float)config.msFadeAccel * 1000) ) * 100; //TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    if (msFadeAccel > 0){
+    dutyIncrementAccel = ( usPassed / ((float)msFadeAccel * 1000) ) * 100; //TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    } else {
+        dutyIncrementAccel = 100;
+    }
 
     //calculate increment for fading DOWN with passed time since last run and configured fade time
-    if (config.msFadeDecel > 0){
-        dutyIncrementDecel = ( usPassed / ((float)config.msFadeDecel * 1000) ) * 100; 
+    if (msFadeDecel > 0){
+        dutyIncrementDecel = ( usPassed / ((float)msFadeDecel * 1000) ) * 100; 
     } else {
         dutyIncrementDecel = 100;
     }
@@ -130,7 +137,7 @@ void controlledMotor::handle(){
         if (dutyNow <= 0) { //reverse, accelerating
             fade(&dutyNow, dutyTarget, - dutyIncrementAccel);
         }
-        else if (&dutyNow > 0) { //forward, decelerating
+        else if (dutyNow > 0) { //forward, decelerating
             fade(&dutyNow, dutyTarget, - dutyIncrementDecel);
         }
     }
@@ -221,4 +228,77 @@ motorCommand_t controlledMotor::getStatus(){
     //TODO: mutex
     return status;
 };
+
+
+
+//===============================
+//=========== setFade ===========
+//===============================
+//function for editing or enabling the fading/ramp of the motor control
+
+//set/update fading duration/amount
+void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew){
+    //TODO: mutex for msFade variable also used in handle function
+    switch(fadeType){
+        case fadeType_t::ACCEL:
+            msFadeAccel = msFadeNew; 
+            break;
+        case fadeType_t::DECEL:
+            msFadeDecel = msFadeNew;
+            break;
+    }
+}
+
+
+//enable (set to default value) or disable fading
+void controlledMotor::setFade(fadeType_t fadeType, bool enabled){
+    uint32_t msFadeNew = 0; //define new fade time as default disabled
+    if(enabled){ //enable
+        //set to default/configured value
+        switch(fadeType){
+            case fadeType_t::ACCEL:
+                msFadeNew = config.msFadeAccel;
+                break;
+            case fadeType_t::DECEL:
+                msFadeNew = config.msFadeDecel;
+                break;
+        }
+    }
+    //apply new Fade value
+    setFade(fadeType, msFadeNew); 
+}
+
+
+
+//==================================
+//=========== toggleFade ===========
+//==================================
+//toggle fading between OFF and default value
+bool controlledMotor::toggleFade(fadeType_t fadeType){
+    uint32_t msFadeNew = 0;
+    bool enabled = false;
+    switch(fadeType){
+        case fadeType_t::ACCEL:
+            if (msFadeAccel == 0){
+                msFadeNew = config.msFadeAccel;
+                enabled = true;
+            } else {
+                msFadeNew = 0;
+            }
+            break;
+        case fadeType_t::DECEL:
+            if (msFadeDecel == 0){
+                msFadeNew = config.msFadeAccel;
+                enabled = true;
+            } else {
+                msFadeNew = 0;
+            }
+            break;
+    }
+    //apply new Fade value
+    setFade(fadeType, msFadeNew); 
+
+    //return new state (fading enabled/disabled)
+    return enabled;
+}
 
