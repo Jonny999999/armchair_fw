@@ -259,7 +259,6 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             ESP_LOGI(TAG, "disabling http server...");
             http_stop_server();
 
-
             //FIXME: make wifi function work here - currently starting wifi at startup (see notes main.cpp)
             //stop wifi
             //TODO: decide whether ap or client is currently used - which has to be disabled?
@@ -267,6 +266,17 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             //wifi_deinit_client();
             //wifi_deinit_ap();
             ESP_LOGI(TAG, "done stopping http mode");
+            break;
+
+        case controlMode_t::MASSAGE:
+            ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading");
+            //TODO: fix issue when downfading was disabled before switching to massage mode - currently it gets enabled again here...
+            //enable downfading (set to default value)
+            motorLeft->setFade(fadeType_t::DECEL, true);
+            motorRight->setFade(fadeType_t::DECEL, true);
+            //set upfading to default value
+            motorLeft->setFade(fadeType_t::ACCEL, true);
+            motorRight->setFade(fadeType_t::ACCEL, true);
             break;
     }
 
@@ -300,6 +310,19 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             http_init_server();
             ESP_LOGI(TAG, "done initializing http mode");
             break;
+
+        case controlMode_t::MASSAGE:
+            ESP_LOGW(TAG, "switching to MASSAGE mode -> reducing fading");
+            uint32_t shake_msFadeAccel = 400; //TODO: move this to config
+
+            //disable downfading (max. deceleration)
+            motorLeft->setFade(fadeType_t::DECEL, false);
+            motorRight->setFade(fadeType_t::DECEL, false);
+            //reduce upfading (increase acceleration)
+            motorLeft->setFade(fadeType_t::ACCEL, shake_msFadeAccel);
+            motorRight->setFade(fadeType_t::ACCEL, shake_msFadeAccel);
+            break;
+
     }
 
     //--- update mode to new mode ---
