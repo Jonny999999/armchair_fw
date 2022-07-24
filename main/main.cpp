@@ -75,7 +75,7 @@ void task_control( void * pvParameters ){
 void task_button( void * pvParameters ){
     ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
     //create button instance
-    buttonCommands commandButton(&buttonJoystick, &control, &buzzer);
+    buttonCommands commandButton(&buttonJoystick, &control, &buzzer, &motorLeft, &motorRight);
     //start handle loop
     commandButton.startHandleLoop();
 }

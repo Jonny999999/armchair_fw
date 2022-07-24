@@ -27,6 +27,7 @@ controlledArmchair::controlledArmchair (
         buzzer_t * buzzer_f,
         controlledMotor* motorLeft_f,
         controlledMotor* motorRight_f,
+        evaluatedJoystick* joystick_f,
         httpJoystick* httpJoystick_f
         ){
 
@@ -36,6 +37,7 @@ controlledArmchair::controlledArmchair (
     buzzer = buzzer_f;
     motorLeft = motorLeft_f;
     motorRight = motorRight_f;
+    joystick_l = joystick_f,
     httpJoystickMain_l = httpJoystick_f;
     //set default mode from config
     modePrevious = config.defaultMode;
@@ -68,10 +70,13 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::JOYSTICK:
+                //get current joystick data with getData method of evaluatedJoystick
+                stickData = joystick_l->getData();
+                //additionaly scale coordinates (more detail in slower area)
+                joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.35); //TODO: add scaling parameters to config
                 //generate motor commands
-                //pass joystick data from getData method of evaluatedJoystick to generateCommandsDriving function
-                commands = joystick_generateCommandsDriving(joystick.getData());
-                //TODO: pass pointer to joystick object to control class instead of accessing it directly globally
+                commands = joystick_generateCommandsDriving(stickData);
+                //apply motor commands
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
@@ -79,24 +84,26 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::MASSAGE:
-                motorRight->setTarget(motorstate_t::IDLE, 0); 
-                motorLeft->setTarget(motorstate_t::IDLE, 0); 
-                //TODO add actual command generation here
+                //generate motor commands
+                //pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
+                commands = joystick_generateCommandsShaking(joystick_l->getData());
+                //apply motor commands
+                motorRight->setTarget(commands.right.state, commands.right.duty); 
+                motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 vTaskDelay(20 / portTICK_PERIOD_MS);
                 break;
 
             case controlMode_t::HTTP:
-                //create emptry struct for receiving data from http function
-                joystickData_t dataRead = { };
-
                 //--- get joystick data from queue ---
                 //Note this function waits several seconds (httpconfig.timeoutMs) for data to arrive, otherwise Center data or NULL is returned
                 //TODO: as described above, when changing modes it might delay a few seconds for the change to apply
-                dataRead = httpJoystickMain_l->getData();
+                stickData = httpJoystickMain_l->getData();
+                //scale coordinates additionally (more detail in slower area)
+                joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.4); //TODO: add scaling parameters to config
+                ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
                 //--- generate motor commands ---
-                ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
                 //Note: timeout (no data received) is handled in getData method
-                commands = joystick_generateCommandsDriving(dataRead);
+                commands = joystick_generateCommandsDriving(stickData);
 
                 //--- apply commands to motors ---
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
@@ -162,11 +169,11 @@ void controlledArmchair::handleTimeout(){
         if (validateActivity(dutyLeft_lastActivity, dutyLeftNow, inactivityTolerance) 
                 || validateActivity(dutyRight_lastActivity, dutyRightNow, inactivityTolerance)
            ){
-            ESP_LOGD(TAG, "timeout check: detected [activity] since last check -> reset");
+            ESP_LOGD(TAG, "timeout check: [activity] detected since last check -> reset");
             //reset last duty and timestamp
-            timestamp_lastActivity = esp_log_timestamp(); 
             dutyLeft_lastActivity = dutyLeftNow;
             dutyRight_lastActivity = dutyRightNow;
+            resetTimeout();
         }
         //no activity on any motor and msTimeout exceeded
         else if (esp_log_timestamp() - timestamp_lastActivity > config.timeoutMs){
@@ -175,7 +182,7 @@ void controlledArmchair::handleTimeout(){
             toggleIdle();
         }
         else {
-            ESP_LOGD(TAG, "timeout check: [inactive], last activity %.1f seconds ago", (float)(esp_log_timestamp() - timestamp_lastActivity)/1000);
+            ESP_LOGD(TAG, "timeout check: [inactive], last activity %.1f s ago, timeout after %d s", (float)(esp_log_timestamp() - timestamp_lastActivity)/1000, config.timeoutMs/1000);
         }
     }
 }

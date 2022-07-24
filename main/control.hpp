@@ -38,6 +38,7 @@ class controlledArmchair {
                 buzzer_t* buzzer_f,
                 controlledMotor* motorLeft_f,
                 controlledMotor* motorRight_f,
+                evaluatedJoystick* joystick_f,
                 httpJoystick* httpJoystick_f
                 );
 
@@ -68,12 +69,16 @@ class controlledArmchair {
         controlledMotor* motorLeft;
         controlledMotor* motorRight;
         httpJoystick* httpJoystickMain_l;
+        evaluatedJoystick* joystick_l;
 
         //---variables ---
         //struct for motor commands returned by generate functions of each mode
         motorCommands_t commands;
         //struct with config parameters
         control_config_t config;
+
+        //store joystick data
+        joystickData_t stickData;
 
         //variables for http mode
         uint32_t http_timestamp_lastData = 0;

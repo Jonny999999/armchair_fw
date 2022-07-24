@@ -29,7 +29,8 @@ single100a_config_t configDriverRight = {
 
 //--- configure motor contol ---
 motorctl_config_t configMotorControl = {
-    .msFade = 900,
+    .msFadeAccel = 1300, //acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 800, //deceleration of the motor (ms it takes from 100% to 0%)
     .currentMax = 10
 };
 
@@ -57,10 +58,10 @@ control_config_t configControl = {
 //----- httpJoystick config -----
 //-------------------------------
 httpJoystick_config_t configHttpJoystickMain{
-    .toleranceZeroX_Per = 3,  //percentage around joystick axis the coordinate snaps to 0
-    .toleranceZeroY_Per = 10,
+    .toleranceZeroX_Per = 1,  //percentage around joystick axis the coordinate snaps to 0
+    .toleranceZeroY_Per = 6,
     .toleranceEndPer = 2,   //percentage before joystick end the coordinate snaps to 1/-1
-    .timeoutMs = 3000       //time no new data was received before the motors get turned off
+    .timeoutMs = 2500       //time no new data was received before the motors get turned off
 };
 
 
@@ -72,8 +73,8 @@ joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
     //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
-    .tolerance_zeroX_per = 7,
-    .tolerance_zeroY_per = 3,
+    .tolerance_zeroX_per = 3,
+    .tolerance_zeroY_per = 7,
     //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
     .tolerance_end_per = 5, 
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
@@ -123,7 +124,7 @@ buzzer_t buzzer(GPIO_NUM_12, 100);
 httpJoystick httpJoystickMain(configHttpJoystickMain);
 
 //create global control object
-controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &httpJoystickMain);
+controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &joystick, &httpJoystickMain);
 
 
 

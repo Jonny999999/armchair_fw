@@ -19,11 +19,13 @@ static const char * TAG = "button";
 //-----------------------------
 //-------- constructor --------
 //-----------------------------
-buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, controlledArmchair * control_f, buzzer_t * buzzer_f ){
+buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, controlledArmchair * control_f, buzzer_t * buzzer_f, controlledMotor * motorLeft_f, controlledMotor * motorRight_f){
     //copy object pointers
     button = button_f;
     control = control_f;
     buzzer = buzzer_f;
+    motorLeft = motorLeft_f;
+    motorRight = motorRight_f;
     //TODO declare / configure evaluatedSwitch here instead of config (unnecessary that button object is globally available - only used here)?
 }
 
@@ -63,6 +65,19 @@ void buttonCommands::action (uint8_t count){
             ESP_LOGW(TAG, "cmd %d: toggle between MASSAGE and JOYSTICK", count);
             control->toggleModes(controlMode_t::MASSAGE, controlMode_t::JOYSTICK); //toggle between MASSAGE and JOYSTICK mode
             break;
+
+        case 8:
+            //toggle deceleration fading between on and off
+            bool decelEnabled = motorLeft->toggleFade(fadeType_t::DECEL);
+            motorRight->toggleFade(fadeType_t::DECEL);
+            ESP_LOGW(TAG, "cmd %d: toggle deceleration fading to: %d", count, (int)decelEnabled);
+            if (decelEnabled){
+                buzzer->beep(3, 60, 50);
+            } else {
+                buzzer->beep(1, 1000, 1);
+            }
+
+
     }
 }
 
