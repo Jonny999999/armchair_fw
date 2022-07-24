@@ -61,6 +61,7 @@ void controlledArmchair::startHandleLoop() {
                 mode = controlMode_t::IDLE;
                 break;
 
+
             case controlMode_t::IDLE:
                 //copy preset commands for idling both motors
                 commands = cmds_bothMotorsIdle;
@@ -69,7 +70,9 @@ void controlledArmchair::startHandleLoop() {
                 vTaskDelay(200 / portTICK_PERIOD_MS);
                 break;
 
+
             case controlMode_t::JOYSTICK:
+                vTaskDelay(20 / portTICK_PERIOD_MS);
                 //get current joystick data with getData method of evaluatedJoystick
                 stickData = joystick_l->getData();
                 //additionaly scale coordinates (more detail in slower area)
@@ -80,18 +83,38 @@ void controlledArmchair::startHandleLoop() {
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
-                vTaskDelay(20 / portTICK_PERIOD_MS);
+
+                //--- button event ---
+                if (buttonEvent){
+                    joystick_l->defineCenter();
+                    buzzer->beep(2, 200, 100);
+                }
                 break;
 
+
             case controlMode_t::MASSAGE:
-                //generate motor commands
+                vTaskDelay(20 / portTICK_PERIOD_MS);
+                //--- read joystick ---
+                //only update joystick data when input not frozen
+                if (!freezeInput){
+                    stickData = joystick_l->getData();
+                }
+
+                //--- generate motor commands ---
                 //pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
-                commands = joystick_generateCommandsShaking(joystick_l->getData());
+                commands = joystick_generateCommandsShaking(stickData);
                 //apply motor commands
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
-                vTaskDelay(20 / portTICK_PERIOD_MS);
+
+                //--- button event ---
+                if (buttonEvent){
+                    //toggle freeze of input (lock joystick at current values)
+                    freezeInput = !freezeInput;
+                    buzzer->beep(2, 200, 100);
+                }
                 break;
+
 
             case controlMode_t::HTTP:
                 //--- get joystick data from queue ---
@@ -111,7 +134,15 @@ void controlledArmchair::startHandleLoop() {
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                break;
 
+
               //  //TODO: add other modes here
+        }
+
+        //--- reset button event --- (only one run of handle loop)
+        //TODO: what if variable gets set durin above code? -> mutex around entire handle loop
+        if (buttonEvent == true){
+            ESP_LOGI(TAG, "resetting button event");
+            buttonEvent = false;
         }
 
 
@@ -143,9 +174,23 @@ void controlledArmchair::resetTimeout(){
 
 
 //------------------------------------
+//--------- sendButtonEvent ----------
+//------------------------------------
+void controlledArmchair::sendButtonEvent(uint8_t count){
+    //TODO mutex - if not replaced with queue
+    ESP_LOGI(TAG, "setting button event");
+    buttonEvent = true;
+    buttonCount = count;
+}
+
+
+
+//------------------------------------
 //---------- handleTimeout -----------
 //------------------------------------
-float inactivityTolerance = 10; //percentage the duty can vary since last timeout check and still counts as incative
+//percentage the duty can vary since last timeout check and still counts as incative 
+//TODO: add this to config
+float inactivityTolerance = 10; 
 
 //local function that checks whether two values differ more than a given tolerance
 bool validateActivity(float dutyOld, float dutyNow, float tolerance){

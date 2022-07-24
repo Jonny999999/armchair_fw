@@ -44,11 +44,13 @@ void buttonCommands::action (uint8_t count){
             break;
 
         case 1:
-            ESP_LOGW(TAG, "RESTART");
-            buzzer->beep(1,1000,1);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            esp_restart();
+            //ESP_LOGW(TAG, "RESTART");
+            //buzzer->beep(1,1000,1);
+            //vTaskDelay(1000 / portTICK_PERIOD_MS);
+            //esp_restart();
 
+            ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
+            control->sendButtonEvent(count);
             break;
 
         case 2:
