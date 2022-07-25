@@ -43,14 +43,20 @@ void buttonCommands::action (uint8_t count){
             buzzer->beep(3, 400, 100);
             break;
 
-        case 1:
-            //ESP_LOGW(TAG, "RESTART");
-            //buzzer->beep(1,1000,1);
-            //vTaskDelay(1000 / portTICK_PERIOD_MS);
-            //esp_restart();
+        case 0: //special case when last button press is longer than timeout (>1s)
+            ESP_LOGW(TAG, "RESTART");
+            buzzer->beep(1,1000,1);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            esp_restart();
 
+        case 1:
             ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
-            control->sendButtonEvent(count);
+            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
+            break;
+
+        case 3:
+            ESP_LOGW(TAG, "cmd %d: switch to JOYSTICK", count);
+            control->changeMode(controlMode_t::JOYSTICK); //switch to JOYSTICK mode
             break;
 
         case 2:
@@ -123,9 +129,16 @@ void buttonCommands::startHandleLoop() {
                     state = inputState_t::IDLE;
                     buzzer->beep(count, 50, 50);
                     //TODO: add optional "bool wait" parameter to beep function to delay until finished beeping
-                    //run action function with current count of button presses
                     ESP_LOGI(TAG, "timeout - running action function for count=%d", count);
-                    action(count);
+                    //--- run action function ---
+                    //check if still pressed
+                    if (button->state == true){
+                        //run special case when last press was longer than timeout
+                        action(0); 
+                    } else {
+                        //run action function with current count of button presses
+                        action(count);
+                    }
                 }
                 break;
         }

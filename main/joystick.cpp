@@ -456,6 +456,7 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
                     stickQuadrant = joystickPos_t::BOTTOM_RIGHT;
                 }
             }
+            break;
 
         case joystickPos_t::X_AXIS:
             //when moving from center to axis initially start in a certain quadrant
@@ -480,7 +481,7 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
 
 
 
-    //--- handle different modes (joystich in any of 4 quadrants) ---
+    //--- handle different modes (joystick in any of 4 quadrants) ---
     switch (stickQuadrant){
         case joystickPos_t::CENTER:
         case joystickPos_t::X_AXIS: //never true
