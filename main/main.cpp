@@ -38,7 +38,7 @@ void task_motorctl( void * pvParameters ){
         motorRight.handle();
         motorLeft.handle();
         //10khz -> T=100us
-        vTaskDelay(20 / portTICK_PERIOD_MS);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 
@@ -148,7 +148,7 @@ extern "C" void app_main(void) {
     //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
-    esp_log_level_set("control", ESP_LOG_DEBUG);
+    esp_log_level_set("control", ESP_LOG_INFO);
     esp_log_level_set("fan-control", ESP_LOG_INFO);
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("http", ESP_LOG_INFO);
@@ -158,12 +158,12 @@ extern "C" void app_main(void) {
     //--- create task for controlling the motors ---
     //----------------------------------------------
     //task that receives commands, handles ramp and current limit and executes commands using the motordriver function
-    xTaskCreate(&task_motorctl, "task_motor-control", 2048, NULL, 5, NULL);
+    xTaskCreate(&task_motorctl, "task_motor-control", 2048, NULL, 6, NULL);
 
     //------------------------------
     //--- create task for buzzer ---
     //------------------------------
-    xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 5, NULL);
+    xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
 
     //-------------------------------
     //--- create task for control ---
@@ -175,13 +175,13 @@ extern "C" void app_main(void) {
     //--- create task for button ---
     //------------------------------
     //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_button, "task_button", 2048, NULL, 5, NULL);
+    xTaskCreate(&task_button, "task_button", 2048, NULL, 4, NULL);
 
     //-----------------------------------
     //--- create task for fan control ---
     //-----------------------------------
     //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_fans, "task_fans", 2048, NULL, 5, NULL);
+    xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
 
 
     //beep at startup

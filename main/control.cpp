@@ -93,7 +93,7 @@ void controlledArmchair::startHandleLoop() {
 
 
             case controlMode_t::MASSAGE:
-                vTaskDelay(20 / portTICK_PERIOD_MS);
+                vTaskDelay(10 / portTICK_PERIOD_MS);
                 //--- read joystick ---
                 //only update joystick data when input not frozen
                 if (!freezeInput){
@@ -313,7 +313,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching to MASSAGE mode -> reducing fading");
-            uint32_t shake_msFadeAccel = 400; //TODO: move this to config
+            uint32_t shake_msFadeAccel = 500; //TODO: move this to config
 
             //disable downfading (max. deceleration)
             motorLeft->setFade(fadeType_t::DECEL, false);

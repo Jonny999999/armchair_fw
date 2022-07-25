@@ -381,8 +381,8 @@ joystickPos_t lastStickPos = joystickPos_t::CENTER;
 joystickPos_t stickQuadrant = joystickPos_t::CENTER;
 
 //--- configure shake mode --- TODO: move this to config
-uint32_t shake_msOffMax = 90;
-uint32_t shake_msOnMax = 180;
+uint32_t shake_msOffMax = 80;
+uint32_t shake_msOnMax = 120;
 float dutyShake = 60;
 
 //function that generates commands for both motors from the joystick data
@@ -498,7 +498,7 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
             commands.right.state = motorstate_t::FWD;
             break;
         case joystickPos_t::TOP_LEFT:
-            commands.left.state = motorstate_t::FWD;
+            commands.left.state = motorstate_t::REV;
             commands.right.state = motorstate_t::REV;
             break;
         case joystickPos_t::BOTTOM_LEFT:
@@ -506,7 +506,7 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
             commands.right.state = motorstate_t::FWD;
             break;
         case joystickPos_t::BOTTOM_RIGHT:
-            commands.left.state = motorstate_t::REV;
+            commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::REV;
             break;
     }
