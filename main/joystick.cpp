@@ -278,7 +278,7 @@ joystickPos_t joystick_evaluatePosition(float x, float y){
 //========= joystick_CommandsDriving =========
 //============================================
 //function that generates commands for both motors from the joystick data
-motorCommands_t joystick_generateCommandsDriving(joystickData_t data){
+motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altStickMapping){
 
 
     //struct with current data of the joystick
@@ -292,11 +292,22 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data){
 
 
     motorCommands_t commands;
-    float dutyMax = 94; //TODO add this to config, make changeable during runtime
+    float dutyMax = 95; //TODO add this to config, make changeable during runtime
 
-    float dutyOffset = 10; //immedeately starts with this duty, TODO add this to config
+    float dutyOffset = 10; //immediately starts with this duty, TODO add this to config
     float dutyRange = dutyMax - dutyOffset;
     float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
+
+    //experimental alternative control mode
+    if (altStickMapping == true){
+        //swap BOTTOM_LEFT and BOTTOM_RIGHT
+        if (data.position == joystickPos_t::BOTTOM_LEFT){
+            data.position = joystickPos_t::BOTTOM_RIGHT;
+        }
+        else if (data.position == joystickPos_t::BOTTOM_RIGHT){
+            data.position = joystickPos_t::BOTTOM_LEFT;
+        }
+    }
 
     switch (data.position){
 

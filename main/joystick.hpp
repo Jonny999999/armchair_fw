@@ -107,7 +107,7 @@ class evaluatedJoystick {
 //============================================
 //function that generates commands for both motors from the joystick data
 //motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick);
-motorCommands_t joystick_generateCommandsDriving(joystickData_t data );
+motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altStickMapping = false);
 
 
 

@@ -36,6 +36,10 @@ buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, controlledArmcha
 //----------------------------
 //function that runs commands depending on a count value
 void buttonCommands::action (uint8_t count){
+    //--- variable declarations ---
+    bool decelEnabled; //for different beeping when toggling
+
+    //--- actions based on count ---
     switch (count){
         //no such command
         default:
@@ -51,6 +55,7 @@ void buttonCommands::action (uint8_t count){
 
         case 1:
             ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
+            //-> define joystick center or toggle freeze input (executed in control task)
             control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
             break;
 
@@ -76,7 +81,7 @@ void buttonCommands::action (uint8_t count){
 
         case 8:
             //toggle deceleration fading between on and off
-            bool decelEnabled = motorLeft->toggleFade(fadeType_t::DECEL);
+            decelEnabled = motorLeft->toggleFade(fadeType_t::DECEL);
             motorRight->toggleFade(fadeType_t::DECEL);
             ESP_LOGW(TAG, "cmd %d: toggle deceleration fading to: %d", count, (int)decelEnabled);
             if (decelEnabled){
@@ -84,7 +89,13 @@ void buttonCommands::action (uint8_t count){
             } else {
                 buzzer->beep(1, 1000, 1);
             }
+            break;
 
+        case 12:
+            ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
+            //-> toggle altStickMapping (executed in control task)
+            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1)?
+            break;
 
     }
 }

@@ -110,6 +110,8 @@ A diagram which shows what components are connected to which terminals of the pc
 | 6x | toggle mode | **MASSAGE** <=> JOYSTICK | switch to MASSAGE mode or back to JOYSTICK mode |
 | 7x | | | |
 | 8x | toggle option | **deceleration limit** | disable/enable deceleration limit (default on) => more responsive |
+| | | | |
+| 12x | toggle option | **alt stick mapping** | toggle between default and alternative stick mapping (reverse swapped) |
 | >1s | system | **restart** | Restart the controller when pressing the button longer than 1 second | 
 
 

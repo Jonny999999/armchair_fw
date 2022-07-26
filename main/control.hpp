@@ -83,6 +83,7 @@ class controlledArmchair {
 
         //store joystick data
         joystickData_t stickData;
+        bool altStickMapping; //alternative joystick mapping (reverse mapped differently)
 
         //variables for http mode
         uint32_t http_timestamp_lastData = 0;
@@ -91,7 +92,6 @@ class controlledArmchair {
         bool freezeInput = false;
         
         //variable to store button event
-        bool buttonEvent = false;
         uint8_t buttonCount = 0;
 
         //definition of mode enum

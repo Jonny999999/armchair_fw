@@ -78,17 +78,11 @@ void controlledArmchair::startHandleLoop() {
                 //additionaly scale coordinates (more detail in slower area)
                 joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.35); //TODO: add scaling parameters to config
                 //generate motor commands
-                commands = joystick_generateCommandsDriving(stickData);
+                commands = joystick_generateCommandsDriving(stickData, altStickMapping);
                 //apply motor commands
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
-
-                //--- button event ---
-                if (buttonEvent){
-                    joystick_l->defineCenter();
-                    buzzer->beep(2, 200, 100);
-                }
                 break;
 
 
@@ -99,7 +93,6 @@ void controlledArmchair::startHandleLoop() {
                 if (!freezeInput){
                     stickData = joystick_l->getData();
                 }
-
                 //--- generate motor commands ---
                 //pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
                 commands = joystick_generateCommandsShaking(stickData);
@@ -107,12 +100,6 @@ void controlledArmchair::startHandleLoop() {
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
 
-                //--- button event ---
-                if (buttonEvent){
-                    //toggle freeze of input (lock joystick at current values)
-                    freezeInput = !freezeInput;
-                    buzzer->beep(2, 200, 100);
-                }
                 break;
 
 
@@ -126,7 +113,7 @@ void controlledArmchair::startHandleLoop() {
                 ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
                 //--- generate motor commands ---
                 //Note: timeout (no data received) is handled in getData method
-                commands = joystick_generateCommandsDriving(stickData);
+                commands = joystick_generateCommandsDriving(stickData, altStickMapping);
 
                 //--- apply commands to motors ---
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
@@ -134,16 +121,43 @@ void controlledArmchair::startHandleLoop() {
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                break;
 
-
               //  //TODO: add other modes here
         }
 
-        //--- reset button event --- (only one run of handle loop)
-        //TODO: what if variable gets set durin above code? -> mutex around entire handle loop
-        if (buttonEvent == true){
-            ESP_LOGI(TAG, "resetting button event");
-            buttonEvent = false;
+
+        //--- run actions based on received button button event ---
+        //TODO: what if variable gets set from other task during this code? -> mutex around this code
+        switch (buttonCount) {
+            case 1: //define joystick center or freeze input
+                if (mode == controlMode_t::JOYSTICK){
+                    //joystick mode: calibrate joystick
+                    joystick_l->defineCenter();
+                } else if (mode == controlMode_t::MASSAGE){
+                    //massage mode: toggle freeze of input (lock joystick at current values)
+                    freezeInput = !freezeInput;
+                    if (freezeInput){
+                        buzzer->beep(5, 40, 25);
+                    } else {
+                        buzzer->beep(1, 300, 100);
+                    }
+                }
+                break;
+
+            case 12: //toggle alternative joystick mapping (reverse swapped) 
+                altStickMapping = !altStickMapping;
+                if (altStickMapping){
+                    buzzer->beep(6, 70, 50);
+                } else {
+                    buzzer->beep(1, 500, 100);
+                }
+                break;
         }
+        //--- reset button event --- (only one action per run)
+        if (buttonCount > 0){
+            ESP_LOGI(TAG, "resetting button event/count");
+            buttonCount = 0;
+        }
+
 
 
         //-----------------------
@@ -179,7 +193,6 @@ void controlledArmchair::resetTimeout(){
 void controlledArmchair::sendButtonEvent(uint8_t count){
     //TODO mutex - if not replaced with queue
     ESP_LOGI(TAG, "setting button event");
-    buttonEvent = true;
     buttonCount = count;
 }
 
