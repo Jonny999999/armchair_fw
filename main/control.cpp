@@ -282,7 +282,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             break;
 
         case controlMode_t::MASSAGE:
-            ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading");
+            ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading, reset frozen input");
             //TODO: fix issue when downfading was disabled before switching to massage mode - currently it gets enabled again here...
             //enable downfading (set to default value)
             motorLeft->setFade(fadeType_t::DECEL, true);
@@ -290,6 +290,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             //set upfading to default value
             motorLeft->setFade(fadeType_t::ACCEL, true);
             motorRight->setFade(fadeType_t::ACCEL, true);
+            //reset frozen input state
+            freezeInput = false;
             break;
     }
 
