@@ -92,21 +92,28 @@ A diagram which shows what components are connected to which terminals of the pc
 - Anti slip regulation
 - Self driving algorithm
 - Lights
+- drinks holder
 
 
 
 # Usage
 ## Switch functions
 **Currently implemented**
-| Count | Action |
-| --- | ---|
-| 1 | |
-| 2 | toggle IDLE mode |
-| 3 | |
-| 4 | toggle between HTTP and JOYSTICK mode|
-| 5 | |
-| 6 | toggle between MASSAGE and JOYSTICK mode |
-| 7 | |
+| Count | Type | Action | Description |
+| --- | --- | --- | --- |
+| 1x | configure | [JOYSTICK] **calibrate stick** | when in joystick mode: set joystick center to current joystick pos |
+| 1x | control | [MASSAGE] **freeze** input | when in massage mode: lock or unlock joystick input at current position |
+| 2x | toggle mode | **IDLE** <=> previous | enable/disable chair armchair e.g. enable after startup or timeout |
+| 3x | switch mode | **JOYSTICK** | switch to default mode JOYSTICK |
+| 4x | toggle mode | **HTTP** <=> JOYSTICK | switch to '**remote control** via web-app' or back to JOYSTICK mode |
+| 5x | | | |
+| 6x | toggle mode | **MASSAGE** <=> JOYSTICK | switch to MASSAGE mode or back to JOYSTICK mode |
+| 7x | | | |
+| 8x | toggle option | **deceleration limit** | disable/enable deceleration limit (default on) => more responsive |
+| | | | |
+| 12x | toggle option | **alt stick mapping** | toggle between default and alternative stick mapping (reverse swapped) |
+| >1s | system | **restart** | Restart the controller when pressing the button longer than 1 second | 
+
 
 
 **previous functions - not implemented**

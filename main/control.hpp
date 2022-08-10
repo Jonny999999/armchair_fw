@@ -58,6 +58,10 @@ class controlledArmchair {
         //function that restarts timer which initiates the automatic timeout (switch to IDLE) after certain time of inactivity
         void resetTimeout();
 
+        //function for sending a button event (e.g. from button task at event) to control task
+        //TODO: use queue instead?
+        void sendButtonEvent(uint8_t count);
+
     private:
 
         //--- functions ---
@@ -79,9 +83,16 @@ class controlledArmchair {
 
         //store joystick data
         joystickData_t stickData;
+        bool altStickMapping; //alternative joystick mapping (reverse mapped differently)
 
         //variables for http mode
         uint32_t http_timestamp_lastData = 0;
+
+        //variables for MASSAGE mode
+        bool freezeInput = false;
+        
+        //variable to store button event
+        uint8_t buttonCount = 0;
 
         //definition of mode enum
         controlMode_t mode = controlMode_t::IDLE;
