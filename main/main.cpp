@@ -152,6 +152,7 @@ extern "C" void app_main(void) {
     esp_log_level_set("fan-control", ESP_LOG_INFO);
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("http", ESP_LOG_INFO);
+    esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
 
     
     //----------------------------------------------

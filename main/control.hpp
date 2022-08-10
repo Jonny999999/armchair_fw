@@ -4,6 +4,7 @@
 #include "motorctl.hpp"
 #include "buzzer.hpp"
 #include "http.hpp"
+#include "auto.hpp"
 
 
 //--------------------------------------------

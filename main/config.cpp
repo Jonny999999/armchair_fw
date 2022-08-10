@@ -126,5 +126,7 @@ httpJoystick httpJoystickMain(configHttpJoystickMain);
 //create global control object
 controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &joystick, &httpJoystickMain);
 
+//create global automatedArmchair object (for auto-mode)
+automatedArmchair armchair;
 
 

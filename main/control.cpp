@@ -121,6 +121,14 @@ void controlledArmchair::startHandleLoop() {
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                break;
 
+
+            case controlMode_t::AUTO:
+                vTaskDelay(20 / portTICK_PERIOD_MS);
+               //generate commands
+               commands = armchair.generateCommands();
+               break;
+
+
               //  //TODO: add other modes here
         }
 
