@@ -1,4 +1,5 @@
 #include "auto.hpp"
+#include "config.hpp"
 
 //tag for logging
 static const char * TAG = "automatedArmchair";
@@ -23,6 +24,11 @@ motorCommands_t automatedArmchair::generateCommands() {
         //get next command from queue
         if( xQueueReceive( commandQueue, &cmdCurrent, pdMS_TO_TICKS(500) ) ) {
             ESP_LOGI(TAG, "running next command from queue...");
+            //set acceleration / fading parameters according to command
+            motorLeft.setFade(fadeType_t::DECEL, cmdCurrent.fadeDecel);
+            motorRight.setFade(fadeType_t::DECEL, cmdCurrent.fadeDecel);
+            motorLeft.setFade(fadeType_t::ACCEL, cmdCurrent.fadeAccel);
+            motorRight.setFade(fadeType_t::ACCEL, cmdCurrent.fadeAccel);
             //calculate timestamp the command is finished
             timestampCmdFinished = esp_log_timestamp() + cmdCurrent.msDuration;
             //copy the new commands
@@ -35,6 +41,7 @@ motorCommands_t automatedArmchair::generateCommands() {
         ESP_LOGD(TAG, "command still running -> no change");
     }
 
+    //TODO also return instructions via call by reference
     return motorCommands;
 }
 

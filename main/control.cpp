@@ -126,6 +126,10 @@ void controlledArmchair::startHandleLoop() {
                 vTaskDelay(20 / portTICK_PERIOD_MS);
                //generate commands
                commands = armchair.generateCommands();
+                //--- apply commands to motors ---
+                //TODO make motorctl.setTarget also accept motorcommand struct directly
+                motorRight->setTarget(commands.right.state, commands.right.duty); 
+                motorLeft->setTarget(commands.left.state, commands.left.duty); 
                break;
 
 
@@ -274,7 +278,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 
     ESP_LOGW(TAG, "=== changing mode from %s to %s ===", controlModeStr[(int)mode], controlModeStr[(int)modeNew]);
 
-    //--- run functions when changing FROM certain mode ---
+    //========== commands change FROM mode ==========
+    //run functions when changing FROM certain mode
     switch(modePrevious){
         default:
             ESP_LOGI(TAG, "noting to execute when changing FROM this mode");
@@ -307,10 +312,22 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             //reset frozen input state
             freezeInput = false;
             break;
+
+        case controlMode_t::AUTO:
+            ESP_LOGW(TAG, "switching from AUTO mode -> restoring fading to default");
+            //TODO: fix issue when downfading was disabled before switching to auto mode - currently it gets enabled again here...
+            //enable downfading (set to default value)
+            motorLeft->setFade(fadeType_t::DECEL, true);
+            motorRight->setFade(fadeType_t::DECEL, true);
+            //set upfading to default value
+            motorLeft->setFade(fadeType_t::ACCEL, true);
+            motorRight->setFade(fadeType_t::ACCEL, true);
+            break;
     }
 
 
-    //--- run functions when changing TO certain mode ---
+    //========== commands change TO mode ==========
+    //run functions when changing TO certain mode
     switch(modeNew){
         default:
             ESP_LOGI(TAG, "noting to execute when changing TO this mode");

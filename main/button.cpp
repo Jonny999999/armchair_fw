@@ -60,16 +60,27 @@ void buttonCommands::action (uint8_t count){
             ////////control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
             //====== TESTING: send cmd to auto mode =====
             //define commands
+            cmds[0] =
+            {
+                .motorCmds = {
+                    .left = {motorstate_t::REV, 90},
+                    .right = {motorstate_t::REV, 90}
+                },
+                .msDuration = 700,
+                .fadeDecel = 800,
+                .fadeAccel = 1200,
+                .instruction = auto_instruction_t::NONE
+            };
             cmds[1] =
             {
                 .motorCmds = {
-                    .left = {motorstate_t::FWD, 40},
-                    .right = {motorstate_t::FWD, 40}
+                    .left = {motorstate_t::FWD, 50},
+                    .right = {motorstate_t::FWD, 50}
                 },
-                .msDuration = 2000,
-                .fadeDecel = 800,
-                .fadeAcel = 1300,
-                .instructions = instructions_t::NONE
+                .msDuration = 100,
+                .fadeDecel = 0,
+                .fadeAccel = 400,
+                .instruction = auto_instruction_t::NONE
             };
             cmds[2] =
             {
@@ -77,21 +88,10 @@ void buttonCommands::action (uint8_t count){
                     .left = {motorstate_t::IDLE, 0},
                     .right = {motorstate_t::IDLE, 0}
                 },
-                .msDuration = 1000,
+                .msDuration = 10,
                 .fadeDecel = 800,
-                .fadeAcel = 1300,
-                .instructions = instructions_t::NONE
-            };
-            cmds[3] =
-            {
-                .motorCmds = {
-                    .left = {motorstate_t::REV, 40},
-                    .right = {motorstate_t::REV, 40}
-                },
-                .msDuration = 1000,
-                .fadeDecel = 800,
-                .fadeAcel = 1300,
-                .instructions = instructions_t::NONE
+                .fadeAccel = 1300,
+                .instruction = auto_instruction_t::NONE
             };
 
             //send commands to automatedArmchair command queue

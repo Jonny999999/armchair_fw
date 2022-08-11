@@ -18,7 +18,7 @@ extern "C"
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
 //enum for special instructions / commands to be run in control task
-enum class instructions_t { NONE, SWITCH_PREV_MODE, RESET_ACCEL, RESET_DECEL };
+enum class auto_instruction_t { NONE, SWITCH_PREV_MODE, RESET_ACCEL, RESET_DECEL };
 
 //struct for a simple command
 //e.g. put motors in a certain state for certain time
@@ -26,8 +26,8 @@ typedef struct commandSimple_t{
     motorCommands_t motorCmds;
     uint32_t msDuration;
     uint32_t fadeDecel;
-    uint32_t fadeAcel;
-    instructions_t instructions;
+    uint32_t fadeAccel;
+    auto_instruction_t instruction;
 } commandSimple_t;
 
 

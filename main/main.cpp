@@ -176,7 +176,7 @@ extern "C" void app_main(void) {
     //--- create task for button ---
     //------------------------------
     //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_button, "task_button", 2048, NULL, 4, NULL);
+    xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
 
     //-----------------------------------
     //--- create task for fan control ---
