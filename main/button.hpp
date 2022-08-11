@@ -33,7 +33,7 @@ class buttonCommands {
 
     private:
         //--- functions ---
-        void action(uint8_t count);
+        void action(uint8_t count, bool lastPressLong);
 
         //--- objects ---
         gpio_evaluatedSwitch* button;
