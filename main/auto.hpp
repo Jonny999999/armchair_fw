@@ -17,11 +17,17 @@ extern "C"
 //--------------------------------------------
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
+//enum for special instructions / commands to be run in control task
+enum class instructions_t { NONE, SWITCH_PREV_MODE, RESET_ACCEL, RESET_DECEL };
+
 //struct for a simple command
 //e.g. put motors in a certain state for certain time
-typedef struct {
-    motorCommands_t commands;
+typedef struct commandSimple_t{
+    motorCommands_t motorCmds;
     uint32_t msDuration;
+    uint32_t fadeDecel;
+    uint32_t fadeAcel;
+    instructions_t instructions;
 } commandSimple_t;
 
 
@@ -36,11 +42,16 @@ class automatedArmchair {
         automatedArmchair(void);
         //function to generate motor commands
         //can be also seen as handle function 
-        //TODO: maybe create separate task for handling at mode switch and communicate with queue?
+        //TODO: go with other approach: separate task for handling auto mode
+        //  - receive commands with queue anyways
+        //  - => use delay function
+        //  - have a queue that outputs current motor state/commands -> repeatedly check the queue in control task
         motorCommands_t generateCommands(); //repeatedly called by control task
 
         //function that adds a basic command to the queue
         void addCommand(commandSimple_t command);
+        //function that adds an array of basic commands to queue
+        void addCommands(commandSimple_t commands[], size_t count);
 
         //function that deletes all pending/queued commands
         motorCommands_t clearCommands();
@@ -61,13 +72,13 @@ class automatedArmchair {
         motorCommands_t motorCommands;
 
         //command preset for idling motors
-        const motorCommand_t cmd_motorIdle = {
+        const motorCommand_t motorCmd_motorIdle = {
             .state = motorstate_t::IDLE,
             .duty = 0
         };
-        const motorCommands_t cmds_bothMotorsIdle = {
-            .left = cmd_motorIdle,
-            .right = cmd_motorIdle
+        const motorCommands_t motorCmds_bothMotorsIdle = {
+            .left = motorCmd_motorIdle,
+            .right = motorCmd_motorIdle
         };
 };
 

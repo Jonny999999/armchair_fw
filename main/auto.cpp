@@ -21,15 +21,15 @@ motorCommands_t automatedArmchair::generateCommands() {
     //check if previous command is finished
     if ( esp_log_timestamp() > timestampCmdFinished ) {
         //get next command from queue
-        if( xQueueReceive( commandQueue, &cmdCurrent, pdMS_TO_TICKS(0) ) ) {
+        if( xQueueReceive( commandQueue, &cmdCurrent, pdMS_TO_TICKS(500) ) ) {
             ESP_LOGI(TAG, "running next command from queue...");
             //calculate timestamp the command is finished
             timestampCmdFinished = esp_log_timestamp() + cmdCurrent.msDuration;
             //copy the new commands
-            motorCommands = cmdCurrent.commands;
+            motorCommands = cmdCurrent.motorCmds;
         } else { //queue empty
             ESP_LOGD(TAG, "no new command in queue -> set motors to IDLE");
-            motorCommands = cmds_bothMotorsIdle;
+            motorCommands = motorCmds_bothMotorsIdle;
         }
     } else { //previous command still running
         ESP_LOGD(TAG, "command still running -> no change");
@@ -53,6 +53,12 @@ void automatedArmchair::addCommand(commandSimple_t command) {
      }
 }
 
+void automatedArmchair::addCommands(commandSimple_t commands[], size_t count) {
+    for (int i = 0; i < count; i++) {
+         ESP_LOGI(TAG, "Reading command no. %d from provided array", i);
+        addCommand(commands[i]);
+    }
+}
 
 
 //===============================
@@ -65,6 +71,7 @@ motorCommands_t automatedArmchair::clearCommands() {
     xQueueReset( commandQueue );
     ESP_LOGW(TAG, "command queue was successfully emptied");
     //return commands for idling both motors
-    return cmds_bothMotorsIdle;
+    motorCommands = motorCmds_bothMotorsIdle;
+    return motorCmds_bothMotorsIdle;
 }
 

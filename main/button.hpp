@@ -4,6 +4,8 @@
 #include "buzzer.hpp"
 #include "control.hpp"
 #include "motorctl.hpp"
+#include "auto.hpp"
+#include "config.hpp"
 
 
 

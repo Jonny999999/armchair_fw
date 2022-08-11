@@ -263,6 +263,12 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
     //reset timeout timer
     resetTimeout();
 
+    //exit if target mode is already active
+    if (mode == modeNew) {
+        ESP_LOGE(TAG, "changeMode: Already in target mode '%s' -> nothing to change", controlModeStr[(int)mode]);
+        return;
+    }
+
     //copy previous mode
     controlMode_t modePrevious = mode;
 

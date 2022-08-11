@@ -38,6 +38,7 @@ buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, controlledArmcha
 void buttonCommands::action (uint8_t count){
     //--- variable declarations ---
     bool decelEnabled; //for different beeping when toggling
+    commandSimple_t cmds[8]; //array for commands for automatedArmchair
 
     //--- actions based on count ---
     switch (count){
@@ -54,9 +55,50 @@ void buttonCommands::action (uint8_t count){
             esp_restart();
 
         case 1:
-            ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
-            //-> define joystick center or toggle freeze input (executed in control task)
-            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
+            ////////ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
+            //////////-> define joystick center or toggle freeze input (executed in control task)
+            ////////control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
+            //====== TESTING: send cmd to auto mode =====
+            //define commands
+            cmds[1] =
+            {
+                .motorCmds = {
+                    .left = {motorstate_t::FWD, 40},
+                    .right = {motorstate_t::FWD, 40}
+                },
+                .msDuration = 2000,
+                .fadeDecel = 800,
+                .fadeAcel = 1300,
+                .instructions = instructions_t::NONE
+            };
+            cmds[2] =
+            {
+                .motorCmds = {
+                    .left = {motorstate_t::IDLE, 0},
+                    .right = {motorstate_t::IDLE, 0}
+                },
+                .msDuration = 1000,
+                .fadeDecel = 800,
+                .fadeAcel = 1300,
+                .instructions = instructions_t::NONE
+            };
+            cmds[3] =
+            {
+                .motorCmds = {
+                    .left = {motorstate_t::REV, 40},
+                    .right = {motorstate_t::REV, 40}
+                },
+                .msDuration = 1000,
+                .fadeDecel = 800,
+                .fadeAcel = 1300,
+                .instructions = instructions_t::NONE
+            };
+
+            //send commands to automatedArmchair command queue
+            armchair.addCommands(cmds, 3);
+
+            //change mode to AUTO
+            control->changeMode(controlMode_t::AUTO);
             break;
 
         case 3:
