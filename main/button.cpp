@@ -19,9 +19,10 @@ static const char * TAG = "button";
 //-----------------------------
 //-------- constructor --------
 //-----------------------------
-buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, controlledArmchair * control_f, buzzer_t * buzzer_f, controlledMotor * motorLeft_f, controlledMotor * motorRight_f){
+buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, evaluatedJoystick * joystick_f, controlledArmchair * control_f, buzzer_t * buzzer_f, controlledMotor * motorLeft_f, controlledMotor * motorRight_f){
     //copy object pointers
     button = button_f;
+    joystick = joystick_f;
     control = control_f;
     buzzer = buzzer_f;
     motorLeft = motorLeft_f;
@@ -39,6 +40,9 @@ void buttonCommands::action (uint8_t count){
     //--- variable declarations ---
     bool decelEnabled; //for different beeping when toggling
     commandSimple_t cmds[8]; //array for commands for automatedArmchair
+
+    //--- get joystick position ---
+    //joystickData_t stickData = joystick->getData();
 
     //--- actions based on count ---
     switch (count){

@@ -6,6 +6,7 @@
 #include "motorctl.hpp"
 #include "auto.hpp"
 #include "config.hpp"
+#include "joystick.hpp"
 
 
 
@@ -18,6 +19,7 @@ class buttonCommands {
         //--- constructor ---
         buttonCommands (
                 gpio_evaluatedSwitch * button_f,
+                evaluatedJoystick * joystick_f,
                 controlledArmchair * control_f,
                 buzzer_t * buzzer_f,
                 controlledMotor * motorLeft_f, 
@@ -35,6 +37,7 @@ class buttonCommands {
 
         //--- objects ---
         gpio_evaluatedSwitch* button;
+        evaluatedJoystick* joystick;
         controlledArmchair * control;
         buzzer_t* buzzer;
         controlledMotor * motorLeft;
