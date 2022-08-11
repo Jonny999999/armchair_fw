@@ -18,7 +18,7 @@ extern "C"
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
 //enum for special instructions / commands to be run in control task
-enum class auto_instruction_t { NONE, SWITCH_PREV_MODE, RESET_ACCEL, RESET_DECEL };
+enum class auto_instruction_t { NONE, SWITCH_PREV_MODE, SWITCH_JOYSTICK_MODE, RESET_ACCEL_DECEL, RESET_ACCEL, RESET_DECEL };
 
 //struct for a simple command
 //e.g. put motors in a certain state for certain time
@@ -46,7 +46,9 @@ class automatedArmchair {
         //  - receive commands with queue anyways
         //  - => use delay function
         //  - have a queue that outputs current motor state/commands -> repeatedly check the queue in control task
-        motorCommands_t generateCommands(); //repeatedly called by control task
+        //function that handles automatic driving and returns motor commands
+        //also provides instructions to be executed in control task via pointer
+        motorCommands_t generateCommands(auto_instruction_t * instruction);
 
         //function that adds a basic command to the queue
         void addCommand(commandSimple_t command);

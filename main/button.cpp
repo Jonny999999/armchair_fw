@@ -66,20 +66,20 @@ void buttonCommands::action (uint8_t count){
                     .left = {motorstate_t::REV, 90},
                     .right = {motorstate_t::REV, 90}
                 },
-                .msDuration = 700,
+                .msDuration = 1200,
                 .fadeDecel = 800,
-                .fadeAccel = 1200,
+                .fadeAccel = 1300,
                 .instruction = auto_instruction_t::NONE
             };
             cmds[1] =
             {
                 .motorCmds = {
-                    .left = {motorstate_t::FWD, 50},
-                    .right = {motorstate_t::FWD, 50}
+                    .left = {motorstate_t::FWD, 70},
+                    .right = {motorstate_t::FWD, 70}
                 },
-                .msDuration = 100,
+                .msDuration = 70,
                 .fadeDecel = 0,
-                .fadeAccel = 400,
+                .fadeAccel = 300,
                 .instruction = auto_instruction_t::NONE
             };
             cmds[2] =
@@ -91,7 +91,7 @@ void buttonCommands::action (uint8_t count){
                 .msDuration = 10,
                 .fadeDecel = 800,
                 .fadeAccel = 1300,
-                .instruction = auto_instruction_t::NONE
+                .instruction = auto_instruction_t::SWITCH_JOYSTICK_MODE
             };
 
             //send commands to automatedArmchair command queue

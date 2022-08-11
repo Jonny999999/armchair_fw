@@ -125,11 +125,41 @@ void controlledArmchair::startHandleLoop() {
             case controlMode_t::AUTO:
                 vTaskDelay(20 / portTICK_PERIOD_MS);
                //generate commands
-               commands = armchair.generateCommands();
+               commands = armchair.generateCommands(&instruction);
                 //--- apply commands to motors ---
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
-                motorRight->setTarget(commands.right.state, commands.right.duty); 
-                motorLeft->setTarget(commands.left.state, commands.left.duty); 
+               motorRight->setTarget(commands.right.state, commands.right.duty); 
+               motorLeft->setTarget(commands.left.state, commands.left.duty); 
+
+               //process received instruction
+               switch (instruction) {
+                   case auto_instruction_t::NONE:
+                       break;
+                   case auto_instruction_t::SWITCH_PREV_MODE:
+                       toggleMode(controlMode_t::AUTO);
+                       break;
+                   case auto_instruction_t::SWITCH_JOYSTICK_MODE:
+                       changeMode(controlMode_t::JOYSTICK);
+                       break;
+                   case auto_instruction_t::RESET_ACCEL_DECEL:
+                       //enable downfading (set to default value)
+                       motorLeft->setFade(fadeType_t::DECEL, true);
+                       motorRight->setFade(fadeType_t::DECEL, true);
+                       //set upfading to default value
+                       motorLeft->setFade(fadeType_t::ACCEL, true);
+                       motorRight->setFade(fadeType_t::ACCEL, true);
+                       break;
+                   case auto_instruction_t::RESET_ACCEL:
+                       //set upfading to default value
+                       motorLeft->setFade(fadeType_t::ACCEL, true);
+                       motorRight->setFade(fadeType_t::ACCEL, true);
+                       break;
+                   case auto_instruction_t::RESET_DECEL:
+                       //enable downfading (set to default value)
+                       motorLeft->setFade(fadeType_t::DECEL, true);
+                       motorRight->setFade(fadeType_t::DECEL, true);
+                       break;
+               }
                break;
 
 
@@ -274,7 +304,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
     }
 
     //copy previous mode
-    controlMode_t modePrevious = mode;
+    modePrevious = mode;
 
     ESP_LOGW(TAG, "=== changing mode from %s to %s ===", controlModeStr[(int)mode], controlModeStr[(int)modeNew]);
 
@@ -383,15 +413,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 //-----------------------------------
 //function to toggle between IDLE and previous active mode
 void controlledArmchair::toggleIdle() {
-    if (mode == controlMode_t::IDLE){
-        changeMode(modePrevious); //restore previous mode, or default if not switched yet
-        buzzer->beep(2, 200, 100);
-        ESP_LOGW(TAG, "toggle idle: switched mode from IDLE to %s", controlModeStr[(int)mode]);
-    } else {
-        modePrevious = mode; //store current mode
-        changeMode(controlMode_t::IDLE); //set mode to IDLE
-        ESP_LOGW(TAG, "toggle idle: switched mode from %s to IDLE", controlModeStr[(int)mode]);
-    }
+    //toggle between IDLE and previous mode
+    toggleMode(controlMode_t::IDLE);
 }
 
 
@@ -412,6 +435,28 @@ void controlledArmchair::toggleModes(controlMode_t modePrimary, controlMode_t mo
     else {
         ESP_LOGW(TAG, "toggleModes: switching from %s to primary mode %s", controlModeStr[(int)mode], controlModeStr[(int)modePrimary]);
         buzzer->beep(4,200,100);
+        changeMode(modePrimary);
+    }
+}
+
+
+
+//-----------------------------------
+//----------- toggleMode ------------
+//-----------------------------------
+//function that toggles between certain mode and previous mode
+void controlledArmchair::toggleMode(controlMode_t modePrimary){
+
+    //switch to previous mode when primary is already active
+    if (mode == modePrimary){
+        ESP_LOGW(TAG, "toggleMode: switching from primaryMode %s to previousMode %s", controlModeStr[(int)mode], controlModeStr[(int)modePrevious]);
+        //buzzer->beep(2,200,100);
+        changeMode(modePrevious); //switch to previous mode
+    } 
+    //switch to primary mode when any other mode is active
+    else {
+        ESP_LOGW(TAG, "toggleModes: switching from %s to primary mode %s", controlModeStr[(int)mode], controlModeStr[(int)modePrimary]);
+        //buzzer->beep(4,200,100);
         changeMode(modePrimary);
     }
 }

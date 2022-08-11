@@ -55,6 +55,8 @@ class controlledArmchair {
 
         //function that toggles between two modes, but prefers first argument if entirely different mode is currently active
         void toggleModes(controlMode_t modePrimary, controlMode_t modeSecondary);
+        //toggle between certain mode and previous mode
+        void toggleMode(controlMode_t modePrimary);
 
         //function that restarts timer which initiates the automatic timeout (switch to IDLE) after certain time of inactivity
         void resetTimeout();
@@ -91,6 +93,9 @@ class controlledArmchair {
 
         //variables for MASSAGE mode
         bool freezeInput = false;
+
+        //variables for AUTO mode
+        auto_instruction_t instruction = auto_instruction_t::NONE; //variable to receive instructions from automatedArmchair
         
         //variable to store button event
         uint8_t buttonCount = 0;

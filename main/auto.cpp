@@ -18,12 +18,16 @@ automatedArmchair::automatedArmchair(void) {
 //==============================
 //====== generateCommands ======
 //==============================
-motorCommands_t automatedArmchair::generateCommands() {
+motorCommands_t automatedArmchair::generateCommands(auto_instruction_t * instruction) {
+    //reset instruction
+    *instruction = auto_instruction_t::NONE;
     //check if previous command is finished
     if ( esp_log_timestamp() > timestampCmdFinished ) {
         //get next command from queue
         if( xQueueReceive( commandQueue, &cmdCurrent, pdMS_TO_TICKS(500) ) ) {
             ESP_LOGI(TAG, "running next command from queue...");
+            //copy instruction to be provided to control task
+            *instruction = cmdCurrent.instruction;
             //set acceleration / fading parameters according to command
             motorLeft.setFade(fadeType_t::DECEL, cmdCurrent.fadeDecel);
             motorRight.setFade(fadeType_t::DECEL, cmdCurrent.fadeDecel);
