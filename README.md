@@ -2,6 +2,7 @@ Firmware for a homemade automated electric armchair.
 More details about this project: https://pfusch.zone/electric-armchair
 
 
+
 # Installation
 ### Install esp-idf
 For this project **ESP-IDF v4.4.1** is required (with other versions it might not compile)
@@ -93,6 +94,16 @@ A diagram which shows what components are connected to which terminals of the pc
 - Self driving algorithm
 - Lights
 - drinks holder
+- improved webinterface
+
+
+
+# Todo
+**Add switch functions**
+- set loglevel
+- define max-speed
+- calibrate joystick (min, max, center)
+- testing mode / dry-run
 
 
 
@@ -105,7 +116,7 @@ A diagram which shows what components are connected to which terminals of the pc
 | 1x | control | [MASSAGE] **freeze** input | when in massage mode: lock or unlock joystick input at current position |
 | 2x | toggle mode | **IDLE** <=> previous | enable/disable chair armchair e.g. enable after startup or timeout |
 | 3x | switch mode | **JOYSTICK** | switch to default mode JOYSTICK |
-| 4x | toggle mode | **HTTP** <=> JOYSTICK | switch to '**remote control** via web-app' or back to JOYSTICK mode |
+| 4x | toggle mode | **HTTP** <=> JOYSTICK | switch to '**remote control** via web-app `http://191.168.4.1`' or back to JOYSTICK mode |
 | 5x | | | |
 | 6x | toggle mode | **MASSAGE** <=> JOYSTICK | switch to MASSAGE mode or back to JOYSTICK mode |
 | 7x | | | |
@@ -113,16 +124,20 @@ A diagram which shows what components are connected to which terminals of the pc
 | | | | |
 | 12x | toggle option | **alt stick mapping** | toggle between default and alternative stick mapping (reverse swapped) |
 | >1s | system | **restart** | Restart the controller when pressing the button longer than 1 second | 
+| 1x short, 1x long | auto command | **eject** foot support | automatically go forward and reverse for certain time with no acceleration limits, so foot support ejects |
 
 
+## HTTP mode
+Control armchair via virtual joystick on a webinterface.  
 
-**previous functions - not implemented**
-| Count | Action |
-| --- | ---|
-| 1 | define joystick center |
-| 2 | toggle motors |
-| 3 | toggle log-level (WARN, DEBUG, INFO) |
-| 4 | define max duty |
-| 5 | toggle mode MQTT/JOYSTICK |
-| 6 | toggle mode SHAKE/JOYSTICK |
-| 7 | toggle testing-mode (dry-run) |
+**Usage**
+- Connect to wifi `armchar`, no password
+- Access http://192.168.4.1  (note: **http** NOT https, some browsers automatically add https!)  
+
+**Current Features**
+- Control direction and speed with joystick  
+
+**Todo**
+- Set parameters
+- Control other modes
+- Execute preset movement commands
