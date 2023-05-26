@@ -19,9 +19,10 @@ static const char * TAG = "button";
 //-----------------------------
 //-------- constructor --------
 //-----------------------------
-buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, controlledArmchair * control_f, buzzer_t * buzzer_f, controlledMotor * motorLeft_f, controlledMotor * motorRight_f){
+buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, evaluatedJoystick * joystick_f, controlledArmchair * control_f, buzzer_t * buzzer_f, controlledMotor * motorLeft_f, controlledMotor * motorRight_f){
     //copy object pointers
     button = button_f;
+    joystick = joystick_f;
     control = control_f;
     buzzer = buzzer_f;
     motorLeft = motorLeft_f;
@@ -35,9 +36,13 @@ buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, controlledArmcha
 //--------- action -----------
 //----------------------------
 //function that runs commands depending on a count value
-void buttonCommands::action (uint8_t count){
+void buttonCommands::action (uint8_t count, bool lastPressLong){
     //--- variable declarations ---
     bool decelEnabled; //for different beeping when toggling
+    commandSimple_t cmds[8]; //array for commands for automatedArmchair
+
+    //--- get joystick position ---
+    //joystickData_t stickData = joystick->getData();
 
     //--- actions based on count ---
     switch (count){
@@ -47,26 +52,75 @@ void buttonCommands::action (uint8_t count){
             buzzer->beep(3, 400, 100);
             break;
 
-        case 0: //special case when last button press is longer than timeout (>1s)
-            ESP_LOGW(TAG, "RESTART");
-            buzzer->beep(1,1000,1);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            esp_restart();
-
         case 1:
+            //restart contoller when 1x long pressed
+            if (lastPressLong){
+                ESP_LOGW(TAG, "RESTART");
+                buzzer->beep(1,1000,1);
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+                esp_restart();
+                return;
+            } 
+
             ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
             //-> define joystick center or toggle freeze input (executed in control task)
             control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
             break;
+        case 2:
+            //run automatic commands to lift leg support when pressed 1x short 1x long
+            if (lastPressLong){
+                //define commands
+                cmds[0] =
+                {
+                    .motorCmds = {
+                        .left = {motorstate_t::REV, 90},
+                        .right = {motorstate_t::REV, 90}
+                    },
+                    .msDuration = 1200,
+                    .fadeDecel = 800,
+                    .fadeAccel = 1300,
+                    .instruction = auto_instruction_t::NONE
+                };
+                cmds[1] =
+                {
+                    .motorCmds = {
+                        .left = {motorstate_t::FWD, 70},
+                        .right = {motorstate_t::FWD, 70}
+                    },
+                    .msDuration = 70,
+                    .fadeDecel = 0,
+                    .fadeAccel = 300,
+                    .instruction = auto_instruction_t::NONE
+                };
+                cmds[2] =
+                {
+                    .motorCmds = {
+                        .left = {motorstate_t::IDLE, 0},
+                        .right = {motorstate_t::IDLE, 0}
+                    },
+                    .msDuration = 10,
+                    .fadeDecel = 800,
+                    .fadeAccel = 1300,
+                    .instruction = auto_instruction_t::SWITCH_JOYSTICK_MODE
+                };
+
+                //send commands to automatedArmchair command queue
+                armchair.addCommands(cmds, 3);
+
+                //change mode to AUTO
+                control->changeMode(controlMode_t::AUTO);
+                return;
+            }
+
+            //toggle idle when 2x pressed
+            ESP_LOGW(TAG, "cmd %d: toggle IDLE", count);
+            control->toggleIdle(); //toggle between idle and previous/default mode
+            break;
+
 
         case 3:
             ESP_LOGW(TAG, "cmd %d: switch to JOYSTICK", count);
             control->changeMode(controlMode_t::JOYSTICK); //switch to JOYSTICK mode
-            break;
-
-        case 2:
-            ESP_LOGW(TAG, "cmd %d: toggle IDLE", count);
-            control->toggleIdle(); //toggle between idle and previous/default mode
             break;
 
         case 4:
@@ -120,7 +174,7 @@ void buttonCommands::startHandleLoop() {
             case inputState_t::IDLE: //wait for initial button press
                 if (button->risingEdge) {
                     count = 1;
-                    buzzer->beep(1, 60, 0);
+                    buzzer->beep(1, 65, 0);
                     timestamp_lastAction = esp_log_timestamp();
                     state = inputState_t::WAIT_FOR_INPUT;
                     ESP_LOGI(TAG, "first button press detected -> waiting for further events");
@@ -131,7 +185,7 @@ void buttonCommands::startHandleLoop() {
                 //button pressed again
                 if (button->risingEdge){
                     count++;
-                    buzzer->beep(1, 60, 0);
+                    buzzer->beep(1, 65, 0);
                     timestamp_lastAction = esp_log_timestamp();
                     ESP_LOGI(TAG, "another press detected -> count=%d -> waiting for further events", count);
                 }
@@ -143,14 +197,14 @@ void buttonCommands::startHandleLoop() {
                     ESP_LOGI(TAG, "timeout - running action function for count=%d", count);
                     //--- run action function ---
                     //check if still pressed
+                    bool lastPressLong = false;
                     if (button->state == true){
                         //run special case when last press was longer than timeout
-                        action(0); 
-                    } else {
-                        //run action function with current count of button presses
-                        action(count);
+                        lastPressLong = true;
                     }
-                }
+                        //run action function with current count of button presses
+                        action(count, lastPressLong);
+                    }
                 break;
         }
     }

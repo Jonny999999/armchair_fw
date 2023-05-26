@@ -30,7 +30,7 @@ single100a_config_t configDriverRight = {
 //--- configure motor contol ---
 motorctl_config_t configMotorControl = {
     .msFadeAccel = 1300, //acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 800, //deceleration of the motor (ms it takes from 100% to 0%)
+    .msFadeDecel = 700, //deceleration of the motor (ms it takes from 100% to 0%)
     .currentMax = 10
 };
 
@@ -126,5 +126,7 @@ httpJoystick httpJoystickMain(configHttpJoystickMain);
 //create global control object
 controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &joystick, &httpJoystickMain);
 
+//create global automatedArmchair object (for auto-mode)
+automatedArmchair armchair;
 
 
