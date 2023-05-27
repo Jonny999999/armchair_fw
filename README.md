@@ -5,7 +5,7 @@ More details about this project: https://pfusch.zone/electric-armchair
 
 # Installation
 ### Install esp-idf
-For this project **ESP-IDF v4.4.1** is required (with other versions it might not compile)
+For this project **ESP-IDF v4.4.4** is required (with other versions it might not compile)
 ```bash
 #download esp-idf
 yay -S esp-idf #alternatively clone the esp-idf repository from github

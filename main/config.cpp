@@ -80,11 +80,11 @@ joystick_config_t configJoystick = {
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
     .tolerance_radius = 0.05,
 
-    //min and max adc values of each axis
-    .x_min = 975,
-    .x_max = 2520,
-    .y_min = 1005,
-    .y_max = 2550,
+    //min and max adc values of each axis (after inversion is applied)
+    .x_min = 1230, //=> x=-1
+    .x_max = 2700, //=> x=1
+    .y_min = 1260, //=> y=-1
+    .y_max = 2700, //=> y=1
     //invert adc measurement
     .x_inverted = true,
     .y_inverted = true

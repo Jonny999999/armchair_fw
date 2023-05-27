@@ -14,6 +14,10 @@ extern "C"
 #include "control.hpp"
 
 
+//used definitions moved from config.hpp:
+//#define JOYSTICK_TEST
+
+
 //tag for logging
 static const char * TAG = "control";
 
@@ -68,6 +72,12 @@ void controlledArmchair::startHandleLoop() {
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 vTaskDelay(200 / portTICK_PERIOD_MS);
+#ifdef JOYSTICK_LOG_IN_IDLE
+				//get joystick data here (without using it)
+				//since loglevel is DEBUG, calculateion details is output
+                joystick_l->getData(); //get joystick data here
+#endif
+
                 break;
 
 
@@ -306,22 +316,29 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
     //copy previous mode
     modePrevious = mode;
 
-    ESP_LOGW(TAG, "=== changing mode from %s to %s ===", controlModeStr[(int)mode], controlModeStr[(int)modeNew]);
+	ESP_LOGW(TAG, "=== changing mode from %s to %s ===", controlModeStr[(int)mode], controlModeStr[(int)modeNew]);
 
-    //========== commands change FROM mode ==========
-    //run functions when changing FROM certain mode
-    switch(modePrevious){
-        default:
-            ESP_LOGI(TAG, "noting to execute when changing FROM this mode");
-            break;
+	//========== commands change FROM mode ==========
+	//run functions when changing FROM certain mode
+	switch(modePrevious){
+		default:
+			ESP_LOGI(TAG, "noting to execute when changing FROM this mode");
+			break;
 
-        case controlMode_t::HTTP:
-            ESP_LOGW(TAG, "switching from http mode -> disabling http and wifi");
-            //stop http server
-            ESP_LOGI(TAG, "disabling http server...");
-            http_stop_server();
+#ifdef JOYSTICK_LOG_IN_IDLE
+		case controlMode_t::IDLE:
+			ESP_LOGI(TAG, "disabling debug output for 'evaluatedJoystick'");
+			esp_log_level_set("evaluatedJoystick", ESP_LOG_WARN); //FIXME: loglevel from config
+			break;
+#endif
 
-            //FIXME: make wifi function work here - currently starting wifi at startup (see notes main.cpp)
+		case controlMode_t::HTTP:
+			ESP_LOGW(TAG, "switching from http mode -> disabling http and wifi");
+			//stop http server
+			ESP_LOGI(TAG, "disabling http server...");
+			http_stop_server();
+
+			//FIXME: make wifi function work here - currently starting wifi at startup (see notes main.cpp)
             //stop wifi
             //TODO: decide whether ap or client is currently used - which has to be disabled?
             //ESP_LOGI(TAG, "deinit wifi...");
@@ -363,9 +380,13 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             ESP_LOGI(TAG, "noting to execute when changing TO this mode");
             break;
 
-        case controlMode_t::IDLE:
-            buzzer->beep(1, 1500, 0);
-            break;
+		case controlMode_t::IDLE:
+			buzzer->beep(1, 1500, 0);
+#ifdef JOYSTICK_LOG_IN_IDLE
+			esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
+#endif
+
+			break;
 
         case controlMode_t::HTTP:
             ESP_LOGW(TAG, "switching to http mode -> enabling http and wifi");
