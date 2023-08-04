@@ -75,7 +75,7 @@ void task_control( void * pvParameters ){
 void task_button( void * pvParameters ){
     ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
     //create button instance
-    buttonCommands commandButton(&buttonJoystick, &control, &buzzer, &motorLeft, &motorRight);
+    buttonCommands commandButton(&buttonJoystick, &joystick, &control, &buzzer, &motorLeft, &motorRight);
     //start handle loop
     commandButton.startHandleLoop();
 }
@@ -152,6 +152,7 @@ extern "C" void app_main(void) {
     esp_log_level_set("fan-control", ESP_LOG_INFO);
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("http", ESP_LOG_INFO);
+    esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
 
     
     //----------------------------------------------
@@ -175,7 +176,7 @@ extern "C" void app_main(void) {
     //--- create task for button ---
     //------------------------------
     //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_button, "task_button", 2048, NULL, 4, NULL);
+    xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
 
     //-----------------------------------
     //--- create task for fan control ---

@@ -11,6 +11,7 @@ idf_component_register(
         "fan.cpp"
         "wifi.c"
         "http.cpp"
+        "auto.cpp"
     INCLUDE_DIRS 
         "."
     )

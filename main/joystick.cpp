@@ -75,13 +75,21 @@ int evaluatedJoystick::readAdc(adc1_channel_t adc_channel, bool inverted) {
 joystickData_t evaluatedJoystick::getData() {
     //get coordinates
     //TODO individual tolerances for each axis? Otherwise some parameters can be removed
-    ESP_LOGD(TAG, "getting X coodrinate...");
+    ESP_LOGV(TAG, "getting X coodrinate...");
+	uint32_t adcRead;
+	adcRead = readAdc(config.adc_x, config.x_inverted);
     float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), config.x_min, config.x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
     data.x = x;
+	ESP_LOGD(TAG, "X: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => x=%.3f",
+        adc1_get_raw(config.adc_x), adcRead,  config.x_min, config.x_max, x_center, config.x_inverted, x);
 
-    ESP_LOGD(TAG, "getting Y coodrinate...");
-    float y = scaleCoordinate(readAdc(config.adc_y, config.y_inverted), config.y_min, config.y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
+
+    ESP_LOGV(TAG, "getting Y coodrinate...");
+	adcRead = readAdc(config.adc_y, config.y_inverted);
+    float y = scaleCoordinate(adcRead, config.y_min, config.y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
     data.y = y;
+	ESP_LOGD(TAG, "Y: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => y=%.3lf",
+        adc1_get_raw(config.adc_y), adcRead,  config.y_min, config.y_max, y_center, config.y_inverted, y);
 
     //calculate radius
     data.radius = sqrt(pow(data.x,2) + pow(data.y,2));

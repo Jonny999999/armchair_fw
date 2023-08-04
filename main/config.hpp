@@ -9,6 +9,12 @@
 #include "control.hpp"
 #include "fan.hpp"
 #include "http.hpp"
+#include "auto.hpp"
+
+
+//in IDLE mode: set loglevel for evaluatedJoystick to DEBUG 
+//and repeatedly read joystick e.g. for manually calibrating / testing joystick
+//#define JOYSTICK_LOG_IN_IDLE
 
 
 //create global controlledMotor instances for both motors
@@ -26,6 +32,9 @@ extern buzzer_t buzzer;
 
 //create global control object
 extern controlledArmchair control;
+
+//create global automatedArmchair object (for auto-mode)
+extern automatedArmchair armchair;
 
 //create global httpJoystick object
 extern httpJoystick httpJoystickMain;
