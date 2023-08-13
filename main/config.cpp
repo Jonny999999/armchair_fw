@@ -10,7 +10,8 @@ single100a_config_t configDriverLeft = {
     .gpio_b = GPIO_NUM_4,
     .ledc_timer = LEDC_TIMER_0,
     .ledc_channel = LEDC_CHANNEL_0,
-    .abInverted = true,
+	.aEnabledPinState = false, //-> pins inverted (mosfets)
+	.bEnabledPinState = false,
     .resolution = LEDC_TIMER_11_BIT,
     .pwmFreq = 10000
 };
@@ -22,7 +23,8 @@ single100a_config_t configDriverRight = {
     .gpio_b = GPIO_NUM_14,
     .ledc_timer = LEDC_TIMER_1,
     .ledc_channel = LEDC_CHANNEL_1,
-    .abInverted = false,
+	.aEnabledPinState = true, //-> pins not inverted
+	.bEnabledPinState = true,
     .resolution = LEDC_TIMER_11_BIT,
     .pwmFreq = 10000
 };
