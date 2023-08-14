@@ -19,12 +19,12 @@ single100a_config_t configDriverLeft = {
 //--- configure right motor ---
 single100a_config_t configDriverRight = {
     .gpio_pwm = GPIO_NUM_27,
-    .gpio_a = GPIO_NUM_18,
+    .gpio_a = GPIO_NUM_2,
     .gpio_b = GPIO_NUM_14,
     .ledc_timer = LEDC_TIMER_1,
     .ledc_channel = LEDC_CHANNEL_1,
-	.aEnabledPinState = true, //-> pins not inverted
-	.bEnabledPinState = true,
+	.aEnabledPinState = false, //-> pin inverted (mosfet)
+	.bEnabledPinState = true,  //-> not inverted (direct)
     .resolution = LEDC_TIMER_11_BIT,
     .pwmFreq = 10000
 };
@@ -75,17 +75,17 @@ joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
     //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
-    .tolerance_zeroX_per = 3,
-    .tolerance_zeroY_per = 7,
+    .tolerance_zeroX_per = 5,
+    .tolerance_zeroY_per = 8,
     //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
-    .tolerance_end_per = 5, 
+    .tolerance_end_per = 6, 
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
     .tolerance_radius = 0.05,
 
     //min and max adc values of each axis (after inversion is applied)
-    .x_min = 1230, //=> x=-1
-    .x_max = 2700, //=> x=1
-    .y_min = 1260, //=> y=-1
+    .x_min = 1260, //=> x=-1
+    .x_max = 2680, //=> x=1
+    .y_min = 1250, //=> y=-1
     .y_max = 2700, //=> y=1
     //invert adc measurement
     .x_inverted = true,
@@ -98,12 +98,12 @@ joystick_config_t configJoystick = {
 //--- configure fan contol ---
 //----------------------------
 fan_config_t configFanLeft = {
-    .gpio_fan = GPIO_NUM_2,
+    .gpio_fan = GPIO_NUM_13, //FIXME simplify fan control! now only one pin used - might cause issues
     .msRun = 5000,
     .dutyThreshold = 35
 };
 fan_config_t configFanRight = {
-    .gpio_fan = GPIO_NUM_15,
+    .gpio_fan = GPIO_NUM_13,
     .msRun = 5000,
     .dutyThreshold = 35
 };
@@ -117,7 +117,7 @@ fan_config_t configFanRight = {
 evaluatedJoystick joystick(configJoystick);
 
 //create global evaluated switch instance for button next to joystick
-gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_33, true, false); //pullup true, not inverted (switch to GND use pullup of controller)
+gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_25, true, false); //pullup true, not inverted (switch to GND use pullup of controller)
                                                                
 //create buzzer object on pin 12 with gap between queued events of 100ms 
 buzzer_t buzzer(GPIO_NUM_12, 100);
