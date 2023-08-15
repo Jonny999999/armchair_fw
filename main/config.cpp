@@ -97,15 +97,12 @@ joystick_config_t configJoystick = {
 //----------------------------
 //--- configure fan contol ---
 //----------------------------
-fan_config_t configFanLeft = {
-    .gpio_fan = GPIO_NUM_13, //FIXME simplify fan control! now only one pin used - might cause issues
-    .msRun = 5000,
-    .dutyThreshold = 35
-};
-fan_config_t configFanRight = {
+fan_config_t configCooling = {
     .gpio_fan = GPIO_NUM_13,
-    .msRun = 5000,
-    .dutyThreshold = 35
+    .dutyThreshold = 40,
+	.minOnMs = 1500,
+	.minOffMs = 3000,
+	.turnOffDelayMs = 5000,
 };
 
 

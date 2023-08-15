@@ -88,12 +88,10 @@ void task_button( void * pvParameters ){
 void task_fans( void * pvParameters ){
     ESP_LOGI(TAG, "Initializing fans and starting fan handle loop");
     //create fan instances with config defined in config.cpp
-    controlledFan fanLeft(configFanLeft, &motorLeft);
-    controlledFan fanRight(configFanRight, &motorRight);
-    //repeatedly run fan handle functions in a slow loop
+    controlledFan fan(configCooling, &motorLeft, &motorRight);
+    //repeatedly run fan handle function in a slow loop
     while(1){
-        fanLeft.handle();
-        fanRight.handle();
+        fan.handle();
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }

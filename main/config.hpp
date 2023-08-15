@@ -14,7 +14,7 @@
 
 //in IDLE mode: set loglevel for evaluatedJoystick to DEBUG 
 //and repeatedly read joystick e.g. for manually calibrating / testing joystick
-#define JOYSTICK_LOG_IN_IDLE
+//#define JOYSTICK_LOG_IN_IDLE
 
 
 //create global controlledMotor instances for both motors
@@ -39,7 +39,6 @@ extern automatedArmchair armchair;
 //create global httpJoystick object
 extern httpJoystick httpJoystickMain;
 
-//configuration for fans
-extern fan_config_t configFanLeft;
-extern fan_config_t configFanRight;
+//configuration for fans / cooling
+extern fan_config_t configCooling;
 
