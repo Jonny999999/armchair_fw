@@ -302,7 +302,7 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
     motorCommands_t commands;
     float dutyMax = 95; //TODO add this to config, make changeable during runtime
 
-    float dutyOffset = 10; //immediately starts with this duty, TODO add this to config
+    float dutyOffset = 5; //immediately starts with this duty, TODO add this to config
     float dutyRange = dutyMax - dutyOffset;
     float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
 

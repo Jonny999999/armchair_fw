@@ -31,8 +31,8 @@ single100a_config_t configDriverRight = {
 
 //--- configure motor contol ---
 motorctl_config_t configMotorControl = {
-    .msFadeAccel = 1300, //acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 700, //deceleration of the motor (ms it takes from 100% to 0%)
+    .msFadeAccel = 2400, //acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
     .currentMax = 10
 };
 
@@ -75,10 +75,10 @@ joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
     //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
-    .tolerance_zeroX_per = 5,
-    .tolerance_zeroY_per = 8,
+    .tolerance_zeroX_per = 6,
+    .tolerance_zeroY_per = 7,
     //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
-    .tolerance_end_per = 6, 
+    .tolerance_end_per = 4, 
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
     .tolerance_radius = 0.05,
 
