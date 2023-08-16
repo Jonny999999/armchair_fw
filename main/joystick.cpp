@@ -54,6 +54,7 @@ int evaluatedJoystick::readAdc(adc1_channel_t adc_channel, bool inverted) {
     int adc_reading = 0;
     for (int i = 0; i < 16; i++) {
         adc_reading += adc1_get_raw(adc_channel);
+		//TODO add delay for actual average
     }
     adc_reading = adc_reading / 16;
 
@@ -75,7 +76,8 @@ int evaluatedJoystick::readAdc(adc1_channel_t adc_channel, bool inverted) {
 joystickData_t evaluatedJoystick::getData() {
     //get coordinates
     //TODO individual tolerances for each axis? Otherwise some parameters can be removed
-    ESP_LOGV(TAG, "getting X coodrinate...");
+	//TODO duplicate code for each axis below:
+    ESP_LOGV(TAG, "getting X coodrdinate...");
 	uint32_t adcRead;
 	adcRead = readAdc(config.adc_x, config.x_inverted);
     float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), config.x_min, config.x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
@@ -103,6 +105,7 @@ joystickData_t evaluatedJoystick::getData() {
     //define position
     data.position = joystick_evaluatePosition(x, y);
 
+	ESP_LOGD(TAG, "X=%.2f  Y=%.2f  radius=%.2f  angle=%.2f", data.x, data.y, data.radius, data.angle);
     return data;
 }
 
@@ -162,7 +165,7 @@ float scaleCoordinate(float input, float min, float max, float center, float tol
         coordinate = -(center-input - tolerance_zero) / range;
     }
 
-    ESP_LOGD(TAG, "scaled coordinate from %.3f to %.3f, tolZero=%.3f, tolEnd=%.3f", input, coordinate, tolerance_zero, tolerance_end);
+    ESP_LOGD(TAG, "scaling: in=%.3f coordinate=%.3f, tolZero=%.3f, tolEnd=%.3f", input, coordinate, tolerance_zero, tolerance_end);
     //return coordinate (-1 to 1)
     return coordinate;
 
@@ -225,14 +228,23 @@ float scaleLinPoint(float value, float pointX, float pointY){
 //function that updates a joystickData object with linear scaling applied to coordinates
 //e.g. use to use more joystick resolution for lower speeds
 void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float pointY){
-    //scale x and y coordinate
+    // --- scale x and y coordinate ---
+	/*
     data->x = scaleLinPoint(data->x, pointX, pointY);
     data->y = scaleLinPoint(data->y, pointX, pointY);
     //re-calculate radius
     data->radius = sqrt(pow(data->x,2) + pow(data->y,2));
-    if (data->radius > 1-0.07) {//FIXME hardcoded radius tolerance
+    if (data->radius > 1-0.1) {//FIXME hardcoded radius tolerance
         data->radius = 1;
     }
+	*/
+	
+	//note: issue with scaling X, Y coordinates:
+	//  - messed up radius calculation - radius never gets 1 at diagonal positions
+	//==> only scaling radius as only speed should be more acurate at low radius:
+	
+	//--- scale radius only ---
+	data-> radius = scaleLinPoint(data->radius, pointX, pointY);
 }
 
 
