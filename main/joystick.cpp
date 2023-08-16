@@ -227,6 +227,7 @@ float scaleLinPoint(float value, float pointX, float pointY){
 }
 //function that updates a joystickData object with linear scaling applied to coordinates
 //e.g. use to use more joystick resolution for lower speeds
+//TODO rename this function to more general name (scales not only coordinates e.g. adjusts radius, in future angle...)
 void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float pointY){
     // --- scale x and y coordinate ---
 	/*
@@ -243,7 +244,7 @@ void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float 
 	//  - messed up radius calculation - radius never gets 1 at diagonal positions
 	//==> only scaling radius as only speed should be more acurate at low radius:
 	
-	//--- scale radius only ---
+	//--- scale radius ---
 	data-> radius = scaleLinPoint(data->radius, pointX, pointY);
 }
 
@@ -312,11 +313,20 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
 
 
     motorCommands_t commands;
-    float dutyMax = 95; //TODO add this to config, make changeable during runtime
+    float dutyMax = 90; //TODO add this to config, make changeable during runtime
 
     float dutyOffset = 5; //immediately starts with this duty, TODO add this to config
     float dutyRange = dutyMax - dutyOffset;
     float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
+	
+	//snap ratio to max at threshold (-> more joystick area where inner wheel is off when turning)
+	/*
+	//FIXME works, but armchair unsusable because of current bug with motor driver (inner motor freezes after turn)
+	float ratioClipThreshold = 0.3;
+	if (ratio < ratioClipThreshold) ratio = 0;
+	else if (ratio > 1-ratioClipThreshold) ratio = 1;
+	//TODO subtract this clip threshold from available joystick range at ratio usage
+	*/
 
     //experimental alternative control mode
     if (altStickMapping == true){
@@ -366,13 +376,13 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::FWD;
             commands.left.duty = data.radius * dutyRange + dutyOffset;
-            commands.right.duty = data.radius * dutyRange - data.radius*dutyRange*(1-ratio) + dutyOffset;
+            commands.right.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
             break;
 
         case joystickPos_t::TOP_LEFT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::FWD;
-            commands.left.duty =  data.radius * dutyRange - data.radius*dutyRange*(1-ratio) + dutyOffset;
+            commands.left.duty =  data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
             commands.right.duty = data.radius * dutyRange + dutyOffset;
             break;
 
@@ -380,13 +390,13 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
             commands.left.state = motorstate_t::REV;
             commands.right.state = motorstate_t::REV;
             commands.left.duty = data.radius * dutyRange + dutyOffset;
-            commands.right.duty = data.radius * dutyRange - data.radius*dutyRange*(1-ratio) + dutyOffset; //TODO remove offset? allow one motor only
+            commands.right.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
             break;
 
         case joystickPos_t::BOTTOM_RIGHT:
             commands.left.state = motorstate_t::REV;
             commands.right.state = motorstate_t::REV;
-            commands.left.duty = data.radius * dutyRange - data.radius*dutyRange*(1-ratio) + dutyOffset; //TODO remove offset? allow one motor only
+            commands.left.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
             commands.right.duty =  data.radius * dutyRange + dutyOffset;
             break;
     }

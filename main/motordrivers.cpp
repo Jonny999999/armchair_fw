@@ -83,7 +83,8 @@ void single100a::set(motorstate_t state_f, float duty_f){
     uint32_t dutyScaled;
     if (duty_f > 100) { //target duty above 100%
         dutyScaled = dutyMax;
-    } else if (duty_f < 0) { //target duty below 0%
+    } else if (duty_f <= 0) { //target at or below 0%
+		state_f = motorstate_t::IDLE;
         dutyScaled = 0;
     } else { //target duty 0-100%
              //scale duty to available resolution
@@ -97,6 +98,8 @@ void single100a::set(motorstate_t state_f, float duty_f){
             ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
             //TODO: to fix bugged state of h-bridge module when idle and start again, maybe try to leave pwm signal on for some time before updating a/b pins?
             //no brake: (freewheel)
+            //gpio_set_level(config.gpio_a, config.aEnabledPinState);
+            //gpio_set_level(config.gpio_b, !config.bEnabledPinState);
             gpio_set_level(config.gpio_a, config.aEnabledPinState);
             gpio_set_level(config.gpio_b, config.bEnabledPinState);
             break;
