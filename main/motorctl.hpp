@@ -10,6 +10,7 @@ extern "C"
 }
 
 #include "motordrivers.hpp"
+#include "currentsensor.hpp"
 
 
 //-------------------------------------
@@ -32,6 +33,9 @@ typedef struct motorCommands_t {
 typedef struct motorctl_config_t {
     uint32_t msFadeAccel; //acceleration of the motor (ms it takes from 0% to 100%)
     uint32_t msFadeDecel; //deceleration of the motor (ms it takes from 100% to 0%)
+	bool currentLimitEnabled;
+	adc1_channel_t currentSensor_adc;
+	float currentSensor_ratedCurrent;
     float currentMax;
 } motorctl_config_t;
 
@@ -52,6 +56,8 @@ class controlledMotor {
         void setFade(fadeType_t fadeType, bool enabled); //enable/disable acceleration or deceleration fading
         void setFade(fadeType_t fadeType, uint32_t msFadeNew); //set acceleration or deceleration fade time
         bool toggleFade(fadeType_t fadeType); //toggle acceleration or deceleration on/off
+											  
+		//TODO set current limit
 
 
     private:
@@ -59,11 +65,12 @@ class controlledMotor {
         void init(); //creates currentsensor objects, motordriver objects and queue
 
         //--- objects ---
-        //TODO: add currentsensor object
         //motor driver
         single100a motor;
         //queue for sending commands to the separate task running the handle() function very fast
         QueueHandle_t commandQueue = NULL;
+		//current sensor
+		currentSensor cSensor;
 
         //--- variables ---
         //struct for storing control specific parameters
