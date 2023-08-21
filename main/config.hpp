@@ -17,6 +17,8 @@
 //#define JOYSTICK_LOG_IN_IDLE
 
 
+//TODO outsource global variables to e.g. global.cpp and only config options here?
+
 //create global controlledMotor instances for both motors
 extern controlledMotor motorLeft;
 extern controlledMotor motorRight;

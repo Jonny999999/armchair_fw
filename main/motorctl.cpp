@@ -7,7 +7,7 @@ static const char * TAG = "motor-control";
 //=============================
 //======== constructor ========
 //=============================
-//constructor, simultaniously initialize instance of motor driver 'motor' with provided config (see below line after ':')
+//constructor, simultaniously initialize instance of motor driver 'motor' and current sensor 'cSensor' with provided config (see below lines after ':')
 controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control): 
 	motor(config_driver), 
 	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent) {
@@ -29,7 +29,7 @@ controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_co
 //============================
 void controlledMotor::init(){
     commandQueue = xQueueCreate( 1, sizeof( struct motorCommand_t ) );
-	//cSensor.calibrateZeroAmpere(); //TODO do this regularly e.g. in idle?
+	//cSensor.calibrateZeroAmpere(); //currently done in currentsensor constructor TODO do this regularly e.g. in idle?
 }
 
 
@@ -118,12 +118,10 @@ void controlledMotor::handle(){
     }
 
 
-
     //--- calculate difference ---
     dutyDelta = dutyTarget - dutyNow;
     //positive: need to increase by that value
     //negative: need to decrease
-
 
 
 	//----- fading -----
@@ -147,30 +145,6 @@ void controlledMotor::handle(){
     }
 
 
-    //previous approach: (resulted in bug where accel/decel fade is swaped in reverse)
-//    //--- fade up ---
-//    //dutyDelta is higher than IncrementUp -> fade up
-//    if(dutyDelta > dutyIncrementUp){
-//        ESP_LOGV(TAG, "*fading up*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementUp, (int)usPassed);
-//        dutyNow += dutyIncrementUp; //increase duty by increment
-//    }
-//
-//    //--- fade down ---
-//    //dutyDelta is more negative than -IncrementDown -> fade down
-//    else if (dutyDelta < -dutyIncrementDown){
-//        ESP_LOGV(TAG, "*fading down*: target=%.2f%% - previous=%.2f%% - increment=%.6f%% - usSinceLastRun=%d", dutyTarget, dutyNow, dutyIncrementDown, (int)usPassed);
-//
-//        dutyNow -= dutyIncrementDown; //decrease duty by increment
-//    }
-//
-//    //--- set to target ---
-//    //duty is already very close to target (closer than IncrementUp or IncrementDown)
-//    else{ 
-//        //immediately set to target duty
-//        dutyNow = dutyTarget;
-//    }
-    
-
 	//----- current limit -----
 	if ((config.currentLimitEnabled) && (dutyDelta != 0)){
 		currentNow = cSensor.read();
@@ -190,8 +164,8 @@ void controlledMotor::handle(){
 	}
 
 
-    //define motorstate from converted duty -100 to 100
-    //apply target duty and state to motor driver
+    //--- define motorstate ---
+	//from converted duty -100 to 100
     //forward
     if(dutyNow > 0){
         state = motorstate_t::FWD;
@@ -205,14 +179,12 @@ void controlledMotor::handle(){
         state = motorstate_t::IDLE;
     }
 
-    //--- apply to motor ---
+    //--- apply new target to motor ---
     motor.set(state, fabs(dutyNow));
     //note: BRAKE state is handled earlier
     
-    
     //--- update timestamp ---
     timestampLastRunUs = esp_timer_get_time(); //update timestamp last run with current timestamp in microseconds
-
 }
 
 
@@ -269,7 +241,6 @@ void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew){
             break;
     }
 }
-
 
 //enable (set to default value) or disable fading
 void controlledMotor::setFade(fadeType_t fadeType, bool enabled){

@@ -5,7 +5,6 @@ extern "C"
 #include "esp_log.h"
 #include "freertos/queue.h"
 
-
 //custom C libraries
 #include "wifi.h"
 }
@@ -20,8 +19,8 @@ extern "C"
 
 //tag for logging
 static const char * TAG = "control";
-
 const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", "BLUETOOTH", "AUTO"};
+
 
 //-----------------------------
 //-------- constructor --------
@@ -55,16 +54,15 @@ controlledArmchair::controlledArmchair (
 //---------- Handle loop -----------
 //----------------------------------
 //function that repeatedly generates motor commands depending on the current mode
+//also handles fading and current-limit
 void controlledArmchair::startHandleLoop() {
     while (1){
-
         ESP_LOGV(TAG, "control task executing... mode=%s", controlModeStr[(int)mode]);
 
         switch(mode) {
             default:
                 mode = controlMode_t::IDLE;
                 break;
-
 
             case controlMode_t::IDLE:
                 //copy preset commands for idling both motors
@@ -77,7 +75,6 @@ void controlledArmchair::startHandleLoop() {
 				//since loglevel is DEBUG, calculateion details is output
                 joystick_l->getData(); //get joystick data here
 #endif
-
                 break;
 
 
@@ -109,7 +106,6 @@ void controlledArmchair::startHandleLoop() {
                 //apply motor commands
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
-
                 break;
 
 
@@ -173,11 +169,12 @@ void controlledArmchair::startHandleLoop() {
                break;
 
 
-              //  //TODO: add other modes here
+              //TODO: add other modes here
         }
 
 
         //--- run actions based on received button button event ---
+		//note: buttonCount received by sendButtonEvent method called from button.cpp
         //TODO: what if variable gets set from other task during this code? -> mutex around this code
         switch (buttonCount) {
             case 1: //define joystick center or freeze input
@@ -385,7 +382,6 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 #ifdef JOYSTICK_LOG_IN_IDLE
 			esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
 #endif
-
 			break;
 
         case controlMode_t::HTTP:
@@ -428,6 +424,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 }
 
 
+//TODO simplify the following 3 functions? can be replaced by one?
 
 //-----------------------------------
 //----------- toggleIdle ------------
@@ -445,7 +442,6 @@ void controlledArmchair::toggleIdle() {
 //------------------------------------
 //function to toggle between two modes, but prefer first argument if entirely different mode is currently active
 void controlledArmchair::toggleModes(controlMode_t modePrimary, controlMode_t modeSecondary) {
-
     //switch to secondary mode when primary is already active
     if (mode == modePrimary){
         ESP_LOGW(TAG, "toggleModes: switching from primaryMode %s to secondarMode %s", controlModeStr[(int)mode], controlModeStr[(int)modeSecondary]);

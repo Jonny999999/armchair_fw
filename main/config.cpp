@@ -1,9 +1,9 @@
 #include "config.hpp"
 
-//-----------------------------------
-//------- motor configuration -------
-//-----------------------------------
-//--- configure left motor ---
+//===================================
+//======= motor configuration =======
+//===================================
+//--- configure left motor (hardware) ---
 single100a_config_t configDriverLeft = {
     .gpio_pwm = GPIO_NUM_26,
     .gpio_a = GPIO_NUM_16,
@@ -16,7 +16,7 @@ single100a_config_t configDriverLeft = {
     .pwmFreq = 10000
 };
 
-//--- configure right motor ---
+//--- configure right motor (hardware) ---
 single100a_config_t configDriverRight = {
     .gpio_pwm = GPIO_NUM_27,
     .gpio_a = GPIO_NUM_2,
@@ -29,8 +29,9 @@ single100a_config_t configDriverRight = {
     .pwmFreq = 10000
 };
 
+
 //TODO add motor name string -> then use as log tag?
-//--- configure motor contol ---
+//--- configure left motor (contol) ---
 motorctl_config_t configMotorControlLeft = {
     .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
@@ -39,6 +40,8 @@ motorctl_config_t configMotorControlLeft = {
 	.currentSensor_ratedCurrent = 50,
     .currentMax = 30
 };
+
+//--- configure right motor (contol) ---
 motorctl_config_t configMotorControlRight = {
     .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
@@ -48,15 +51,11 @@ motorctl_config_t configMotorControlRight = {
     .currentMax = 30
 };
 
-//create controlled motor instances
-controlledMotor motorLeft(configDriverLeft, configMotorControlLeft);
-controlledMotor motorRight(configDriverRight, configMotorControlRight);
 
 
-
-//------------------------------
-//------- control config -------
-//------------------------------
+//==============================
+//======= control config =======
+//==============================
 control_config_t configControl = {
     .defaultMode = controlMode_t::JOYSTICK, //default mode after startup and toggling IDLE
     //--- timeout ---    
@@ -68,9 +67,9 @@ control_config_t configControl = {
 
 
 
-//-------------------------------
-//----- httpJoystick config -----
-//-------------------------------
+//===============================
+//===== httpJoystick config =====
+//===============================
 httpJoystick_config_t configHttpJoystickMain{
     .toleranceZeroX_Per = 1,  //percentage around joystick axis the coordinate snaps to 0
     .toleranceZeroY_Per = 6,
@@ -80,9 +79,9 @@ httpJoystick_config_t configHttpJoystickMain{
 
 
 
-//--------------------------------------
-//------- joystick configuration -------
-//--------------------------------------
+//======================================
+//======= joystick configuration =======
+//======================================
 joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
@@ -106,9 +105,9 @@ joystick_config_t configJoystick = {
 
 
 
-//----------------------------
-//--- configure fan contol ---
-//----------------------------
+//============================
+//=== configure fan contol ===
+//============================
 fan_config_t configCooling = {
     .gpio_fan = GPIO_NUM_13,
     .dutyThreshold = 40,
@@ -119,10 +118,17 @@ fan_config_t configCooling = {
 
 
 
+
 //=================================
 //===== create global objects =====
 //=================================
-//create global joystic instance
+//TODO outsource global variables to e.g. global.cpp and only config options here?
+
+//create controlled motor instances (motorctl.hpp)
+controlledMotor motorLeft(configDriverLeft, configMotorControlLeft);
+controlledMotor motorRight(configDriverRight, configMotorControlRight);
+
+//create global joystic instance (joystick.hpp)
 evaluatedJoystick joystick(configJoystick);
 
 //create global evaluated switch instance for button next to joystick
@@ -131,13 +137,13 @@ gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_25, true, false); //pullup true, no
 //create buzzer object on pin 12 with gap between queued events of 100ms 
 buzzer_t buzzer(GPIO_NUM_12, 100);
 
-//create global httpJoystick object
+//create global httpJoystick object (http.hpp)
 httpJoystick httpJoystickMain(configHttpJoystickMain);
 
-//create global control object
+//create global control object (control.hpp)
 controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &joystick, &httpJoystickMain);
 
-//create global automatedArmchair object (for auto-mode)
+//create global automatedArmchair object (for auto-mode) (auto.hpp)
 automatedArmchair armchair;
 
 

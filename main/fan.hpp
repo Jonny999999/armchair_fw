@@ -8,7 +8,7 @@ extern "C"
 #include "motorctl.hpp"
 
 
-
+//--- fan_config_t ---
 //struct with all config parameters for a fan
 typedef struct fan_config_t {
     gpio_num_t gpio_fan;
@@ -29,7 +29,7 @@ class controlledFan {
         controlledFan (fan_config_t config_f, controlledMotor* motor1_f, controlledMotor* motor2_f );
 
         //--- functions ---
-        void handle();
+        void handle(); //has to be run repeatedly in a slow loop
 
 
     private:

@@ -13,9 +13,9 @@ extern "C"
 #include "currentsensor.hpp"
 
 
-//-------------------------------------
-//-------- struct/type  declarations -------
-//-------------------------------------
+//=======================================
+//====== struct/type  declarations ======
+//=======================================
 
 //struct for sending command for one motor in the queue
 struct motorCommand_t {
@@ -45,6 +45,9 @@ enum class fadeType_t {ACCEL, DECEL};
 
 
 
+//===================================
+//====== controlledMotor class ======
+//===================================
 class controlledMotor {
     public:
         //--- functions ---
@@ -57,8 +60,7 @@ class controlledMotor {
         void setFade(fadeType_t fadeType, uint32_t msFadeNew); //set acceleration or deceleration fade time
         bool toggleFade(fadeType_t fadeType); //toggle acceleration or deceleration on/off
 											  
-		//TODO set current limit
-
+		//TODO set current limit method
 
     private:
         //--- functions ---
@@ -75,7 +77,6 @@ class controlledMotor {
         //--- variables ---
         //struct for storing control specific parameters
         motorctl_config_t config;
-        
         motorstate_t state = motorstate_t::IDLE;
 
         float currentMax;
@@ -95,5 +96,4 @@ class controlledMotor {
 
         struct motorCommand_t commandReceive = {};
         struct motorCommand_t commandSend = {};
-
 };
