@@ -6,14 +6,14 @@
 //--- configure left motor (hardware) ---
 single100a_config_t configDriverLeft = {
     .gpio_pwm = GPIO_NUM_26,
-    .gpio_a = GPIO_NUM_16,
-    .gpio_b = GPIO_NUM_4,
+    .gpio_a = GPIO_NUM_25,
+    .gpio_b = GPIO_NUM_27,
     .ledc_timer = LEDC_TIMER_0,
     .ledc_channel = LEDC_CHANNEL_0,
-	.aEnabledPinState = false, //-> pins inverted (mosfets)
-	.bEnabledPinState = false,
+	.aEnabledPinState = true, //-> pins inverted (mosfets)
+	.bEnabledPinState = true,
     .resolution = LEDC_TIMER_11_BIT,
-    .pwmFreq = 10000
+    .pwmFreq = 5000
 };
 
 //--- configure right motor (hardware) ---

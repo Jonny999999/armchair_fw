@@ -134,8 +134,8 @@ void setLoglevels(void){
     //--- set loglevel for individual tags ---
     esp_log_level_set("main", ESP_LOG_INFO);
     esp_log_level_set("buzzer", ESP_LOG_ERROR);
-    //esp_log_level_set("motordriver", ESP_LOG_INFO);
-    //esp_log_level_set("motor-control", ESP_LOG_DEBUG);
+    esp_log_level_set("motordriver", ESP_LOG_DEBUG);
+    esp_log_level_set("motor-control", ESP_LOG_DEBUG);
     //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
@@ -153,78 +153,78 @@ void setLoglevels(void){
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
-    //enable 5V volate regulator
-    gpio_pad_select_gpio(GPIO_NUM_17);                                                  
-    gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_17, 1);                                                      
-
-    //---- define log levels ----
+//    //enable 5V volate regulator
+//    gpio_pad_select_gpio(GPIO_NUM_17);                                                  
+//    gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
+//    gpio_set_level(GPIO_NUM_17, 1);                                                      
+//
+//    //---- define log levels ----
 	setLoglevels();
-    
-    //----------------------------------------------
-    //--- create task for controlling the motors ---
-    //----------------------------------------------
+//    
+//    //----------------------------------------------
+//    //--- create task for controlling the motors ---
+//    //----------------------------------------------
     //task that receives commands, handles ramp and current limit and executes commands using the motordriver function
     xTaskCreate(&task_motorctl, "task_motor-control", 2048, NULL, 6, NULL);
-
-    //------------------------------
-    //--- create task for buzzer ---
-    //------------------------------
-    xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
-
-    //-------------------------------
-    //--- create task for control ---
-    //-------------------------------
-    //task that generates motor commands depending on the current mode and sends those to motorctl task
-    xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
-
-    //------------------------------
-    //--- create task for button ---
-    //------------------------------
-    //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
-
-    //-----------------------------------
-    //--- create task for fan control ---
-    //-----------------------------------
-    //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
-
-
-    //beep at startup
-    buzzer.beep(3, 70, 50);
-
-    //--- initialize nvs-flash and netif (needed for wifi) ---
-    wifi_initNvs_initNetif();
-
-    //--- initialize spiffs ---
-    init_spiffs();
-
-    //--- initialize and start wifi ---
-    //FIXME: run wifi_init_client or wifi_init_ap as intended from control.cpp when switching state 
-    //currently commented out because of error "assert failed: xQueueSemaphoreTake queue.c:1549 (pxQueue->uxItemSize == 0)" when calling control->changeMode from button.cpp
-    //when calling control.changeMode(http) from main.cpp it worked without error for some reason?
-    ESP_LOGI(TAG,"starting wifi...");
-    //wifi_init_client(); //connect to existing wifi
-    wifi_init_ap(); //start access point
-    ESP_LOGI(TAG,"done starting wifi");
-
-
-    //--- testing http server ---
-    //    wifi_init_client(); //connect to existing wifi
-    //    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    //    ESP_LOGI(TAG, "initializing http server");
-    //    http_init_server();
-    
-
-    //--- testing force http mode after startup ---
-        //control.changeMode(controlMode_t::HTTP);
-
-
-	//--- main loop ---
-	//does nothing except for testing things
+//
+//    //------------------------------
+//    //--- create task for buzzer ---
+//    //------------------------------
+//    xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
+//
+//    //-------------------------------
+//    //--- create task for control ---
+//    //-------------------------------
+//    //task that generates motor commands depending on the current mode and sends those to motorctl task
+//    xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
+//
+//    //------------------------------
+//    //--- create task for button ---
+//    //------------------------------
+//    //task that evaluates and processes the button input and runs the configured commands
+//    xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
+//
+//    //-----------------------------------
+//    //--- create task for fan control ---
+//    //-----------------------------------
+//    //task that evaluates and processes the button input and runs the configured commands
+//    xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
+//
+//
+//    //beep at startup
+//    buzzer.beep(3, 70, 50);
+//
+//    //--- initialize nvs-flash and netif (needed for wifi) ---
+//    wifi_initNvs_initNetif();
+//
+//    //--- initialize spiffs ---
+//    init_spiffs();
+//
+//    //--- initialize and start wifi ---
+//    //FIXME: run wifi_init_client or wifi_init_ap as intended from control.cpp when switching state 
+//    //currently commented out because of error "assert failed: xQueueSemaphoreTake queue.c:1549 (pxQueue->uxItemSize == 0)" when calling control->changeMode from button.cpp
+//    //when calling control.changeMode(http) from main.cpp it worked without error for some reason?
+//    ESP_LOGI(TAG,"starting wifi...");
+//    //wifi_init_client(); //connect to existing wifi
+//    wifi_init_ap(); //start access point
+//    ESP_LOGI(TAG,"done starting wifi");
+//
+//
+//    //--- testing http server ---
+//    //    wifi_init_client(); //connect to existing wifi
+//    //    vTaskDelay(2000 / portTICK_PERIOD_MS);
+//    //    ESP_LOGI(TAG, "initializing http server");
+//    //    http_init_server();
+//    
+//
+//    //--- testing force http mode after startup ---
+//        //control.changeMode(controlMode_t::HTTP);
+//
+//
+//	//--- main loop ---
+//	//does nothing except for testing things
 	while(1){
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 
 		//---------------------------------
 		//-------- TESTING section --------
@@ -284,15 +284,15 @@ extern "C" void app_main(void) {
 
 
 		//--- test controlledMotor --- (ramp)
-		// //brake for 1 s
-		// motorLeft.setTarget(motorstate_t::BRAKE);
-		// vTaskDelay(1000 / portTICK_PERIOD_MS);
-		// //command 90% - reverse
-		// motorLeft.setTarget(motorstate_t::REV, 90);
-		// vTaskDelay(5000 / portTICK_PERIOD_MS);
-		// //command 100% - forward
-		// motorLeft.setTarget(motorstate_t::FWD, 100);
-		// vTaskDelay(1000 / portTICK_PERIOD_MS);
+		 //brake for 1 s
+		 motorLeft.setTarget(motorstate_t::BRAKE);
+		 vTaskDelay(200 / portTICK_PERIOD_MS);
+		 //command 90% - reverse
+		 motorLeft.setTarget(motorstate_t::REV, 50);
+		 vTaskDelay(2000 / portTICK_PERIOD_MS);
+		 //command 100% - forward
+		 motorLeft.setTarget(motorstate_t::FWD, 40);
+		 vTaskDelay(3000 / portTICK_PERIOD_MS);
 
 	}
 
