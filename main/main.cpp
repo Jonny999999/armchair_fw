@@ -61,6 +61,7 @@ void task_buzzer( void * pvParameters ){
 //=======================================
 //============ control task =============
 //=======================================
+//task that controls the armchair modes and initiates commands generation and applies them to driver
 void task_control( void * pvParameters ){
     ESP_LOGI(TAG, "Initializing controlledArmchair and starting handle loop");
     //start handle loop (control object declared in config.hpp)
@@ -72,6 +73,7 @@ void task_control( void * pvParameters ){
 //======================================
 //============ button task =============
 //======================================
+//task that handles the button interface/commands
 void task_button( void * pvParameters ){
     ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
     //create button instance
@@ -85,6 +87,7 @@ void task_button( void * pvParameters ){
 //=======================================
 //============== fan task ===============
 //=======================================
+//task that controlls fans for cooling the drivers
 void task_fans( void * pvParameters ){
     ESP_LOGI(TAG, "Initializing fans and starting fan handle loop");
     //create fan instances with config defined in config.cpp
@@ -92,7 +95,7 @@ void task_fans( void * pvParameters ){
     //repeatedly run fan handle function in a slow loop
     while(1){
         fan.handle();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 
@@ -121,20 +124,10 @@ void init_spiffs(){
 
 
 
-//=================================
-//=========== app_main ============
-//=================================
-extern "C" void app_main(void) {
-    //enable 5V volate regulator
-    gpio_pad_select_gpio(GPIO_NUM_17);                                                  
-    gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_17, 1);                                                      
-
-
-
-    //-------------------------------
-    //---------- log level ----------
-    //-------------------------------
+//==================================
+//======== define loglevels ========
+//==================================
+void setLoglevels(void){
     //set loglevel for all tags:
     esp_log_level_set("*", ESP_LOG_WARN);
 
@@ -152,7 +145,21 @@ extern "C" void app_main(void) {
     esp_log_level_set("http", ESP_LOG_INFO);
     esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
     //esp_log_level_set("current-sensors", ESP_LOG_INFO);
+}
 
+
+
+//=================================
+//=========== app_main ============
+//=================================
+extern "C" void app_main(void) {
+    //enable 5V volate regulator
+    gpio_pad_select_gpio(GPIO_NUM_17);                                                  
+    gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_17, 1);                                                      
+
+    //---- define log levels ----
+	setLoglevels();
     
     //----------------------------------------------
     //--- create task for controlling the motors ---
@@ -187,7 +194,6 @@ extern "C" void app_main(void) {
     //beep at startup
     buzzer.beep(3, 70, 50);
 
-
     //--- initialize nvs-flash and netif (needed for wifi) ---
     wifi_initNvs_initNetif();
 
@@ -215,79 +221,79 @@ extern "C" void app_main(void) {
         //control.changeMode(controlMode_t::HTTP);
 
 
-    while(1){
+	//--- main loop ---
+	//does nothing except for testing things
+	while(1){
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-       vTaskDelay(500 / portTICK_PERIOD_MS);
-
-       // //--- testing functions at mode change HTTP ---
-       // control.changeMode(controlMode_t::HTTP);
-       // vTaskDelay(10000 / portTICK_PERIOD_MS);
-       // control.changeMode(controlMode_t::IDLE);
-       // vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-
-        //--- testing wifi functions ---
-       // ESP_LOGI(TAG, "creating AP");
-       // wifi_init_ap(); //start accesspoint
-       // vTaskDelay(15000 / portTICK_PERIOD_MS);
-       // ESP_LOGI(TAG, "stopping wifi");
-       // wifi_deinit_ap();  //stop wifi access point
-       // vTaskDelay(5000 / portTICK_PERIOD_MS);
-       // ESP_LOGI(TAG, "connecting to wifi");
-       // wifi_init_client(); //connect to existing wifi
-       // vTaskDelay(10000 / portTICK_PERIOD_MS);
-       // ESP_LOGI(TAG, "stopping wifi");
-       // wifi_deinit_client(); //stop wifi client
-       // vTaskDelay(5000 / portTICK_PERIOD_MS);
+		//---------------------------------
+		//-------- TESTING section --------
+		//---------------------------------
+		// //--- test functions at mode change HTTP ---
+		// control.changeMode(controlMode_t::HTTP);
+		// vTaskDelay(10000 / portTICK_PERIOD_MS);
+		// control.changeMode(controlMode_t::IDLE);
+		// vTaskDelay(10000 / portTICK_PERIOD_MS);
 
 
-
-       //--- testing button ---
-       //buttonJoystick.handle();
-       // if (buttonJoystick.risingEdge){
-       //     ESP_LOGI(TAG, "button pressed, was released for %d ms", buttonJoystick.msReleased);
-       //     buzzer.beep(2, 100, 50);
-
-       // }else if (buttonJoystick.fallingEdge){
-       //     ESP_LOGI(TAG, "button released, was pressed for %d ms", buttonJoystick.msPressed);
-       //     buzzer.beep(1, 200, 0);
-       // }
-
-
-
-        //--- testing joystick commands ---
-       // motorCommands_t commands = joystick_generateCommandsDriving(joystick);
-       // motorRight.setTarget(commands.right.state, commands.right.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
-       // motorLeft.setTarget(commands.left.state, commands.left.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
-       // //motorRight.setTarget(commands.right.state, commands.right.duty);
-
-        
+		//--- test wifi functions ---
+		// ESP_LOGI(TAG, "creating AP");
+		// wifi_init_ap(); //start accesspoint
+		// vTaskDelay(15000 / portTICK_PERIOD_MS);
+		// ESP_LOGI(TAG, "stopping wifi");
+		// wifi_deinit_ap();  //stop wifi access point
+		// vTaskDelay(5000 / portTICK_PERIOD_MS);
+		// ESP_LOGI(TAG, "connecting to wifi");
+		// wifi_init_client(); //connect to existing wifi
+		// vTaskDelay(10000 / portTICK_PERIOD_MS);
+		// ESP_LOGI(TAG, "stopping wifi");
+		// wifi_deinit_client(); //stop wifi client
+		// vTaskDelay(5000 / portTICK_PERIOD_MS);
 
 
-        //--- testing joystick class ---
-        //joystickData_t data = joystick.getData();
-        //ESP_LOGI(TAG, "position=%s, x=%.1f%%, y=%.1f%%, radius=%.1f%%, angle=%.2f",
-        //        joystickPosStr[(int)data.position], data.x*100, data.y*100, data.radius*100, data.angle);
+		//--- test button ---
+		//buttonJoystick.handle();
+		// if (buttonJoystick.risingEdge){
+		//     ESP_LOGI(TAG, "button pressed, was released for %d ms", buttonJoystick.msReleased);
+		//     buzzer.beep(2, 100, 50);
 
-        //--- testing the motor driver ---
-        //fade up duty - forward
-        //   for (int duty=0; duty<=100; duty+=5) {
-        //       motorLeft.setTarget(motorstate_t::FWD, duty);
-        //       vTaskDelay(100 / portTICK_PERIOD_MS); 
-        //   }
-        
-        
-       //--- testing controlledMotor --- (ramp)
-       // //brake for 1 s
-       // motorLeft.setTarget(motorstate_t::BRAKE);
-       // vTaskDelay(1000 / portTICK_PERIOD_MS);
-       // //command 90% - reverse
-       // motorLeft.setTarget(motorstate_t::REV, 90);
-       // vTaskDelay(5000 / portTICK_PERIOD_MS);
-       // //command 100% - forward
-       // motorLeft.setTarget(motorstate_t::FWD, 100);
-       // vTaskDelay(1000 / portTICK_PERIOD_MS);
+		// }else if (buttonJoystick.fallingEdge){
+		//     ESP_LOGI(TAG, "button released, was pressed for %d ms", buttonJoystick.msPressed);
+		//     buzzer.beep(1, 200, 0);
+		// }
 
-    }
+
+		//--- test joystick commands ---
+		// motorCommands_t commands = joystick_generateCommandsDriving(joystick);
+		// motorRight.setTarget(commands.right.state, commands.right.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
+		// motorLeft.setTarget(commands.left.state, commands.left.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
+		// //motorRight.setTarget(commands.right.state, commands.right.duty);
+
+
+		//--- test joystick class ---
+		//joystickData_t data = joystick.getData();
+		//ESP_LOGI(TAG, "position=%s, x=%.1f%%, y=%.1f%%, radius=%.1f%%, angle=%.2f",
+		//        joystickPosStr[(int)data.position], data.x*100, data.y*100, data.radius*100, data.angle);
+
+		//--- test the motor driver ---
+		//fade up duty - forward
+		//   for (int duty=0; duty<=100; duty+=5) {
+		//       motorLeft.setTarget(motorstate_t::FWD, duty);
+		//       vTaskDelay(100 / portTICK_PERIOD_MS); 
+		//   }
+
+
+		//--- test controlledMotor --- (ramp)
+		// //brake for 1 s
+		// motorLeft.setTarget(motorstate_t::BRAKE);
+		// vTaskDelay(1000 / portTICK_PERIOD_MS);
+		// //command 90% - reverse
+		// motorLeft.setTarget(motorstate_t::REV, 90);
+		// vTaskDelay(5000 / portTICK_PERIOD_MS);
+		// //command 100% - forward
+		// motorLeft.setTarget(motorstate_t::FWD, 100);
+		// vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+	}
 
 }

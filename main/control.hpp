@@ -15,10 +15,11 @@ enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO};
 //string array representing the mode enum (for printing the state as string)
 extern const char* controlModeStr[7];
 
+//--- control_config_t ---
 //struct with config parameters
 typedef struct control_config_t {
     controlMode_t defaultMode;  //default mode after startup and toggling IDLE
-    //--- timeout ---
+    //timeout options
     uint32_t timeoutMs;         //time of inactivity after which the mode gets switched to IDLE
     float timeoutTolerancePer;  //percentage the duty can vary between timeout checks considered still inactive
 } control_config_t;
@@ -55,6 +56,7 @@ class controlledArmchair {
 
         //function that toggles between two modes, but prefers first argument if entirely different mode is currently active
         void toggleModes(controlMode_t modePrimary, controlMode_t modeSecondary);
+
         //toggle between certain mode and previous mode
         void toggleMode(controlMode_t modePrimary);
 

@@ -21,7 +21,6 @@ controlledFan::controlledFan (fan_config_t config_f, controlledMotor* motor1_f, 
 	//copy pointer to motor objects
 	motor1 = motor1_f;
 	motor2 = motor2_f;
-
 	//initialize gpio pin
 	gpio_pad_select_gpio(config.gpio_fan);
 	gpio_set_direction(config.gpio_fan, GPIO_MODE_OUTPUT);
@@ -33,10 +32,11 @@ controlledFan::controlledFan (fan_config_t config_f, controlledMotor* motor1_f, 
 //--------- handle ---------
 //--------------------------
 void controlledFan::handle(){
-	//get current state of the motor
+	//get current state of the motor (motorctl.cpp)
 	motor1Status = motor1->getStatus();
 	motor2Status = motor2->getStatus();
 
+	//--- handle duty threshold ---
 	//update timestamp if any threshold exceeded
 	if (motor1Status.duty > config.dutyThreshold
 			|| motor2Status.duty > config.dutyThreshold){ //TODO add temperature threshold
@@ -49,8 +49,7 @@ void controlledFan::handle(){
 		needsCooling = false;
 	}
 
-
-	//turn off condition
+	//--- turn off condition ---
 	if (fanRunning
 			&& !needsCooling //no more cooling required
 			&& (motor1Status.duty == 0) && (motor2Status.duty == 0) //both motors are off 
@@ -62,7 +61,7 @@ void controlledFan::handle(){
 		ESP_LOGI(TAG, "turned fan OFF gpio=%d, minOnMs=%d, WasOnMs=%d", (int)config.gpio_fan, config.minOnMs, esp_log_timestamp()-timestamp_turnedOn);
 	}
 
-	//turn on condition
+	//--- turn on condition ---
 	if (!fanRunning
 			&& needsCooling
 			&& ((esp_log_timestamp() - timestamp_turnedOff) > config.minOffMs) //fans off long enough

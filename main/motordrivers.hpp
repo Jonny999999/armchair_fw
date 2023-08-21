@@ -19,7 +19,7 @@ extern "C"
 //====================================
 
 //--------------------------------------------
-//---- struct, enum, variable deklarations ---
+//---- struct, enum, variable declarations ---
 //--------------------------------------------
 
 //class which controls a motor using a 'single100a' h-bridge module

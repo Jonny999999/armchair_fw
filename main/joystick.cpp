@@ -1,3 +1,7 @@
+extern "C" {
+#include "hal/timer_types.h"
+}
+
 #include "joystick.hpp"
 
 
@@ -22,7 +26,6 @@ evaluatedJoystick::evaluatedJoystick(joystick_config_t config_f){
 
 
 
-
 //----------------------------
 //---------- init ------------
 //----------------------------
@@ -34,14 +37,13 @@ void evaluatedJoystick::init(){
     //FIXME: the following two commands each throw error 
     //"ADC: adc1_lock_release(419): adc1 lock release called before acquire"
     //note: also happens for each get_raw for first call of readAdc function
-    //when run in main function that does not happen
+    //when run in main function that does not happen -> move init from constructor to be called in main
     adc1_config_channel_atten(config.adc_x, ADC_ATTEN_DB_11); //max voltage
     adc1_config_channel_atten(config.adc_y, ADC_ATTEN_DB_11); //max voltage
 
     //define joystick center from current position
     defineCenter(); //define joystick center from current position
 }
-
 
 
 
@@ -54,7 +56,7 @@ int evaluatedJoystick::readAdc(adc1_channel_t adc_channel, bool inverted) {
     int adc_reading = 0;
     for (int i = 0; i < 16; i++) {
         adc_reading += adc1_get_raw(adc_channel);
-		//TODO add delay for actual average
+		ets_delay_us(50);
     }
     adc_reading = adc_reading / 16;
 
@@ -65,7 +67,6 @@ int evaluatedJoystick::readAdc(adc1_channel_t adc_channel, bool inverted) {
         return adc_reading;
     }
 }
-
 
 
 
@@ -84,7 +85,6 @@ joystickData_t evaluatedJoystick::getData() {
     data.x = x;
 	ESP_LOGD(TAG, "X: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => x=%.3f",
         adc1_get_raw(config.adc_x), adcRead,  config.x_min, config.x_max, x_center, config.x_inverted, x);
-
 
     ESP_LOGV(TAG, "getting Y coodrinate...");
 	adcRead = readAdc(config.adc_y, config.y_inverted);
@@ -111,7 +111,6 @@ joystickData_t evaluatedJoystick::getData() {
 
 
 
-
 //----------------------------
 //------ defineCenter --------
 //----------------------------
@@ -123,8 +122,6 @@ void evaluatedJoystick::defineCenter(){
 
     ESP_LOGW(TAG, "defined center to x=%d, y=%d", x_center, y_center);
 }
-
-
 
 
 
@@ -168,7 +165,6 @@ float scaleCoordinate(float input, float min, float max, float center, float tol
     ESP_LOGD(TAG, "scaling: in=%.3f coordinate=%.3f, tolZero=%.3f, tolEnd=%.3f", input, coordinate, tolerance_zero, tolerance_end);
     //return coordinate (-1 to 1)
     return coordinate;
-
 }
 
 
@@ -225,11 +221,12 @@ float scaleLinPoint(float value, float pointX, float pointY){
         return -result;
     }
 }
+
 //function that updates a joystickData object with linear scaling applied to coordinates
 //e.g. use to use more joystick resolution for lower speeds
 //TODO rename this function to more general name (scales not only coordinates e.g. adjusts radius, in future angle...)
 void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float pointY){
-    // --- scale x and y coordinate ---
+    // --- scale x and y coordinate --- DISABLED
 	/*
     data->x = scaleLinPoint(data->x, pointX, pointY);
     data->y = scaleLinPoint(data->y, pointX, pointY);
@@ -243,6 +240,7 @@ void joystick_scaleCoordinatesLinear(joystickData_t * data, float pointX, float 
 	//note: issue with scaling X, Y coordinates:
 	//  - messed up radius calculation - radius never gets 1 at diagonal positions
 	//==> only scaling radius as only speed should be more acurate at low radius:
+	//TODO make that clear and rename function, since it does not scale coordinates - just radius
 	
 	//--- scale radius ---
 	data-> radius = scaleLinPoint(data->radius, pointX, pointY);
@@ -301,7 +299,6 @@ joystickPos_t joystick_evaluatePosition(float x, float y){
 //function that generates commands for both motors from the joystick data
 motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altStickMapping){
 
-
     //struct with current data of the joystick
     //typedef struct joystickData_t {
     //    joystickPos_t position;
@@ -311,7 +308,7 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
     //    float angle;
     //} joystickData_t;
 
-
+	//--- variables ---
     motorCommands_t commands;
     float dutyMax = 90; //TODO add this to config, make changeable during runtime
 
@@ -319,7 +316,8 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
     float dutyRange = dutyMax - dutyOffset;
     float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
 	
-	//snap ratio to max at threshold (-> more joystick area where inner wheel is off when turning)
+	//--- snap ratio to max at angle threshold --- 
+	//(-> more joystick area where inner wheel is off when turning)
 	/*
 	//FIXME works, but armchair unsusable because of current bug with motor driver (inner motor freezes after turn)
 	float ratioClipThreshold = 0.3;
@@ -328,7 +326,7 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
 	//TODO subtract this clip threshold from available joystick range at ratio usage
 	*/
 
-    //experimental alternative control mode
+    //--- experimental alternative control mode ---
     if (altStickMapping == true){
         //swap BOTTOM_LEFT and BOTTOM_RIGHT
         if (data.position == joystickPos_t::BOTTOM_LEFT){
@@ -339,6 +337,8 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
         }
     }
 
+	//--- handle all positions ---
+	//define target direction and duty according to position
     switch (data.position){
 
         case joystickPos_t::CENTER:
@@ -466,9 +466,6 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
         shake_timestamp_turnedOff = esp_log_timestamp();
     }
 
-
-
-
     //struct with current data of the joystick
     //typedef struct joystickData_t {
     //    joystickPos_t position;
@@ -477,7 +474,6 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
     //    float radius;
     //    float angle;
     //} joystickData_t;
-
 
     //--- evaluate stick position --- 
     //4 quadrants and center only - with X and Y axis as hysteresis
@@ -519,7 +515,6 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
             //TODO: maybe beep when switching mode? (difficult because beep object has to be passed to function)
             break;
     }
-
 
 
     //--- handle different modes (joystick in any of 4 quadrants) ---
