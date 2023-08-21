@@ -29,16 +29,28 @@ single100a_config_t configDriverRight = {
     .pwmFreq = 10000
 };
 
+//TODO add motor name string -> then use as log tag?
 //--- configure motor contol ---
-motorctl_config_t configMotorControl = {
-    .msFadeAccel = 2400, //acceleration of the motor (ms it takes from 0% to 100%)
+motorctl_config_t configMotorControlLeft = {
+    .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
-    .currentMax = 10
+	.currentLimitEnabled = true,
+	.currentSensor_adc =  ADC1_CHANNEL_6, //GPIO34
+	.currentSensor_ratedCurrent = 50,
+    .currentMax = 30
+};
+motorctl_config_t configMotorControlRight = {
+    .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
+	.currentLimitEnabled = true,
+	.currentSensor_adc =  ADC1_CHANNEL_4, //GPIO32
+	.currentSensor_ratedCurrent = 50,
+    .currentMax = 30
 };
 
 //create controlled motor instances
-controlledMotor motorLeft(configDriverLeft, configMotorControl);
-controlledMotor motorRight(configDriverRight, configMotorControl);
+controlledMotor motorLeft(configDriverLeft, configMotorControlLeft);
+controlledMotor motorRight(configDriverRight, configMotorControlRight);
 
 
 
@@ -75,18 +87,18 @@ joystick_config_t configJoystick = {
     .adc_x = ADC1_CHANNEL_3, //GPIO39
     .adc_y = ADC1_CHANNEL_0, //GPIO36
     //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
-    .tolerance_zeroX_per = 6,
-    .tolerance_zeroY_per = 7,
+    .tolerance_zeroX_per = 7, //6
+    .tolerance_zeroY_per = 10, //7
     //percentage of joystick range the coordinate snaps to -1 or 1 before configured "_max" or "_min" threshold (mechanical end) is reached (0-100)
     .tolerance_end_per = 4, 
     //threshold the radius jumps to 1 before the stick is at max radius (range 0-1)
-    .tolerance_radius = 0.08,
+    .tolerance_radius = 0.09,
 
     //min and max adc values of each axis, !!!AFTER INVERSION!!! is applied:
     .x_min = 1392, //=> x=-1
-    .x_max = 2815, //=> x=1
-    .y_min = 1370, //=> y=-1
-    .y_max = 2795, //=> y=1
+    .x_max = 2650, //=> x=1
+    .y_min = 1390, //=> y=-1
+    .y_max = 2640, //=> y=1
     //invert adc measurement
     .x_inverted = true,
     .y_inverted = true

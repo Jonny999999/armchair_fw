@@ -141,8 +141,8 @@ extern "C" void app_main(void) {
     //--- set loglevel for individual tags ---
     esp_log_level_set("main", ESP_LOG_INFO);
     esp_log_level_set("buzzer", ESP_LOG_ERROR);
-    //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
-    esp_log_level_set("motor-control", ESP_LOG_INFO);
+    //esp_log_level_set("motordriver", ESP_LOG_INFO);
+    //esp_log_level_set("motor-control", ESP_LOG_DEBUG);
     //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
@@ -151,6 +151,7 @@ extern "C" void app_main(void) {
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("http", ESP_LOG_INFO);
     esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
+    //esp_log_level_set("current-sensors", ESP_LOG_INFO);
 
     
     //----------------------------------------------

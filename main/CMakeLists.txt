@@ -12,6 +12,7 @@ idf_component_register(
         "wifi.c"
         "http.cpp"
         "auto.cpp"
+		"currentsensor.cpp"
     INCLUDE_DIRS 
         "."
     )

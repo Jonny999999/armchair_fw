@@ -8,16 +8,19 @@ static const char * TAG = "motor-control";
 //======== constructor ========
 //=============================
 //constructor, simultaniously initialize instance of motor driver 'motor' with provided config (see below line after ':')
-controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control): motor(config_driver) {
-    //copy parameters for controlling the motor
-    config = config_control;
-    //copy configured default fading durations to actually used variables
-    msFadeAccel = config.msFadeAccel;
-    msFadeDecel = config.msFadeDecel;
+controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control): 
+	motor(config_driver), 
+	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent) {
+		//copy parameters for controlling the motor
+		config = config_control;
+		//copy configured default fading durations to actually used variables
+		msFadeAccel = config.msFadeAccel;
+		msFadeDecel = config.msFadeDecel;
 
-    init();
-    //TODO: add currentsensor object here
-}
+		init();
+		//TODO: add currentsensor object here
+		//currentSensor cSensor(config.currentSensor_adc, config.currentSensor_ratedCurrent);
+	}
 
 
 
@@ -26,6 +29,7 @@ controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_co
 //============================
 void controlledMotor::init(){
     commandQueue = xQueueCreate( 1, sizeof( struct motorCommand_t ) );
+	//cSensor.calibrateZeroAmpere(); //TODO do this regularly e.g. in idle?
 }
 
 
@@ -56,9 +60,8 @@ void fade(float * dutyNow, float dutyTarget, float dutyIncrement){
 //function that controls the motor driver and handles fading/ramp and current limit
 void controlledMotor::handle(){
 
-    //TODO: current sensor
     //TODO: delay when switching direction?
-    //TODO: History: skip fading when motor was running fast recently
+    //TODO: History: skip fading when motor was running fast recently / alternatively add rot-speed sensor
 
     //--- receive commands from queue ---
     if( xQueueReceive( commandQueue, &commandReceive, ( TickType_t ) 0 ) )
@@ -123,7 +126,8 @@ void controlledMotor::handle(){
 
 
 
-    //--- fade duty to target (up and down) ---
+	//----- fading -----
+    //fade duty to target (up and down)
     //TODO: this needs optimization (can be more clear and/or simpler)
     if (dutyDelta > 0) { //difference positive -> increasing duty (-100 -> 100)
         if (dutyNow < 0) { //reverse, decelerating
@@ -141,7 +145,6 @@ void controlledMotor::handle(){
             fade(&dutyNow, dutyTarget, - dutyIncrementDecel);
         }
     }
-
 
 
     //previous approach: (resulted in bug where accel/decel fade is swaped in reverse)
@@ -167,6 +170,24 @@ void controlledMotor::handle(){
 //        dutyNow = dutyTarget;
 //    }
     
+
+	//----- current limit -----
+	if ((config.currentLimitEnabled) && (dutyDelta != 0)){
+		currentNow = cSensor.read();
+		if (fabs(currentNow) > config.currentMax){
+			float dutyOld = dutyNow;
+			//adaptive decrement:
+			//Note current exceeded twice -> twice as much decrement: TODO: decrement calc needs finetuning, currently random values
+			dutyIncrementDecel = (currentNow/config.currentMax) * ( usPassed / ((float)msFadeDecel * 1500) ) * 100; 
+			float currentLimitDecrement = ( (float)usPassed / ((float)1000 * 1000) ) * 100; //1000ms from 100 to 0
+			if (dutyNow < -currentLimitDecrement) {
+				dutyNow += currentLimitDecrement;
+			} else if (dutyNow > currentLimitDecrement) {
+				dutyNow -= currentLimitDecrement;
+			}
+			ESP_LOGW(TAG, "current limit exceeded! now=%.3fA max=%.1fA => decreased duty from %.3f to %.3f", currentNow, config.currentMax, dutyOld, dutyNow);
+		}
+	}
 
 
     //define motorstate from converted duty -100 to 100
