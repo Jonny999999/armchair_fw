@@ -11,7 +11,7 @@ extern "C"
 }
 
 #include <cmath>
-#include "motorctl.hpp" //for deklaration of motorCommands_t struct
+#include "motorctl.hpp" //for declaration of motorCommands_t struct
 
 
 //======================================
@@ -23,7 +23,7 @@ extern "C"
 // - defines an enum with position information
 
 //--------------------------------------------
-//---- struct, enum, variable deklarations ---
+//---- struct, enum, variable declarations ---
 //--------------------------------------------
 //struct with all required configuration parameters
 typedef struct joystick_config_t {
@@ -51,11 +51,9 @@ typedef struct joystick_config_t {
 } joystick_config_t;
 
 
-
 //enum for describing the position of the joystick
 enum class joystickPos_t {CENTER, Y_AXIS, X_AXIS, TOP_RIGHT, TOP_LEFT, BOTTOM_LEFT, BOTTOM_RIGHT};
 extern const char* joystickPosStr[7];
-
 
 
 //struct with current data of the joystick
@@ -97,8 +95,6 @@ class evaluatedJoystick {
         float x;
         float y;
 };
-
-
 
 
 

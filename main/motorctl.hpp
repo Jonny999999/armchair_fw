@@ -10,11 +10,12 @@ extern "C"
 }
 
 #include "motordrivers.hpp"
+#include "currentsensor.hpp"
 
 
-//-------------------------------------
-//-------- struct/type  declarations -------
-//-------------------------------------
+//=======================================
+//====== struct/type  declarations ======
+//=======================================
 
 //struct for sending command for one motor in the queue
 struct motorCommand_t {
@@ -32,7 +33,11 @@ typedef struct motorCommands_t {
 typedef struct motorctl_config_t {
     uint32_t msFadeAccel; //acceleration of the motor (ms it takes from 0% to 100%)
     uint32_t msFadeDecel; //deceleration of the motor (ms it takes from 100% to 0%)
+	bool currentLimitEnabled;
+	adc1_channel_t currentSensor_adc;
+	float currentSensor_ratedCurrent;
     float currentMax;
+	uint32_t deadTimeMs; //time motor stays in IDLE before direction change
 } motorctl_config_t;
 
 //enum fade type (acceleration, deceleration)
@@ -41,6 +46,9 @@ enum class fadeType_t {ACCEL, DECEL};
 
 
 
+//===================================
+//====== controlledMotor class ======
+//===================================
 class controlledMotor {
     public:
         //--- functions ---
@@ -52,23 +60,24 @@ class controlledMotor {
         void setFade(fadeType_t fadeType, bool enabled); //enable/disable acceleration or deceleration fading
         void setFade(fadeType_t fadeType, uint32_t msFadeNew); //set acceleration or deceleration fade time
         bool toggleFade(fadeType_t fadeType); //toggle acceleration or deceleration on/off
-
+											  
+		//TODO set current limit method
 
     private:
         //--- functions ---
         void init(); //creates currentsensor objects, motordriver objects and queue
 
         //--- objects ---
-        //TODO: add currentsensor object
         //motor driver
         single100a motor;
         //queue for sending commands to the separate task running the handle() function very fast
         QueueHandle_t commandQueue = NULL;
+		//current sensor
+		currentSensor cSensor;
 
         //--- variables ---
         //struct for storing control specific parameters
         motorctl_config_t config;
-        
         motorstate_t state = motorstate_t::IDLE;
 
         float currentMax;
@@ -86,7 +95,10 @@ class controlledMotor {
         uint32_t ramp;
         int64_t timestampLastRunUs;
 
+		bool deadTimeWaiting = false;
+		uint32_t timestampsModeLastActive[4] = {};
+        motorstate_t statePrev = motorstate_t::FWD;
+
         struct motorCommand_t commandReceive = {};
         struct motorCommand_t commandSend = {};
-
 };

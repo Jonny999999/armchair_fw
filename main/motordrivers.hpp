@@ -19,7 +19,7 @@ extern "C"
 //====================================
 
 //--------------------------------------------
-//---- struct, enum, variable deklarations ---
+//---- struct, enum, variable declarations ---
 //--------------------------------------------
 
 //class which controls a motor using a 'single100a' h-bridge module
@@ -34,7 +34,8 @@ typedef struct single100a_config_t {
     gpio_num_t gpio_b;
     ledc_timer_t ledc_timer;
     ledc_channel_t ledc_channel;
-    bool abInverted;
+	bool aEnabledPinState;
+	bool bEnabledPinState;
     ledc_timer_bit_t resolution;
     int pwmFreq;
 } single100a_config_t;

@@ -22,12 +22,10 @@ static httpd_handle_t server = NULL;
 
 
 
-//joystickData_t http_readFromJoystickQueue
-
-
 //==============================
 //===== start mdns service =====
 //==============================
+//TODO: test this, not working?
 //function that initializes and starts mdns server for host discovery
 void start_mdns_service()
 {
@@ -36,7 +34,6 @@ void start_mdns_service()
   mdns_hostname_set("armchair");
   mdns_instance_name_set("electric armchair");
 }
-
 
 
 
@@ -96,7 +93,6 @@ static esp_err_t on_default_url(httpd_req_t *req)
 
 
 
-
 //==============================
 //===== httpJoystick class =====
 //==============================
@@ -106,8 +102,6 @@ static esp_err_t on_default_url(httpd_req_t *req)
 httpJoystick::httpJoystick( httpJoystick_config_t config_f ){
     //copy config struct
     config = config_f;
-    //initialize queue for joystick data
-    QueueHandle_t joystickDataQueue = xQueueCreate( 1, sizeof( struct joystickData_t ) );
 }
 
 
@@ -207,7 +201,6 @@ joystickData_t httpJoystick::getData(){
 }
 
 
-
 //--------------------------------------------
 //--- receiveHttpData for httpJoystickMain ---
 //--------------------------------------------
@@ -223,7 +216,6 @@ esp_err_t on_joystick_url(httpd_req_t *req){
 
 
 
-
 //============================
 //===== init http server =====
 //============================
@@ -231,36 +223,34 @@ esp_err_t on_joystick_url(httpd_req_t *req){
 void http_init_server()
 {
 
-    //configure webserver
+  //---- configure webserver ----
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.uri_match_fn = httpd_uri_match_wildcard;
 
-  //start webserver
+  //---- start webserver ----
   ESP_ERROR_CHECK(httpd_start(&server, &config));
 
 
-  //---------------------------
-  //------- define URLs -------
-  //---------------------------
-  httpd_uri_t joystick_url = {
-      .uri = "/api/joystick",
-      .method = HTTP_POST,
-      .handler = on_joystick_url,
-      };
+  //----- define URLs -----
+  httpd_uri_t joystick_url;
+  joystick_url.uri = "/api/joystick";
+  joystick_url.method = HTTP_POST;
+  joystick_url.handler = on_joystick_url;
   httpd_register_uri_handler(server, &joystick_url);
 
-  httpd_uri_t default_url = {
-      .uri = "/*",
-      .method = HTTP_GET,
-      .handler = on_default_url};
+  httpd_uri_t default_url;
+  default_url.uri = "/*";
+  default_url.method = HTTP_GET;
+  default_url.handler = on_default_url;
   httpd_register_uri_handler(server, &default_url);
 
-//  httpd_uri_t socket_joystick_url = {
-//      .uri = "/ws-api/joystick",
-//      .method = HTTP_GET,
-//      .handler = on_socket_joystick_url,
-//      .is_websocket = true};
-//  httpd_register_uri_handler(server, &socket_joystick_url);
+  //previous approach with sockets:
+    //  httpd_uri_t socket_joystick_url = {
+    //      .uri = "/ws-api/joystick",
+    //      .method = HTTP_GET,
+    //      .handler = on_socket_joystick_url,
+    //      .is_websocket = true};
+    //  httpd_register_uri_handler(server, &socket_joystick_url);
 
 }
 

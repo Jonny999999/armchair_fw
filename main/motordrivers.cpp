@@ -79,19 +79,12 @@ void single100a::init(){
 //function to put the h-bridge module in the desired state and duty cycle
 void single100a::set(motorstate_t state_f, float duty_f){
 
-    //define enabled signal state (gpio high/low) TODO: move this to constructor?
-    bool enabled;
-    if (config.abInverted) {
-        enabled = false;
-    } else {
-        enabled = true;
-    }
-
     //scale provided target duty in percent to available resolution for ledc
     uint32_t dutyScaled;
     if (duty_f > 100) { //target duty above 100%
         dutyScaled = dutyMax;
-    } else if (duty_f < 0) { //target duty below 0%
+    } else if (duty_f <= 0) { //target at or below 0%
+		state_f = motorstate_t::IDLE;
         dutyScaled = 0;
     } else { //target duty 0-100%
              //scale duty to available resolution
@@ -105,29 +98,31 @@ void single100a::set(motorstate_t state_f, float duty_f){
             ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
             //TODO: to fix bugged state of h-bridge module when idle and start again, maybe try to leave pwm signal on for some time before updating a/b pins?
             //no brake: (freewheel)
-            gpio_set_level(config.gpio_a, enabled);
-            gpio_set_level(config.gpio_b, enabled);
+            //gpio_set_level(config.gpio_a, config.aEnabledPinState);
+            //gpio_set_level(config.gpio_b, !config.bEnabledPinState);
+            gpio_set_level(config.gpio_a, config.aEnabledPinState);
+            gpio_set_level(config.gpio_b, config.bEnabledPinState);
             break;
         case motorstate_t::BRAKE:
             ledc_set_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel, 0);
             ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
             //brake:
-            gpio_set_level(config.gpio_a, !enabled);
-            gpio_set_level(config.gpio_b, !enabled);
+            gpio_set_level(config.gpio_a, !config.aEnabledPinState);
+            gpio_set_level(config.gpio_b, !config.bEnabledPinState);
             break;
         case motorstate_t::FWD:
             ledc_set_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel, dutyScaled);
             ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
             //forward:
-            gpio_set_level(config.gpio_a, enabled);
-            gpio_set_level(config.gpio_b, !enabled);
+            gpio_set_level(config.gpio_a, config.aEnabledPinState);
+            gpio_set_level(config.gpio_b, !config.bEnabledPinState);
             break;
         case motorstate_t::REV:
             ledc_set_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel, dutyScaled);
             ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
             //reverse:
-            gpio_set_level(config.gpio_a, !enabled);
-            gpio_set_level(config.gpio_b, enabled);
+            gpio_set_level(config.gpio_a, !config.aEnabledPinState);
+            gpio_set_level(config.gpio_b, config.bEnabledPinState);
             break;
     }
     ESP_LOGD(TAG, "set module to state=%s, duty=%d/%d, duty_input=%.3f%%", motorstateStr[(int)state_f], dutyScaled, dutyMax, duty_f);

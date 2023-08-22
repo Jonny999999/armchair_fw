@@ -17,6 +17,8 @@
 //#define JOYSTICK_LOG_IN_IDLE
 
 
+//TODO outsource global variables to e.g. global.cpp and only config options here?
+
 //create global controlledMotor instances for both motors
 extern controlledMotor motorLeft;
 extern controlledMotor motorRight;
@@ -39,7 +41,6 @@ extern automatedArmchair armchair;
 //create global httpJoystick object
 extern httpJoystick httpJoystickMain;
 
-//configuration for fans
-extern fan_config_t configFanLeft;
-extern fan_config_t configFanRight;
+//configuration for fans / cooling
+extern fan_config_t configCooling;
 
