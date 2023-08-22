@@ -38,7 +38,8 @@ motorctl_config_t configMotorControlLeft = {
 	.currentLimitEnabled = true,
 	.currentSensor_adc =  ADC1_CHANNEL_6, //GPIO34
 	.currentSensor_ratedCurrent = 50,
-    .currentMax = 30
+    .currentMax = 30,
+	.deadTimeMs = 900 //minimum time motor is off between direction change
 };
 
 //--- configure right motor (contol) ---
@@ -48,7 +49,8 @@ motorctl_config_t configMotorControlRight = {
 	.currentLimitEnabled = true,
 	.currentSensor_adc =  ADC1_CHANNEL_4, //GPIO32
 	.currentSensor_ratedCurrent = 50,
-    .currentMax = 30
+    .currentMax = 30,
+	.deadTimeMs = 900 //minimum time motor is off between direction change
 };
 
 

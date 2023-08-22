@@ -54,13 +54,24 @@ void fade(float * dutyNow, float dutyTarget, float dutyIncrement){
 
 
 
+//----------------------------
+//----- getStateFromDuty -----
+//----------------------------
+//local function that determines motor the direction from duty range -100 to 100
+motorstate_t getStateFromDuty(float duty){
+	if(duty > 0) return motorstate_t::FWD;
+	if (duty < 0) return motorstate_t::REV;
+	return motorstate_t::IDLE;
+}
+
+
+
 //==============================
 //=========== handle ===========
 //==============================
-//function that controls the motor driver and handles fading/ramp and current limit
+//function that controls the motor driver and handles fading/ramp, current limit and deadtime
 void controlledMotor::handle(){
 
-    //TODO: delay when switching direction?
     //TODO: History: skip fading when motor was running fast recently / alternatively add rot-speed sensor
 
     //--- receive commands from queue ---
@@ -124,7 +135,7 @@ void controlledMotor::handle(){
     //negative: need to decrease
 
 
-	//----- fading -----
+	//----- FADING -----
     //fade duty to target (up and down)
     //TODO: this needs optimization (can be more clear and/or simpler)
     if (dutyDelta > 0) { //difference positive -> increasing duty (-100 -> 100)
@@ -145,7 +156,7 @@ void controlledMotor::handle(){
     }
 
 
-	//----- current limit -----
+	//----- CURRENT LIMIT -----
 	if ((config.currentLimitEnabled) && (dutyDelta != 0)){
 		currentNow = cSensor.read();
 		if (fabs(currentNow) > config.currentMax){
@@ -163,26 +174,49 @@ void controlledMotor::handle(){
 		}
 	}
 
+	
+    //--- define new motorstate --- (-100 to 100 => direction)
+	state=getStateFromDuty(dutyNow);
 
-    //--- define motorstate ---
-	//from converted duty -100 to 100
-    //forward
-    if(dutyNow > 0){
-        state = motorstate_t::FWD;
-    }
-    //reverse
-    else if (dutyNow < 0){
-        state = motorstate_t::REV;
-    }
-    //idle
-    else {
-        state = motorstate_t::IDLE;
-    }
+
+	//--- DEAD TIME ----
+	//ensure minimum idle time between direction change to prevent driver overload
+	//FWD -> IDLE -> FWD  continue without waiting
+	//FWD -> IDLE -> REV  wait for dead-time in IDLE
+	//TODO check when changed only?
+	if (	//not enough time between last direction state
+			(   state == motorstate_t::FWD && (esp_log_timestamp() - timestampsModeLastActive[(int)motorstate_t::REV] < config.deadTimeMs))
+			|| (state == motorstate_t::REV && (esp_log_timestamp() - timestampsModeLastActive[(int)motorstate_t::FWD] < config.deadTimeMs))
+	   ){
+		ESP_LOGD(TAG, "waiting dead-time... dir change %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
+		if (!deadTimeWaiting){ //log start
+			deadTimeWaiting = true;
+			ESP_LOGW(TAG, "starting dead-time... %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
+		}
+		//force IDLE state during wait
+		state = motorstate_t::IDLE;
+		dutyNow = 0;
+	} else {
+		if (deadTimeWaiting){ //log end
+			deadTimeWaiting = false;
+			ESP_LOGW(TAG, "dead-time ended - continue with %s", motorstateStr[(int)state]);
+		}
+		ESP_LOGV(TAG, "deadtime: no change below deadtime detected... dir=%s, duty=%.1f", motorstateStr[(int)state], dutyNow);
+	}
+			
+
+	//--- save current actual motorstate and timestamp ---
+	//needed for deadtime
+	timestampsModeLastActive[(int)getStateFromDuty(dutyNow)] = esp_log_timestamp();
+	//(-100 to 100 => direction)
+	statePrev = getStateFromDuty(dutyNow);
+
 
     //--- apply new target to motor ---
     motor.set(state, fabs(dutyNow));
     //note: BRAKE state is handled earlier
     
+
     //--- update timestamp ---
     timestampLastRunUs = esp_timer_get_time(); //update timestamp last run with current timestamp in microseconds
 }

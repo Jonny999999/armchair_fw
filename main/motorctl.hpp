@@ -37,6 +37,7 @@ typedef struct motorctl_config_t {
 	adc1_channel_t currentSensor_adc;
 	float currentSensor_ratedCurrent;
     float currentMax;
+	uint32_t deadTimeMs; //time motor stays in IDLE before direction change
 } motorctl_config_t;
 
 //enum fade type (acceleration, deceleration)
@@ -93,6 +94,10 @@ class controlledMotor {
 
         uint32_t ramp;
         int64_t timestampLastRunUs;
+
+		bool deadTimeWaiting = false;
+		uint32_t timestampsModeLastActive[4] = {};
+        motorstate_t statePrev = motorstate_t::FWD;
 
         struct motorCommand_t commandReceive = {};
         struct motorCommand_t commandSend = {};
