@@ -13,6 +13,7 @@ idf_component_register(
         "http.cpp"
         "auto.cpp"
 		"currentsensor.cpp"
+		"uart.cpp"
     INCLUDE_DIRS 
         "."
     )

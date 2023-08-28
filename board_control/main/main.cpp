@@ -11,8 +11,6 @@ extern "C"
 #include "sdkconfig.h"
 #include "esp_spiffs.h"    
 
-#include "driver/uart.h"
-
 
 //custom C files
 //#include "wifi.h"
@@ -23,6 +21,8 @@ extern "C"
 //#include "control.hpp" 
 //#include "button.hpp"
 //#include "http.hpp"
+
+#include "uart.hpp"
 
 //tag for logging
 static const char * TAG = "main";
@@ -137,41 +137,6 @@ static const char * TAG = "main";
 
 
 
-static void uart_task(void *arg)
-{
-    uart_config_t uart1_config = {
-        .baud_rate = 115200,
-        .data_bits = UART_DATA_8_BITS,
-        .parity    = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-    };
-
-	ESP_LOGW(TAG, "config...");
-    ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uart1_config));
-	ESP_LOGW(TAG, "setpins...");
-    ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1, 23, 22, 0, 0));
-	ESP_LOGW(TAG, "init...");
-    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, 1024, 1024, 10, NULL, 0));
-    
-    uint8_t *data = (uint8_t *) malloc(1024);
-
-	//SEND data to motorctl board
-	uint8_t count = 0;
-	ESP_LOGW(TAG, "startloop...");
-    while (1) {
-		vTaskDelay(500 / portTICK_PERIOD_MS);
-        int len = uart_read_bytes(UART_NUM_1, data, (1024 - 1), 20 / portTICK_PERIOD_MS);
-		uart_flush_input(UART_NUM_1);
-		uart_flush(UART_NUM_1);
-		ESP_LOGW(TAG, "received data %d", *data);
-		*data = 99;
-        uart_write_bytes(UART_NUM_1, (const char *) &count, 1);
-		ESP_LOGW(TAG, "sent data %d", count);
-		count++;
-    }
-}
-
 
 
 //=================================
@@ -245,7 +210,10 @@ extern "C" void app_main(void) {
 
 
 	//TESTING UART
-	    xTaskCreate(uart_task, "uart_task", 4096, NULL, 10, NULL);
+	    //xTaskCreate(uart_task_testing, "uart_task", 4096, NULL, 10, NULL);
+	uart_init();
+	    xTaskCreate(task_uartReceive, "task_uartReceive", 4096, NULL, 10, NULL);
+	    xTaskCreate(task_uartSend, "task_uartSend", 5*4096, NULL, 10, NULL);
 
 	while(1){
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
