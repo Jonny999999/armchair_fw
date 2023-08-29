@@ -13,11 +13,13 @@ extern "C"
 #include <string.h>
 
 #include "driver/ledc.h"
-#include "driver/uart.h"
 
-	//custom C files
+//custom C files
 #include "wifi.h"
 }
+//custom C++ files
+#include "config.hpp"
+#include "uart.hpp"
 
 //=========================
 //======= UART TEST =======
@@ -30,13 +32,10 @@ extern "C"
 //tag for logging
 static const char * TAG = "main";
 
+
+
 #ifndef UART_TEST_ONLY
-//custom C++ files
-#include "config.hpp"
 #include "control.hpp" 
-
-
-
 //====================================
 //========== motorctl task ===========
 //====================================
@@ -109,33 +108,6 @@ void setLoglevels(void){
 #endif
 
 
-
-#ifdef UART_TEST_ONLY
-void uart_init(void){
-	uart_config_t uart1_config = {                                             
-		.baud_rate = 115198,
-		.data_bits = UART_DATA_8_BITS,
-		.parity    = UART_PARITY_EVEN,
-		.stop_bits = UART_STOP_BITS_1,
-		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-	};
-	ESP_LOGW(TAG, "config...");
-	ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uart1_config));                 
-	ESP_LOGW(TAG, "setpins...");                                               
-	ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1, 23, 22, 0, 0));                       
-	ESP_LOGW(TAG, "init...");                                                  
-	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, 1024, 1024, 10, NULL, 0));  
-
-}
-
-//struct for testing uart
-typedef struct {
-	uint32_t timestamp;
-	int id;
-	float value;
-} uartDataStruct;
-#endif
-
 //=================================
 //=========== app_main ============
 //=================================
@@ -170,35 +142,21 @@ extern "C" void app_main(void) {
 
 	//beep at startup
 	buzzer.beep(3, 70, 50);
-
-
-	//--- main loop ---
-	//does nothing except for testing things
-	while(1){
-		vTaskDelay(5000 / portTICK_PERIOD_MS);
-	}
-
 #endif
 
 
 
 #ifdef UART_TEST_ONLY
 	uart_init();
-	uint8_t receivedData[sizeof(uartDataStruct)];
-	uartDataStruct data;
-
-	ESP_LOGW(TAG, "startloop...");
-	while(1){
-		vTaskDelay(500 / portTICK_PERIOD_MS);
-		int len = uart_read_bytes(UART_NUM_1, receivedData, sizeof(uartDataStruct), 20 / portTICK_PERIOD_MS);
-		uart_flush_input(UART_NUM_1);
-		if (len > 0){
-			memcpy(&data, receivedData, sizeof(uartDataStruct));
-			//uart_write_bytes(UART_NUM_1, (const char *) data, 1);
-			//ESP_LOGW(TAG, "sent data back %d", *data);
-			ESP_LOGW(TAG, "received len=%d DATA: timestamp=%d, id=%d, value=%.1f", len, data.timestamp, data.id, data.value);
-		}
+	xTaskCreate(task_uartReceive, "task_uartReceive", 4096, NULL, 10, NULL);
+	xTaskCreate(task_uartSend, "task_uartSend", 4096, NULL, 10, NULL);
 #endif
+
+
+	//--- main loop ---
+	//does nothing except for testing things
+	while(1){
+		vTaskDelay(5000 / portTICK_PERIOD_MS);
 
 		//--- test controlledMotor --- (ramp)
 		// //brake for 1 s
@@ -210,5 +168,6 @@ extern "C" void app_main(void) {
 		// //command 100% - forward
 		// motorLeft.setTarget(motorstate_t::FWD, 100);
 		// vTaskDelay(1000 / portTICK_PERIOD_MS);
+
 	}
 }
