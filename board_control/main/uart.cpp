@@ -20,23 +20,6 @@ extern "C"
 static const char * TAG = "uart";
 
 
-void uart_init(void){
-	uart_config_t uart1_config = {                                             
-		.baud_rate = 115198,                                                       
-		.data_bits = UART_DATA_8_BITS,                                             
-		.parity    = UART_PARITY_EVEN,                                          
-		.stop_bits = UART_STOP_BITS_1,                                            
-		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,                                     
-	};                                                                             
-	ESP_LOGW(TAG, "config...");
-	ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uart1_config));
-	ESP_LOGW(TAG, "setpins...");
-	ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1, 23, 22, 0, 0));
-	ESP_LOGW(TAG, "init...");
-	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, 1024, 1024, 10, NULL, 0));
-}
-
-
 
 void uart_task_testing(void *arg){
 	//repeatedly send 8 bit count and log received 1 byte
@@ -100,11 +83,6 @@ void task_uartReceiveQueue(void *arg){
 //  }
 
 
-typedef struct {
-	uint32_t timestamp;
-	int id;
-	float value;
-} uartDataStruct;
 
 //send struct
 void task_uartSend(void *arg){

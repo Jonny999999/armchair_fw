@@ -11,7 +11,7 @@ extern "C"
 }
 
 #include <cmath>
-#include "motorctl.hpp" //for declaration of motorCommands_t struct
+#include "types.hpp"
 
 
 //======================================
