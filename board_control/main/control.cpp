@@ -64,11 +64,9 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
                   break;
   
               case controlMode_t::IDLE:
-                  //copy preset commands for idling both motors
-                  commands = cmds_bothMotorsIdle;
-				  uart_sendStruct<motorCommands_t>(commands);
-                  //motorRight->setTarget(commands.right.state, commands.right.duty); 
-                  //motorLeft->setTarget(commands.left.state, commands.left.duty); 
+				  //send both motors idle command to motorctl pcb
+				  uart_sendStruct<motorCommands_t>(cmds_bothMotorsIdle);
+				  commands_now = cmds_bothMotorsIdle;
                   vTaskDelay(200 / portTICK_PERIOD_MS);
   #ifdef JOYSTICK_LOG_IN_IDLE
   				//get joystick data here (without using it)
@@ -79,18 +77,15 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
   
   
               case controlMode_t::JOYSTICK:
-                  vTaskDelay(20 / portTICK_PERIOD_MS);
+                  vTaskDelay(50 / portTICK_PERIOD_MS);
                   //get current joystick data with getData method of evaluatedJoystick
                   stickData = joystick_l->getData();
                   //additionaly scale coordinates (more detail in slower area)
                   joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.35); //TODO: add scaling parameters to config
                   //generate motor commands
-                  commands = joystick_generateCommandsDriving(stickData, altStickMapping);
+                  commands_now = joystick_generateCommandsDriving(stickData, altStickMapping);
                   //apply motor commands
-				  uart_sendStruct<motorCommands_t>(commands);
-                  //motorRight->setTarget(commands.right.state, commands.right.duty); 
-                  //motorLeft->setTarget(commands.left.state, commands.left.duty); 
-                  //TODO make motorctl.setTarget also accept motorcommand struct directly
+				  uart_sendStruct<motorCommands_t>(commands_now);
                   break;
   
   
@@ -103,11 +98,9 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
                   }
                   //--- generate motor commands ---
                   //pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
-                  commands = joystick_generateCommandsShaking(stickData);
+                  commands_now = joystick_generateCommandsShaking(stickData);
                   //apply motor commands
-				  uart_sendStruct<motorCommands_t>(commands);
-                  //motorRight->setTarget(commands.right.state, commands.right.duty); 
-                  //motorLeft->setTarget(commands.left.state, commands.left.duty); 
+				  uart_sendStruct<motorCommands_t>(commands_now);
                   break;
   
   
@@ -121,25 +114,23 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
                   ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
                   //--- generate motor commands ---
                   //Note: timeout (no data received) is handled in getData method
-                  commands = joystick_generateCommandsDriving(stickData, altStickMapping);
+                  commands_now = joystick_generateCommandsDriving(stickData, altStickMapping);
   
                   //--- apply commands to motors ---
-                  //TODO make motorctl.setTarget also accept motorcommand struct directly
-				  uart_sendStruct<motorCommands_t>(commands);
-                  //motorRight->setTarget(commands.right.state, commands.right.duty); 
-                  //motorLeft->setTarget(commands.left.state, commands.left.duty); 
+				  uart_sendStruct<motorCommands_t>(commands_now);
                  break;
   
   
               case controlMode_t::AUTO:
+				 //FIXME auto mode currently not supported, needs rework
                   vTaskDelay(20 / portTICK_PERIOD_MS);
 //                 //generate commands
-//                 commands = armchair.generateCommands(&instruction);
+//                 commands_now = armchair.generateCommands(&instruction);
 //                  //--- apply commands to motors ---
 //                  //TODO make motorctl.setTarget also accept motorcommand struct directly
-//				  uart_sendStruct<motorCommands_t>(commands);
-//                 //motorRight->setTarget(commands.right.state, commands.right.duty); 
-//                 //motorLeft->setTarget(commands.left.state, commands.left.duty); 
+//				  uart_sendStruct<motorCommands_t>(commands_now);
+//                 //motorRight->setTarget(commands_now.right.state, commands_now.right.duty); 
+//                 //motorLeft->setTarget(commands_now.left.state, commands_now.left.duty); 
 //  
 //                 //process received instruction
 //                 switch (instruction) {
@@ -172,7 +163,6 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
 //                 }
                  break;
   
-  
                 //TODO: add other modes here
           }
   
@@ -180,11 +170,14 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
           //--- run actions based on received button button event ---
   		//note: buttonCount received by sendButtonEvent method called from button.cpp
           //TODO: what if variable gets set from other task during this code? -> mutex around this code
+		  //TODO add methods and move below code to button file possible?
           switch (buttonCount) {
               case 1: //define joystick center or freeze input
                   if (mode == controlMode_t::JOYSTICK){
                       //joystick mode: calibrate joystick
                       joystick_l->defineCenter();
+					  buzzer->beep(2, 50, 30);
+					  buzzer->beep(1, 200, 25);
                   } else if (mode == controlMode_t::MASSAGE){
                       //massage mode: toggle freeze of input (lock joystick at current values)
                       freezeInput = !freezeInput;
@@ -268,35 +261,30 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
       }
   }
   
-  //function that evaluates whether there is no activity/change on the motor duty for a certain time. If so, a switch to IDLE is issued. - has to be run repeatedly in a slow interval
-  //FIXME rework timout to work via uart duy or control input only
+  //function that evaluates whether there is no activity/change on the motor duty for a certain time. If so, a switch to IDLE is issued.
+  //has to be run repeatedly in a *slow interval* so change between current and last duty is detectable
   void controlledArmchair::handleTimeout(){
-//      //check for timeout only when not idling already
-//      if (mode != controlMode_t::IDLE) {
-//          //get current duty from controlled motor objects
-//          float dutyLeftNow = motorLeft->getStatus().duty;
-//          float dutyRightNow = motorRight->getStatus().duty;
-//  
-//          //activity detected on any of the two motors
-//          if (validateActivity(dutyLeft_lastActivity, dutyLeftNow, inactivityTolerance) 
-//                  || validateActivity(dutyRight_lastActivity, dutyRightNow, inactivityTolerance)
-//             ){
-//              ESP_LOGD(TAG, "timeout check: [activity] detected since last check -> reset");
-//              //reset last duty and timestamp
-//              dutyLeft_lastActivity = dutyLeftNow;
-//              dutyRight_lastActivity = dutyRightNow;
-//              resetTimeout();
-//          }
-//          //no activity on any motor and msTimeout exceeded
-//          else if (esp_log_timestamp() - timestamp_lastActivity > config.timeoutMs){
-//              ESP_LOGI(TAG, "timeout check: [TIMEOUT], no activity for more than %.ds  -> switch to idle", config.timeoutMs/1000);
-//              //toggle to idle mode
-//              toggleIdle();
-//          }
-//          else {
-//              ESP_LOGD(TAG, "timeout check: [inactive], last activity %.1f s ago, timeout after %d s", (float)(esp_log_timestamp() - timestamp_lastActivity)/1000, config.timeoutMs/1000);
-//          }
-//      }
+      //check for timeout only when not idling already
+      if (mode != controlMode_t::IDLE) {
+		  //activity detected between current and last generated motor commands
+		  if (validateActivity(commands_lastActivityCheck.left.duty, commands_now.left.duty, inactivityTolerance) 
+				  || validateActivity(commands_lastActivityCheck.right.duty, commands_now.right.duty, inactivityTolerance)
+					 ){
+              ESP_LOGD(TAG, "timeout check: [activity] detected since last check -> reset");
+              //reset last commands and timestamp
+			  commands_lastActivityCheck = commands_now;
+              resetTimeout();
+          }
+          //no activity on any motor and msTimeout exceeded
+          else if (esp_log_timestamp() - timestamp_lastActivity > config.timeoutMs){
+              ESP_LOGW(TAG, "timeout check: [TIMEOUT], no activity for more than %.ds  -> switch to idle", config.timeoutMs/1000);
+              //toggle to idle mode
+              toggleIdle();
+          }
+          else {
+              ESP_LOGD(TAG, "timeout check: [inactive], last activity %.1f s ago, timeout after %d s", (float)(esp_log_timestamp() - timestamp_lastActivity)/1000, config.timeoutMs/1000);
+          }
+      }
   }
   
   
@@ -335,21 +323,21 @@ const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
   			break;
   #endif
   
-//  		case controlMode_t::HTTP:
-//  			ESP_LOGW(TAG, "switching from http mode -> disabling http and wifi");
-//  			//stop http server
-//  			ESP_LOGI(TAG, "disabling http server...");
-//  			http_stop_server();
-//  
-//  			//FIXME: make wifi function work here - currently starting wifi at startup (see notes main.cpp)
-//              //stop wifi
-//              //TODO: decide whether ap or client is currently used - which has to be disabled?
-//              //ESP_LOGI(TAG, "deinit wifi...");
-//              //wifi_deinit_client();
-//              //wifi_deinit_ap();
-//              ESP_LOGI(TAG, "done stopping http mode");
-//              break;
-//  
+  		case controlMode_t::HTTP:
+  			ESP_LOGW(TAG, "switching from http mode -> disabling http and wifi");
+  			//stop http server
+  			ESP_LOGI(TAG, "disabling http server...");
+  			http_stop_server();
+  
+  			//FIXME: make wifi function work here - currently starting wifi at startup (see notes main.cpp)
+              //stop wifi
+              //TODO: decide whether ap or client is currently used - which has to be disabled?
+              //ESP_LOGI(TAG, "deinit wifi...");
+              //wifi_deinit_client();
+              //wifi_deinit_ap();
+              ESP_LOGI(TAG, "done stopping http mode");
+              break;
+  
 //          case controlMode_t::MASSAGE:
 //              ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading, reset frozen input");
 //              //TODO: fix issue when downfading was disabled before switching to massage mode - currently it gets enabled again here...

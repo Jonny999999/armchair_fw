@@ -78,7 +78,7 @@
   
           //---variables ---
           //struct for motor commands returned by generate functions of each mode
-          motorCommands_t commands;
+          motorCommands_t commands_now;
           //struct with config parameters
           control_config_t config;
   
@@ -118,9 +118,8 @@
           uint32_t timestamp_SlowLoopLastRun = 0;
   
           //variables for detecting timeout (switch to idle, after inactivity)
-          float dutyLeft_lastActivity = 0;
-          float dutyRight_lastActivity = 0;
           uint32_t timestamp_lastActivity = 0;
+		  motorCommands_t commands_lastActivityCheck;
   };
   
   
