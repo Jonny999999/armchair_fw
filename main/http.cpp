@@ -232,17 +232,20 @@ void http_init_server()
 
 
   //----- define URLs -----
-  httpd_uri_t joystick_url;
-  joystick_url.uri = "/api/joystick";
-  joystick_url.method = HTTP_POST;
-  joystick_url.handler = on_joystick_url;
+    //note: ignore warning here, cant define elements separately, causes crash
+  httpd_uri_t joystick_url = {
+      .uri = "/api/joystick",
+      .method = HTTP_POST,
+      .handler = on_joystick_url,
+      };
   httpd_register_uri_handler(server, &joystick_url);
 
-  httpd_uri_t default_url;
-  default_url.uri = "/*";
-  default_url.method = HTTP_GET;
-  default_url.handler = on_default_url;
+  httpd_uri_t default_url = {
+      .uri = "/*",
+      .method = HTTP_GET,
+      .handler = on_default_url};
   httpd_register_uri_handler(server, &default_url);
+
 
   //previous approach with sockets:
     //  httpd_uri_t socket_joystick_url = {
