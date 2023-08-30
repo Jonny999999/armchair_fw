@@ -14,25 +14,17 @@ extern "C"
 #include "freertos/queue.h"
 #include "driver/uart.h"
 }
-
 #include "uart.hpp"
 
 static const char * TAG = "uart";
 
 
-//TESTING
-#include "control.hpp"
-#include "config.hpp"
 
 //==============================
 //====== task_uartReceive ======
 //==============================
 //TODO copy receive task from board_motorctl/uart.cpp
 void task_uartReceive(void *arg){
-	//--- testing force http mode after startup ---
-	//TESTING
-	vTaskDelay(5000 / portTICK_PERIOD_MS);
-	control.changeMode(controlMode_t::HTTP);
 	while (1) {
 		vTaskDelay(200 / portTICK_PERIOD_MS);
 	}
@@ -43,13 +35,15 @@ void task_uartReceive(void *arg){
 //=============================
 //======= task_uartSend =======
 //=============================
-//repeatedly send structs to uart
+//repeatedly send structs via uart
+//note: uart_sendStruct() from uart_common.hpp can be used anywhere
 void task_uartSend(void *arg){
 	static const char * TAG = "uart-send";
 	uartData_test_t data = {123, 0, 1.1};
-	ESP_LOGW(TAG, "startloop...");
+	ESP_LOGW(TAG, "send task started");
+	//repeatedly send data for testing uart
 	while (1) {
-		vTaskDelay(10000 / portTICK_PERIOD_MS);    
+		vTaskDelay(5000 / portTICK_PERIOD_MS);    
 		uart_sendStruct<uartData_test_t>(data);
 
 		//change data values

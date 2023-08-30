@@ -26,7 +26,7 @@ extern "C"
 //=========================
 //only run uart test code at the end
 //disables other functionality
-#define UART_TEST_ONLY
+//#define UART_TEST_ONLY
 
 
 //tag for logging
@@ -35,7 +35,6 @@ static const char * TAG = "main";
 
 
 #ifndef UART_TEST_ONLY
-#include "control.hpp" 
 //====================================
 //========== motorctl task ===========
 //====================================

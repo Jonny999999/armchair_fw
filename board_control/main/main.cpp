@@ -142,7 +142,7 @@ void setLoglevels(void){
 	esp_log_level_set("wifi", ESP_LOG_INFO);
 	esp_log_level_set("http", ESP_LOG_INFO);
 	esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
-		esp_log_level_set("uart_common", ESP_LOG_INFO);
+	esp_log_level_set("uart-common", ESP_LOG_INFO);
 	esp_log_level_set("uart", ESP_LOG_INFO);
 
 	//
