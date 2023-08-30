@@ -13,7 +13,7 @@ extern "C"
 
 
 	//custom C files
-	//#include "wifi.h"
+	#include "wifi.h"
 }
 
 
@@ -25,7 +25,7 @@ extern "C"
 //=========================
 //only run uart test code at the end
 //disables other functionality
-#define UART_TEST_ONLY
+//#define UART_TEST_ONLY
 
 
 //tag for logging
@@ -71,13 +71,13 @@ void task_control( void * pvParameters ){
 //============ button task =============
 //======================================
 //task that handles the button interface/commands
-void task_button( void * pvParameters ){
-	ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
-	//create button instance
-	buttonCommands commandButton(&buttonJoystick, &joystick, &control, &buzzer, &motorLeft, &motorRight);
-	//start handle loop
-	commandButton.startHandleLoop();
-}
+//void task_button( void * pvParameters ){
+//	ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
+//	//create button instance
+//	buttonCommands commandButton(&buttonJoystick, &joystick, &control, &buzzer, &motorLeft, &motorRight);
+//	//start handle loop
+//	commandButton.startHandleLoop();
+//}
 
 
 
@@ -85,16 +85,16 @@ void task_button( void * pvParameters ){
 //============== fan task ===============
 //=======================================
 //task that controlls fans for cooling the drivers
-void task_fans( void * pvParameters ){
-	ESP_LOGI(TAG, "Initializing fans and starting fan handle loop");
-	//create fan instances with config defined in config.cpp
-	controlledFan fan(configCooling, &motorLeft, &motorRight);
-	//repeatedly run fan handle function in a slow loop
-	while(1){
-		fan.handle();
-		vTaskDelay(500 / portTICK_PERIOD_MS);
-	}
-}
+//void task_fans( void * pvParameters ){
+//	ESP_LOGI(TAG, "Initializing fans and starting fan handle loop");
+//	//create fan instances with config defined in config.cpp
+//	controlledFan fan(configCooling, &motorLeft, &motorRight);
+//	//repeatedly run fan handle function in a slow loop
+//	while(1){
+//		fan.handle();
+//		vTaskDelay(500 / portTICK_PERIOD_MS);
+//	}
+//}
 
 
 
@@ -142,7 +142,10 @@ void setLoglevels(void){
 	esp_log_level_set("wifi", ESP_LOG_INFO);
 	esp_log_level_set("http", ESP_LOG_INFO);
 	esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
-	//esp_log_level_set("current-sensors", ESP_LOG_INFO);
+		esp_log_level_set("uart_common", ESP_LOG_INFO);
+	esp_log_level_set("uart", ESP_LOG_INFO);
+
+	//
 }
 
 
@@ -166,25 +169,25 @@ extern "C" void app_main(void) {
 	//------------------------------
 	//--- create task for buzzer ---
 	//------------------------------
-	xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
+	//xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
 
 	//-------------------------------
 	//--- create task for control ---
 	//-------------------------------
 	//task that generates motor commands depending on the current mode and sends those to motorctl task
-	xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
+	xTaskCreate(&task_control, "task_control", 5*4096, NULL, 5, NULL);
 
 	//------------------------------
 	//--- create task for button ---
 	//------------------------------
 	//task that evaluates and processes the button input and runs the configured commands
-	xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
+	//xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
 
 	//-----------------------------------
 	//--- create task for fan control ---
 	//-----------------------------------
 	//task that evaluates and processes the button input and runs the configured commands
-	xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
+	//xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
 
 
 	//beep at startup
@@ -213,9 +216,11 @@ extern "C" void app_main(void) {
 	//    http_init_server();
 
 
-	//--- testing force http mode after startup ---
-	//control.changeMode(controlMode_t::HTTP);
 #endif
+
+	//-------------------------------------------
+	//--- create tasks for uart communication ---
+	//-------------------------------------------
 
 	uart_init();
 	xTaskCreate(task_uartReceive, "task_uartReceive", 4096, NULL, 10, NULL);
@@ -223,6 +228,10 @@ extern "C" void app_main(void) {
 
 	//--- main loop ---
 	//does nothing except for testing things
+	
+	//--- testing force http mode after startup ---
+		vTaskDelay(5000 / portTICK_PERIOD_MS);
+	control.changeMode(controlMode_t::HTTP);
 	while(1){
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 		//---------------------------------

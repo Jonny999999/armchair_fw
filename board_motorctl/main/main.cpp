@@ -103,6 +103,8 @@ void setLoglevels(void){
 	esp_log_level_set("wifi", ESP_LOG_INFO);
 	esp_log_level_set("http", ESP_LOG_INFO);
 	esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
+	esp_log_level_set("uart_common", ESP_LOG_INFO);
+	esp_log_level_set("uart", ESP_LOG_INFO);
 	//esp_log_level_set("current-sensors", ESP_LOG_INFO);
 }
 #endif
@@ -146,11 +148,12 @@ extern "C" void app_main(void) {
 
 
 
-#ifdef UART_TEST_ONLY
+	//-------------------------------------------
+	//--- create tasks for uart communication ---
+	//-------------------------------------------
 	uart_init();
 	xTaskCreate(task_uartReceive, "task_uartReceive", 4096, NULL, 10, NULL);
 	xTaskCreate(task_uartSend, "task_uartSend", 4096, NULL, 10, NULL);
-#endif
 
 
 	//--- main loop ---

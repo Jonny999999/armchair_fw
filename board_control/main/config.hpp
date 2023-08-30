@@ -26,7 +26,7 @@ extern gpio_evaluatedSwitch buttonJoystick;
 extern buzzer_t buzzer;
 
 //create global control object
-//extern controlledArmchair control;
+extern controlledArmchair control;
 
 //create global automatedArmchair object (for auto-mode)
 extern automatedArmchair armchair;

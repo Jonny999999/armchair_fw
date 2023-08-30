@@ -19,7 +19,7 @@ extern "C"
 //===============================
 enum class motorstate_t {IDLE, FWD, REV, BRAKE};
 //definition of string array to be able to convert state enum to readable string (defined in motordrivers.cpp)
-const char* motorstateStr[] = {"IDLE", "FWD", "REV", "BRAKE"};
+extern const char* motorstateStr[4];
 
 
 

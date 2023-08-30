@@ -1,4 +1,6 @@
 #include "motorctl.hpp"
+#include "esp_log.h"
+#include "types.hpp"
 
 //tag for logging
 static const char * TAG = "motor-control";
@@ -80,6 +82,8 @@ void controlledMotor::handle(){
         ESP_LOGD(TAG, "Read command from queue: state=%s, duty=%.2f", motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
         dutyTarget = commandReceive.duty;
+		receiveTimeout = false;
+		timestamp_commandReceived = esp_log_timestamp();
 
         //--- convert duty ---
         //define target duty (-100 to 100) from provided duty and motorstate
@@ -102,6 +106,14 @@ void controlledMotor::handle(){
         }
     }
 
+	//--- timeout, no data ---
+	//turn motors off if no data received for long time (e.g. no uart data / control offline)
+	if ((esp_log_timestamp() - timestamp_commandReceived) > 3000 && !receiveTimeout){
+		receiveTimeout = true;
+		state = motorstate_t::IDLE;
+		dutyTarget = 0;
+		ESP_LOGE(TAG, "TIMEOUT, no target data received for more than 3s -> switch to IDLE");
+	}
 
     //--- calculate increment ---
     //calculate increment for fading UP with passed time since last run and configured fade time

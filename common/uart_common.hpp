@@ -15,13 +15,21 @@ extern "C"
 #include "freertos/queue.h"
 #include "driver/uart.h"
 }
+#include "types.hpp"
 
-//struct for testin uart
+//struct for testing uart
 typedef struct {
 	uint32_t timestamp;
 	int id;
 	float value;
 } uartData_test_t;
+
+
+//unnecessary, using commands struct directly
+typedef struct {
+	uint32_t timestamp;
+	motorCommands_t commands;
+} uartData_motorCommands_t;
 
 
 //===== uart_init =====

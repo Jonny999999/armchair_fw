@@ -77,4 +77,7 @@ class controlledMotor {
 
         struct motorCommand_t commandReceive = {};
         struct motorCommand_t commandSend = {};
+
+		uint32_t timestamp_commandReceived = 0;
+		bool receiveTimeout = false;
 };

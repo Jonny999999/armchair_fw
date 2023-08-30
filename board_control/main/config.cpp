@@ -71,7 +71,7 @@ buzzer_t buzzer(GPIO_NUM_12, 100);
 httpJoystick httpJoystickMain(configHttpJoystickMain);
 
 //create global control object (control.hpp)
-//controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &joystick, &httpJoystickMain);
+controlledArmchair control(configControl, &buzzer, &joystick, &httpJoystickMain);
 
 //create global automatedArmchair object (for auto-mode) (auto.hpp)
 automatedArmchair armchair;
