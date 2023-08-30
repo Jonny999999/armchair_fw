@@ -71,13 +71,13 @@ void task_control( void * pvParameters ){
 //============ button task =============
 //======================================
 //task that handles the button interface/commands
-//void task_button( void * pvParameters ){
-//	ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
-//	//create button instance
-//	buttonCommands commandButton(&buttonJoystick, &joystick, &control, &buzzer, &motorLeft, &motorRight);
-//	//start handle loop
-//	commandButton.startHandleLoop();
-//}
+void task_button( void * pvParameters ){
+	ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
+	//create button instance
+	buttonCommands commandButton(&buttonJoystick, &joystick, &control, &buzzer);
+	//start handle loop
+	commandButton.startHandleLoop();
+}
 
 
 
@@ -169,7 +169,7 @@ extern "C" void app_main(void) {
 	//------------------------------
 	//--- create task for buzzer ---
 	//------------------------------
-	//xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
+	xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
 
 	//-------------------------------
 	//--- create task for control ---
@@ -181,7 +181,7 @@ extern "C" void app_main(void) {
 	//--- create task for button ---
 	//------------------------------
 	//task that evaluates and processes the button input and runs the configured commands
-	//xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
+	xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
 
 	//-----------------------------------
 	//--- create task for fan control ---
