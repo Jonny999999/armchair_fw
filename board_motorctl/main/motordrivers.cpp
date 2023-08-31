@@ -7,9 +7,6 @@
 //Note fade functionality provided by LEDC would be very useful but unfortunately is not usable here because:
 //"Due to hardware limitations, there is no way to stop a fade before it reaches its target duty."
 
-//definition of string array to be able to convert state enum to readable string
-const char* motorstateStr[4] = {"IDLE", "FWD", "REV", "BRAKE"};
-
 //tag for logging
 static const char * TAG = "motordriver";
 
