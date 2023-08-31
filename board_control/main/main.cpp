@@ -18,6 +18,7 @@ extern "C"
 
 
 #include "uart.hpp"
+#include "encoder.hpp"
 
 
 //=========================
@@ -26,6 +27,13 @@ extern "C"
 //only run uart test code at the end
 //disables other functionality
 //#define UART_TEST_ONLY
+
+
+//=========================
+//====== encoder TEST =====
+//=========================
+//only start encoder task
+#define ENCODER_TEST_ONLY
 
 
 //tag for logging
@@ -157,7 +165,7 @@ void setLoglevels(void){
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
-#ifndef UART_TEST_ONLY
+#if !defined(ENCODER_TEST_ONLY) && !defined(UART_TEST_ONLY)
 	//enable 5V volate regulator
 	gpio_pad_select_gpio(GPIO_NUM_17);                                                  
 	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
@@ -214,24 +222,35 @@ extern "C" void app_main(void) {
 	//    vTaskDelay(2000 / portTICK_PERIOD_MS);
 	//    ESP_LOGI(TAG, "initializing http server");
 	//    http_init_server();
-
-
 #endif
+
 
 	//-------------------------------------------
 	//--- create tasks for uart communication ---
 	//-------------------------------------------
-
+#ifndef ENCODER_TEST_ONLY
 	uart_init();
 	xTaskCreate(task_uartReceive, "task_uartReceive", 4096, NULL, 10, NULL);
 	xTaskCreate(task_uartSend, "task_uartSend", 4096, NULL, 10, NULL);
+#endif
+
+
+	//--------------------------------------------
+	//----- create task that handles encoder -----
+	//--------------------------------------------
+#ifndef UART_TEST_ONLY
+	encoder_init();
+	xTaskCreate(task_encoder, "task_encoder", 4096, NULL, 10, NULL);
+#endif
+
+
 
 	//--- main loop ---
 	//does nothing except for testing things
 	
 	//--- testing force http mode after startup ---
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
-	control.changeMode(controlMode_t::HTTP);
+	//control.changeMode(controlMode_t::HTTP);
 	while(1){
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 		//---------------------------------

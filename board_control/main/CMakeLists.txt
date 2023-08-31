@@ -8,6 +8,7 @@ idf_component_register(
         "http.cpp"
         "auto.cpp"
 		"uart.cpp"
+		"encoder.cpp"
     INCLUDE_DIRS 
         "."
     )
