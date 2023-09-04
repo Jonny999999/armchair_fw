@@ -1,4 +1,6 @@
 #include "motordrivers.hpp"
+#include "esp_log.h"
+#include "types.hpp"
 
 //TODO: move from ledc to mcpwm?
 //https://docs.espressif.com/projects/esp-idf/en/v4.3/esp32/api-reference/peripherals/mcpwm.html#
@@ -10,6 +12,8 @@
 //tag for logging
 static const char * TAG = "motordriver";
 
+//ms to wait in IDLE before BRAKE until relay actually switched
+#define BRAKE_RELAY_DELAY_MS 300
 
 
 //====================================
@@ -61,11 +65,13 @@ void single100a::init(){
     gpio_set_direction(config.gpio_a, GPIO_MODE_OUTPUT);
     gpio_pad_select_gpio(config.gpio_b);
     gpio_set_direction(config.gpio_b, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(config.gpio_brakeRelay);
+    gpio_set_direction(config.gpio_brakeRelay, GPIO_MODE_OUTPUT);
 
     //--- calculate max duty according to selected resolution ---
     dutyMax = pow(2, ledc_timer.duty_resolution) -1;
-    ESP_LOGI(TAG, "initialized single100a driver");
-    ESP_LOGI(TAG, "resolution=%dbit, dutyMax value=%d, resolution=%.4f %%", ledc_timer.duty_resolution, dutyMax, 100/(float)dutyMax);
+    ESP_LOGW(TAG, "initialized single100a driver");
+    ESP_LOGW(TAG, "resolution=%dbit, dutyMax value=%d, resolution=%.4f %%", ledc_timer.duty_resolution, dutyMax, 100/(float)dutyMax);
 }
 
 
@@ -88,7 +94,16 @@ void single100a::set(motorstate_t state_f, float duty_f){
         dutyScaled = duty_f / 100 * dutyMax;
     }
 
+	//TODO: only when previous mode was BRAKE?
+	if (state_f != motorstate_t::BRAKE){
+		//reset brake wait state
+		brakeWaitingForRelay = false;
+		//turn of brake relay
+		gpio_set_level(config.gpio_brakeRelay, 0);
+	}
+
     //put the single100a h-bridge module in the desired state update duty-cycle
+	//TODO maybe outsource mode code from once switch case? e.g. idle() brake()...
     switch (state_f){
         case motorstate_t::IDLE:
             ledc_set_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel, dutyScaled); 
@@ -100,13 +115,37 @@ void single100a::set(motorstate_t state_f, float duty_f){
             gpio_set_level(config.gpio_a, config.aEnabledPinState);
             gpio_set_level(config.gpio_b, config.bEnabledPinState);
             break;
-        case motorstate_t::BRAKE:
-            ledc_set_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel, 0);
-            ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
-            //brake:
-            gpio_set_level(config.gpio_a, !config.aEnabledPinState);
-            gpio_set_level(config.gpio_b, !config.bEnabledPinState);
-            break;
+
+		case motorstate_t::BRAKE:
+			//prevent full short (no brake resistors) due to slow relay, also reduces switching load
+			if (!brakeWaitingForRelay){
+				ESP_LOGW(TAG, "BRAKE: turned on relay, waiting in IDLE for %d ms", BRAKE_RELAY_DELAY_MS);
+				//switch driver to IDLE for now
+				gpio_set_level(config.gpio_a, config.aEnabledPinState);
+				gpio_set_level(config.gpio_b, config.bEnabledPinState);
+				//start brake relay
+				gpio_set_level(config.gpio_brakeRelay, 1);
+				timestamp_brakeRelayPowered = esp_log_timestamp();
+				brakeWaitingForRelay = true;
+			}
+			//check if delay for relay to switch has passed
+			else if ((esp_log_timestamp() - timestamp_brakeRelayPowered) > BRAKE_RELAY_DELAY_MS) { 
+				ESP_LOGD(TAG, "applying brake with brake-resistors at duty=%.2f%%", duty_f);
+				//switch driver to BRAKE
+				gpio_set_level(config.gpio_a, !config.aEnabledPinState);
+				gpio_set_level(config.gpio_b, !config.bEnabledPinState);
+				//apply duty
+				//FIXME switch between BREAK and IDLE with PWM and ignore pwm-pin? (needs test)
+				ledc_set_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel, dutyScaled);
+				ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
+			} else {
+				//waiting... stay in IDLE
+				ESP_LOGD(TAG, "waiting for brake relay to close (IDLE)...");
+				gpio_set_level(config.gpio_a, config.aEnabledPinState);
+				gpio_set_level(config.gpio_b, config.bEnabledPinState);
+			}
+			break;
+
         case motorstate_t::FWD:
             ledc_set_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel, dutyScaled);
             ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
@@ -114,6 +153,7 @@ void single100a::set(motorstate_t state_f, float duty_f){
             gpio_set_level(config.gpio_a, config.aEnabledPinState);
             gpio_set_level(config.gpio_b, !config.bEnabledPinState);
             break;
+
         case motorstate_t::REV:
             ledc_set_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel, dutyScaled);
             ledc_update_duty(LEDC_HIGH_SPEED_MODE, config.ledc_channel);
@@ -122,5 +162,5 @@ void single100a::set(motorstate_t state_f, float duty_f){
             gpio_set_level(config.gpio_b, config.bEnabledPinState);
             break;
     }
-    ESP_LOGD(TAG, "set module to state=%s, duty=%d/%d, duty_input=%.3f%%", motorstateStr[(int)state_f], dutyScaled, dutyMax, duty_f);
+    ESP_LOGV(TAG, "set module to state=%s, duty=%d/%d, duty_input=%.3f%%", motorstateStr[(int)state_f], dutyScaled, dutyMax, duty_f);
 }
