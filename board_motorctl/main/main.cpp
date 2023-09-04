@@ -28,6 +28,9 @@ extern "C"
 //disables other functionality
 //#define UART_TEST_ONLY
 
+//only run brake-test (ignore uart input)
+#define BRAKE_TEST_ONLY
+
 
 //tag for logging
 static const char * TAG = "main";
@@ -92,7 +95,7 @@ void setLoglevels(void){
 	//--- set loglevel for individual tags ---
 	esp_log_level_set("main", ESP_LOG_INFO);
 	esp_log_level_set("buzzer", ESP_LOG_ERROR);
-	//esp_log_level_set("motordriver", ESP_LOG_INFO);
+	esp_log_level_set("motordriver", ESP_LOG_DEBUG);
 	//esp_log_level_set("motor-control", ESP_LOG_DEBUG);
 	//esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
 	//esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
@@ -150,15 +153,52 @@ extern "C" void app_main(void) {
 	//-------------------------------------------
 	//--- create tasks for uart communication ---
 	//-------------------------------------------
+#ifndef BRAKE_TEST_ONLY
 	uart_init();
 	xTaskCreate(task_uartReceive, "task_uartReceive", 4096, NULL, 10, NULL);
 	xTaskCreate(task_uartSend, "task_uartSend", 4096, NULL, 10, NULL);
+#endif
 
 
 	//--- main loop ---
 	//does nothing except for testing things
 	while(1){
+		vTaskDelay(500 / portTICK_PERIOD_MS);
+#ifdef BRAKE_TEST_ONLY
+		//test relays at standstill
+		ESP_LOGW("brake-test", "test relays via motorctl");
+		//turn on
+		motorRight.setTarget(motorstate_t::BRAKE, 0);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
+		motorRight.setTarget(motorstate_t::BRAKE, 0);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		//turn off
+		motorRight.setTarget(motorstate_t::IDLE, 0);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
+		motorRight.setTarget(motorstate_t::IDLE, 0);
+
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+		//go forward and brake
+		ESP_LOGW("brake-test", "go forward 30%% then brake");
+		motorRight.setTarget(motorstate_t::FWD, 30);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		motorRight.setTarget(motorstate_t::BRAKE, 0);
+
+		vTaskDelay(3000 / portTICK_PERIOD_MS);
+
+		//brake partial
+		ESP_LOGW("brake-test", "go forward 30%% then brake partial 10%%, hold for 5sec");
+		motorRight.setTarget(motorstate_t::FWD, 30);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		motorRight.setTarget(motorstate_t::BRAKE, 10);
+
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
+		//reset to idle
+		motorRight.setTarget(motorstate_t::IDLE, 0);
+	
+#endif
+
 
 		//--- test controlledMotor --- (ramp)
 		// //brake for 1 s
