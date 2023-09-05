@@ -29,6 +29,7 @@ typedef struct single100a_config_t {
     gpio_num_t gpio_pwm;
     gpio_num_t gpio_a;
     gpio_num_t gpio_b;
+	gpio_num_t gpio_brakeRelay;
     ledc_timer_t ledc_timer;
     ledc_channel_t ledc_channel;
 	bool aEnabledPinState;
@@ -59,4 +60,6 @@ class single100a {
         single100a_config_t config;
         uint32_t dutyMax;
         motorstate_t state = motorstate_t::IDLE;
+		bool brakeWaitingForRelay = false;
+		uint32_t timestamp_brakeRelayPowered;
 };

@@ -1,3 +1,4 @@
+
 #include "config.hpp"
 
 //===================================
@@ -6,8 +7,9 @@
 //--- configure left motor (hardware) ---
 single100a_config_t configDriverLeft = {
     .gpio_pwm = GPIO_NUM_26,
-    .gpio_a = GPIO_NUM_6,
+    .gpio_a = GPIO_NUM_4,
     .gpio_b = GPIO_NUM_16,
+	.gpio_brakeRelay = GPIO_NUM_5, //power mosfet 2
     .ledc_timer = LEDC_TIMER_0,
     .ledc_channel = LEDC_CHANNEL_0,
 	.aEnabledPinState = false, //-> pins inverted (mosfets)
@@ -21,6 +23,7 @@ single100a_config_t configDriverRight = {
     .gpio_pwm = GPIO_NUM_27,
     .gpio_a = GPIO_NUM_2,
     .gpio_b = GPIO_NUM_15,
+	.gpio_brakeRelay = GPIO_NUM_18, //power mosfet 1
     .ledc_timer = LEDC_TIMER_1,
     .ledc_channel = LEDC_CHANNEL_1,
 	.aEnabledPinState = false, //-> pins inverted (mosfets)
@@ -35,7 +38,7 @@ single100a_config_t configDriverRight = {
 motorctl_config_t configMotorControlLeft = {
     .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
-	.currentLimitEnabled = true,
+	.currentLimitEnabled = false,
 	.currentSensor_adc =  ADC1_CHANNEL_0, //GPIO36
 	.currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -46,7 +49,7 @@ motorctl_config_t configMotorControlLeft = {
 motorctl_config_t configMotorControlRight = {
     .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
-	.currentLimitEnabled = true,
+	.currentLimitEnabled = false,
 	.currentSensor_adc =  ADC1_CHANNEL_3, //GPIO39
 	.currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -70,7 +73,7 @@ fan_config_t configCooling = {
 
 
 //=================================
-//===== create global object s =====
+//===== create global objects =====
 //=================================
 //TODO outsource global variables to e.g. global.cpp and only config options here?
 
