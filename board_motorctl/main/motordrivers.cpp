@@ -86,13 +86,15 @@ void single100a::set(motorstate_t state_f, float duty_f){
     uint32_t dutyScaled;
     if (duty_f > 100) { //target duty above 100%
         dutyScaled = dutyMax;
-    } else if (duty_f <= 0) { //target at or below 0%
+    } else if (duty_f < 0) { //target at or below 0%
 		state_f = motorstate_t::IDLE;
         dutyScaled = 0;
     } else { //target duty 0-100%
              //scale duty to available resolution
         dutyScaled = duty_f / 100 * dutyMax;
     }
+
+    ESP_LOGV(TAG, "target-state=%s, duty=%d/%d, duty_input=%.3f%%", motorstateStr[(int)state_f], dutyScaled, dutyMax, duty_f);
 
 	//TODO: only when previous mode was BRAKE?
 	if (state_f != motorstate_t::BRAKE){
@@ -119,7 +121,7 @@ void single100a::set(motorstate_t state_f, float duty_f){
 		case motorstate_t::BRAKE:
 			//prevent full short (no brake resistors) due to slow relay, also reduces switching load
 			if (!brakeWaitingForRelay){
-				ESP_LOGW(TAG, "BRAKE: turned on relay, waiting in IDLE for %d ms", BRAKE_RELAY_DELAY_MS);
+				ESP_LOGW(TAG, "BRAKE: turned on relay, waiting in IDLE for %d ms, then apply brake", BRAKE_RELAY_DELAY_MS);
 				//switch driver to IDLE for now
 				gpio_set_level(config.gpio_a, config.aEnabledPinState);
 				gpio_set_level(config.gpio_b, config.bEnabledPinState);
@@ -162,5 +164,4 @@ void single100a::set(motorstate_t state_f, float duty_f){
             gpio_set_level(config.gpio_b, config.bEnabledPinState);
             break;
     }
-    ESP_LOGV(TAG, "set module to state=%s, duty=%d/%d, duty_input=%.3f%%", motorstateStr[(int)state_f], dutyScaled, dutyMax, duty_f);
 }
