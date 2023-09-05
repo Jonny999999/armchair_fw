@@ -28,13 +28,15 @@ extern "C"
 //disables other functionality
 //#define UART_TEST_ONLY
 
+//==========================
+//======= BRAKE TEST =======
+//==========================
 //only run brake-test (ignore uart input)
 #define BRAKE_TEST_ONLY
 
 
 //tag for logging
 static const char * TAG = "main";
-
 
 
 #ifndef UART_TEST_ONLY
