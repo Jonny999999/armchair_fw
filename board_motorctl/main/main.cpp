@@ -14,12 +14,20 @@ extern "C"
 
 #include "driver/ledc.h"
 
-//custom C files
+	//custom C files
 #include "wifi.h"
 }
 //custom C++ files
 #include "config.hpp"
 #include "uart.hpp"
+#include "speedsensor.hpp"
+
+
+//============================
+//======= TESTING MODE =======
+//============================
+//do not start the actual tasks for controlling the armchair
+#define TESTING_MODE
 
 //=========================
 //======= UART TEST =======
@@ -32,14 +40,18 @@ extern "C"
 //======= BRAKE TEST =======
 //==========================
 //only run brake-test (ignore uart input)
-#define BRAKE_TEST_ONLY
+//#define BRAKE_TEST_ONLY
 
+//====================-======
+//==== SPEED SENSOR TEST ====
+//======================-====
+//only run speed-sensor test
+#define SPEED_SENSOR_TEST
 
 //tag for logging
 static const char * TAG = "main";
 
 
-#ifndef UART_TEST_ONLY
 //====================================
 //========== motorctl task ===========
 //====================================
@@ -110,22 +122,25 @@ void setLoglevels(void){
 	esp_log_level_set("uart_common", ESP_LOG_INFO);
 	esp_log_level_set("uart", ESP_LOG_INFO);
 	//esp_log_level_set("current-sensors", ESP_LOG_INFO);
+	esp_log_level_set("speedSensor", ESP_LOG_WARN);
 }
-#endif
+
 
 
 //=================================
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
-#ifndef UART_TEST_ONLY
+
+	//---- define log levels ----
+	setLoglevels();
+
+#ifndef TESTING_MODE
 	//enable 5V volate regulator
 	gpio_pad_select_gpio(GPIO_NUM_17);                                                  
 	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
 	gpio_set_level(GPIO_NUM_17, 1);                                                      
 
-	//---- define log levels ----
-	setLoglevels();
 
 	//----------------------------------------------
 	//--- create task for controlling the motors ---
@@ -152,20 +167,42 @@ extern "C" void app_main(void) {
 
 
 
+#ifndef BRAKE_TEST_ONLY
 	//-------------------------------------------
 	//--- create tasks for uart communication ---
 	//-------------------------------------------
-#ifndef BRAKE_TEST_ONLY
 	uart_init();
 	xTaskCreate(task_uartReceive, "task_uartReceive", 4096, NULL, 10, NULL);
 	xTaskCreate(task_uartSend, "task_uartSend", 4096, NULL, 10, NULL);
 #endif
 
 
-	//--- main loop ---
+
+#ifdef SPEED_SENSOR_TEST
+	speedSensor_config_t speedRight_config{
+		.gpioPin = GPIO_NUM_18,
+			.degreePerGroup = 72,
+			.tireCircumferenceMeter = 0.69,
+			.directionInverted = false,
+			.logName = "speedRight",
+	};
+	speedSensor speedRight (speedRight_config);
+#endif
+
+
+	//---------------------------
+	//-------- main loop --------
+	//---------------------------
 	//does nothing except for testing things
 	while(1){
-		vTaskDelay(500 / portTICK_PERIOD_MS);
+
+#ifdef SPEED_SENSOR_TEST
+		vTaskDelay(100 / portTICK_PERIOD_MS);
+		//speedRight.getRpm();
+		ESP_LOGI(TAG, "speedsensor-test: rpm=%fRPM, speed=%fkm/h dir=%d, pulseCount=%d, p1=%d, p2=%d, p3=%d lastEdgetime=%d", speedRight.getRpm(), speedRight.getKmph(), speedRight.direction, speedRight.pulseCounter, (int)speedRight.pulseDurations[0]/1000,  (int)speedRight.pulseDurations[1]/1000, (int)speedRight.pulseDurations[2]/1000,(int)speedRight.lastEdgeTime);
+#endif
+
+
 #ifdef BRAKE_TEST_ONLY
 		//test relays at standstill
 		ESP_LOGW("brake-test", "test relays via motorctl");
@@ -198,7 +235,6 @@ extern "C" void app_main(void) {
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
 		//reset to idle
 		motorRight.setTarget(motorstate_t::IDLE, 0);
-	
 #endif
 
 
