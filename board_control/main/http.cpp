@@ -232,8 +232,8 @@ void http_init_server()
 
 
   //----- define URLs -----
-    //note: ignore warning here, cant define elements separately, causes crash
-  httpd_uri_t joystick_url = {
+  //note: dont use separate assignment of elements because causes controller crash
+    httpd_uri_t joystick_url = {
       .uri = "/api/joystick",
       .method = HTTP_POST,
       .handler = on_joystick_url,

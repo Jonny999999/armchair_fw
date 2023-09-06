@@ -1,5 +1,4 @@
 #include "buzzer.hpp"
-#include "config.hpp"
 
 static const char *TAG_BUZZER = "buzzer";
 

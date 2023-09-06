@@ -1,8 +1,11 @@
 #include "motorctl.hpp"
+#include "esp_log.h"
+#include "types.hpp"
 
 //tag for logging
 static const char * TAG = "motor-control";
 
+#define TIMEOUT_IDLE_WHEN_NO_COMMAND 8000
 
 //=============================
 //======== constructor ========
@@ -77,9 +80,11 @@ void controlledMotor::handle(){
     //--- receive commands from queue ---
     if( xQueueReceive( commandQueue, &commandReceive, ( TickType_t ) 0 ) )
     {
-        ESP_LOGD(TAG, "Read command from queue: state=%s, duty=%.2f", motorstateStr[(int)commandReceive.state], commandReceive.duty);
+        ESP_LOGI(TAG, "Read command from queue: state=%s, duty=%.2f", motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
         dutyTarget = commandReceive.duty;
+		receiveTimeout = false;
+		timestamp_commandReceived = esp_log_timestamp();
 
         //--- convert duty ---
         //define target duty (-100 to 100) from provided duty and motorstate
@@ -88,7 +93,8 @@ void controlledMotor::handle(){
             case motorstate_t::BRAKE:
                 //update state
                 state = motorstate_t::BRAKE;
-                dutyTarget = 0;
+                //dutyTarget = 0;
+                dutyTarget = fabs(commandReceive.duty);
                 break;
             case motorstate_t::IDLE:
                 dutyTarget = 0;
@@ -102,6 +108,15 @@ void controlledMotor::handle(){
         }
     }
 
+	//--- timeout, no data ---
+	//turn motors off if no data received for long time (e.g. no uart data / control offline)
+	//TODO no timeout when braking?
+	if ((esp_log_timestamp() - timestamp_commandReceived) > TIMEOUT_IDLE_WHEN_NO_COMMAND && !receiveTimeout){
+		receiveTimeout = true;
+		state = motorstate_t::IDLE;
+		dutyTarget = 0;
+		ESP_LOGE(TAG, "TIMEOUT, no target data received for more than %ds -> switch to IDLE", TIMEOUT_IDLE_WHEN_NO_COMMAND/1000);
+	}
 
     //--- calculate increment ---
     //calculate increment for fading UP with passed time since last run and configured fade time
@@ -119,14 +134,15 @@ void controlledMotor::handle(){
         dutyIncrementDecel = 100;
     }
 
-    
-    //--- BRAKE ---
-    //brake immediately, update state, duty and exit this cycle of handle function
-    if (state == motorstate_t::BRAKE){
-                motor.set(motorstate_t::BRAKE, 0);
-                dutyNow = 0;
-                return; //no need to run the fade algorithm
-    }
+
+	//--- BRAKE ---
+	//brake immediately, update state, duty and exit this cycle of handle function
+	if (state == motorstate_t::BRAKE){
+		ESP_LOGD(TAG, "braking - skip fading");
+		motor.set(motorstate_t::BRAKE, dutyTarget);
+		//dutyNow = 0;
+		return; //no need to run the fade algorithm
+	}
 
 
     //--- calculate difference ---

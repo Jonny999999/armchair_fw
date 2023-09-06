@@ -10,8 +10,8 @@ sdkconfig.old
 
 
 # React
-react-app/build
-react-app/.pnp
+**/react-app/build
+**/react-app/.pnp
 .pnp.js
 node_modules
 

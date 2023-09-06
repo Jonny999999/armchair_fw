@@ -21,17 +21,15 @@ extern "C"
 //--------------------------------------------
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
-
-//class which controls a motor using a 'single100a' h-bridge module
-enum class motorstate_t {IDLE, FWD, REV, BRAKE};
-//definition of string array to be able to convert state enum to readable string (defined in motordrivers.cpp)
-extern const char* motorstateStr[4];
+//motorstate_t, motorstateStr outsourced to common/types.hpp
+#include "types.hpp"
 
 //struct with all config parameters for single100a motor driver
 typedef struct single100a_config_t {
     gpio_num_t gpio_pwm;
     gpio_num_t gpio_a;
     gpio_num_t gpio_b;
+	gpio_num_t gpio_brakeRelay;
     ledc_timer_t ledc_timer;
     ledc_channel_t ledc_channel;
 	bool aEnabledPinState;
@@ -62,4 +60,6 @@ class single100a {
         single100a_config_t config;
         uint32_t dutyMax;
         motorstate_t state = motorstate_t::IDLE;
+		bool brakeWaitingForRelay = false;
+		uint32_t timestamp_brakeRelayPowered;
 };
