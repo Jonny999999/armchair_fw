@@ -1,3 +1,6 @@
+#include "hal/uart_types.h"
+#include "motordrivers.hpp"
+#include "types.hpp"
 extern "C"
 {
 #include <stdio.h>
@@ -161,37 +164,31 @@ void sendByte(char data){
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
-	//TEST SAVERTOOTH driver:
-	//init uart:
-
-	ESP_LOGW(TAG, "initializing uart1...");
-	uart_config_t uart1_config = {
-		.baud_rate = 38400,
-		.data_bits = UART_DATA_8_BITS,
-		.parity    = UART_PARITY_DISABLE,
-		.stop_bits = UART_STOP_BITS_1,
-		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+	//TEST SABERTOOTH driver:
+	//config
+	sabertooth2x60_config_t sabertoothConfig = {
+		.gpio_TX = GPIO_NUM_23,
+		.uart_num = UART_NUM_2
 	};
-	ESP_LOGI(TAG, "configure...");
-	ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uart1_config));
-	ESP_LOGI(TAG, "setpins...");
-	ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1, 23, 22, 0, 0));
-	ESP_LOGI(TAG, "init...");
-	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, 1024, 1024, 10, NULL, 0));
-	bool uart_isInitialized = true;
 
-	//between 1 and 127 will control motor 1. 1 is full reverse, 64 is stop and 127 is full forward.
-	//between 128 and 255 will control motor 2. 128 is full reverse, 192 is stop and 255 is full forward.
-	//Character 0 (hex 0x00) shut down both motors.
+	//create instance
+	sabertooth2x60a motors(sabertoothConfig);
+
+
+	//run test commands
 	while(1){
-		sendByte(0);
+		motors.setLeft({motorstate_t::FWD, 70});
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		sendByte(10);
-		vTaskDelay(2000 / portTICK_PERIOD_MS);
-		sendByte(64);
+		motors.setLeft({motorstate_t::IDLE, 0});
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		sendByte(120);
-		vTaskDelay(2000 / portTICK_PERIOD_MS);
+		motors.setLeft({motorstate_t::REV, 50});
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		motors.setLeft(-90);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		motors.setLeft(90);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		motors.setLeft(0);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 
 //    //enable 5V volate regulator
