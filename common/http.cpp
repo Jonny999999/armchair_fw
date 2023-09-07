@@ -13,7 +13,7 @@ extern "C"
 }
 
 #include "http.hpp"
-#include "config.hpp"
+//#include "config.hpp"
 
 
 //tag for logging

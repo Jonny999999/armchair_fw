@@ -7,8 +7,10 @@ idf_component_register(
 		"motordrivers.cpp"
 		"motorctl.cpp"
 		"currentsensor.cpp"
+		"joystick.cpp"
+		"http.cpp"
     INCLUDE_DIRS 
         "."
-		PRIV_REQUIRES nvs_flash
+		PRIV_REQUIRES nvs_flash mdns json spiffs esp_http_server
     )
 

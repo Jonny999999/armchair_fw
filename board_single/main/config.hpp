@@ -39,7 +39,7 @@ extern controlledArmchair control;
 extern automatedArmchair armchair;
 
 //create global httpJoystick object
-extern httpJoystick httpJoystickMain;
+//extern httpJoystick httpJoystickMain;
 
 //configuration for fans / cooling
 extern fan_config_t configCooling;
