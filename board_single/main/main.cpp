@@ -23,6 +23,8 @@ extern "C"
 #include "button.hpp"
 #include "http.hpp"
 
+#include "uart_common.hpp"
+
 //tag for logging
 static const char * TAG = "main";
 
@@ -148,152 +150,191 @@ void setLoglevels(void){
 }
 
 
+//send byte via uart to test sabertooth driver
+void sendByte(char data){
+	uart_write_bytes(UART_NUM_1, &data, 1);
+	ESP_LOGI(TAG, "sent %x  /  %d via uart", data, data);
+}
+
 
 //=================================
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
-    //enable 5V volate regulator
-    gpio_pad_select_gpio(GPIO_NUM_17);                                                  
-    gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_17, 1);                                                      
+	//TEST SAVERTOOTH driver:
+	//init uart:
 
-    //---- define log levels ----
-	setLoglevels();
-    
-    //----------------------------------------------
-    //--- create task for controlling the motors ---
-    //----------------------------------------------
-    //task that receives commands, handles ramp and current limit and executes commands using the motordriver function
-    xTaskCreate(&task_motorctl, "task_motor-control", 2048, NULL, 6, NULL);
+	ESP_LOGW(TAG, "initializing uart1...");
+	uart_config_t uart1_config = {
+		.baud_rate = 38400,
+		.data_bits = UART_DATA_8_BITS,
+		.parity    = UART_PARITY_DISABLE,
+		.stop_bits = UART_STOP_BITS_1,
+		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+	};
+	ESP_LOGI(TAG, "configure...");
+	ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uart1_config));
+	ESP_LOGI(TAG, "setpins...");
+	ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1, 23, 22, 0, 0));
+	ESP_LOGI(TAG, "init...");
+	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, 1024, 1024, 10, NULL, 0));
+	bool uart_isInitialized = true;
 
-    //------------------------------
-    //--- create task for buzzer ---
-    //------------------------------
-    xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
-
-    //-------------------------------
-    //--- create task for control ---
-    //-------------------------------
-    //task that generates motor commands depending on the current mode and sends those to motorctl task
-    xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
-
-    //------------------------------
-    //--- create task for button ---
-    //------------------------------
-    //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
-
-    //-----------------------------------
-    //--- create task for fan control ---
-    //-----------------------------------
-    //task that evaluates and processes the button input and runs the configured commands
-    xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
-
-
-    //beep at startup
-    buzzer.beep(3, 70, 50);
-
-    //--- initialize nvs-flash and netif (needed for wifi) ---
-    wifi_initNvs_initNetif();
-
-    //--- initialize spiffs ---
-    init_spiffs();
-
-    //--- initialize and start wifi ---
-    //FIXME: run wifi_init_client or wifi_init_ap as intended from control.cpp when switching state 
-    //currently commented out because of error "assert failed: xQueueSemaphoreTake queue.c:1549 (pxQueue->uxItemSize == 0)" when calling control->changeMode from button.cpp
-    //when calling control.changeMode(http) from main.cpp it worked without error for some reason?
-    ESP_LOGI(TAG,"starting wifi...");
-    //wifi_init_client(); //connect to existing wifi
-    wifi_init_ap(); //start access point
-    ESP_LOGI(TAG,"done starting wifi");
-
-
-    //--- testing http server ---
-    //    wifi_init_client(); //connect to existing wifi
-    //    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    //    ESP_LOGI(TAG, "initializing http server");
-    //    http_init_server();
-    
-
-    //--- testing force http mode after startup ---
-        //control.changeMode(controlMode_t::HTTP);
-
-
-	//--- main loop ---
-	//does nothing except for testing things
+	//between 1 and 127 will control motor 1. 1 is full reverse, 64 is stop and 127 is full forward.
+	//between 128 and 255 will control motor 2. 128 is full reverse, 192 is stop and 255 is full forward.
+	//Character 0 (hex 0x00) shut down both motors.
 	while(1){
+		sendByte(0);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-		//---------------------------------
-		//-------- TESTING section --------
-		//---------------------------------
-		// //--- test functions at mode change HTTP ---
-		// control.changeMode(controlMode_t::HTTP);
-		// vTaskDelay(10000 / portTICK_PERIOD_MS);
-		// control.changeMode(controlMode_t::IDLE);
-		// vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-
-		//--- test wifi functions ---
-		// ESP_LOGI(TAG, "creating AP");
-		// wifi_init_ap(); //start accesspoint
-		// vTaskDelay(15000 / portTICK_PERIOD_MS);
-		// ESP_LOGI(TAG, "stopping wifi");
-		// wifi_deinit_ap();  //stop wifi access point
-		// vTaskDelay(5000 / portTICK_PERIOD_MS);
-		// ESP_LOGI(TAG, "connecting to wifi");
-		// wifi_init_client(); //connect to existing wifi
-		// vTaskDelay(10000 / portTICK_PERIOD_MS);
-		// ESP_LOGI(TAG, "stopping wifi");
-		// wifi_deinit_client(); //stop wifi client
-		// vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-
-		//--- test button ---
-		//buttonJoystick.handle();
-		// if (buttonJoystick.risingEdge){
-		//     ESP_LOGI(TAG, "button pressed, was released for %d ms", buttonJoystick.msReleased);
-		//     buzzer.beep(2, 100, 50);
-
-		// }else if (buttonJoystick.fallingEdge){
-		//     ESP_LOGI(TAG, "button released, was pressed for %d ms", buttonJoystick.msPressed);
-		//     buzzer.beep(1, 200, 0);
-		// }
-
-
-		//--- test joystick commands ---
-		// motorCommands_t commands = joystick_generateCommandsDriving(joystick);
-		// motorRight.setTarget(commands.right.state, commands.right.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
-		// motorLeft.setTarget(commands.left.state, commands.left.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
-		// //motorRight.setTarget(commands.right.state, commands.right.duty);
-
-
-		//--- test joystick class ---
-		//joystickData_t data = joystick.getData();
-		//ESP_LOGI(TAG, "position=%s, x=%.1f%%, y=%.1f%%, radius=%.1f%%, angle=%.2f",
-		//        joystickPosStr[(int)data.position], data.x*100, data.y*100, data.radius*100, data.angle);
-
-		//--- test the motor driver ---
-		//fade up duty - forward
-		//   for (int duty=0; duty<=100; duty+=5) {
-		//       motorLeft.setTarget(motorstate_t::FWD, duty);
-		//       vTaskDelay(100 / portTICK_PERIOD_MS); 
-		//   }
-
-
-		//--- test controlledMotor --- (ramp)
-		// //brake for 1 s
-		// motorLeft.setTarget(motorstate_t::BRAKE);
-		// vTaskDelay(1000 / portTICK_PERIOD_MS);
-		// //command 90% - reverse
-		// motorLeft.setTarget(motorstate_t::REV, 90);
-		// vTaskDelay(5000 / portTICK_PERIOD_MS);
-		// //command 100% - forward
-		// motorLeft.setTarget(motorstate_t::FWD, 100);
-		// vTaskDelay(1000 / portTICK_PERIOD_MS);
-
+		sendByte(10);
+		vTaskDelay(2000 / portTICK_PERIOD_MS);
+		sendByte(64);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		sendByte(120);
+		vTaskDelay(2000 / portTICK_PERIOD_MS);
 	}
+
+//    //enable 5V volate regulator
+//    gpio_pad_select_gpio(GPIO_NUM_17);                                                  
+//    gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
+//    gpio_set_level(GPIO_NUM_17, 1);                                                      
+//
+//    //---- define log levels ----
+//	setLoglevels();
+//    
+//    //----------------------------------------------
+//    //--- create task for controlling the motors ---
+//    //----------------------------------------------
+//    //task that receives commands, handles ramp and current limit and executes commands using the motordriver function
+//    xTaskCreate(&task_motorctl, "task_motor-control", 2048, NULL, 6, NULL);
+//
+//    //------------------------------
+//    //--- create task for buzzer ---
+//    //------------------------------
+//    xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
+//
+//    //-------------------------------
+//    //--- create task for control ---
+//    //-------------------------------
+//    //task that generates motor commands depending on the current mode and sends those to motorctl task
+//    xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
+//
+//    //------------------------------
+//    //--- create task for button ---
+//    //------------------------------
+//    //task that evaluates and processes the button input and runs the configured commands
+//    xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
+//
+//    //-----------------------------------
+//    //--- create task for fan control ---
+//    //-----------------------------------
+//    //task that evaluates and processes the button input and runs the configured commands
+//    xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
+//
+//
+//    //beep at startup
+//    buzzer.beep(3, 70, 50);
+//
+//    //--- initialize nvs-flash and netif (needed for wifi) ---
+//    wifi_initNvs_initNetif();
+//
+//    //--- initialize spiffs ---
+//    init_spiffs();
+//
+//    //--- initialize and start wifi ---
+//    //FIXME: run wifi_init_client or wifi_init_ap as intended from control.cpp when switching state 
+//    //currently commented out because of error "assert failed: xQueueSemaphoreTake queue.c:1549 (pxQueue->uxItemSize == 0)" when calling control->changeMode from button.cpp
+//    //when calling control.changeMode(http) from main.cpp it worked without error for some reason?
+//    ESP_LOGI(TAG,"starting wifi...");
+//    //wifi_init_client(); //connect to existing wifi
+//    wifi_init_ap(); //start access point
+//    ESP_LOGI(TAG,"done starting wifi");
+//
+//
+//    //--- testing http server ---
+//    //    wifi_init_client(); //connect to existing wifi
+//    //    vTaskDelay(2000 / portTICK_PERIOD_MS);
+//    //    ESP_LOGI(TAG, "initializing http server");
+//    //    http_init_server();
+//    
+//
+//    //--- testing force http mode after startup ---
+//        //control.changeMode(controlMode_t::HTTP);
+//
+//
+//	//--- main loop ---
+//	//does nothing except for testing things
+//	while(1){
+//		vTaskDelay(1000 / portTICK_PERIOD_MS);
+//
+//		//---------------------------------
+//		//-------- TESTING section --------
+//		//---------------------------------
+//		// //--- test functions at mode change HTTP ---
+//		// control.changeMode(controlMode_t::HTTP);
+//		// vTaskDelay(10000 / portTICK_PERIOD_MS);
+//		// control.changeMode(controlMode_t::IDLE);
+//		// vTaskDelay(10000 / portTICK_PERIOD_MS);
+//
+//
+//		//--- test wifi functions ---
+//		// ESP_LOGI(TAG, "creating AP");
+//		// wifi_init_ap(); //start accesspoint
+//		// vTaskDelay(15000 / portTICK_PERIOD_MS);
+//		// ESP_LOGI(TAG, "stopping wifi");
+//		// wifi_deinit_ap();  //stop wifi access point
+//		// vTaskDelay(5000 / portTICK_PERIOD_MS);
+//		// ESP_LOGI(TAG, "connecting to wifi");
+//		// wifi_init_client(); //connect to existing wifi
+//		// vTaskDelay(10000 / portTICK_PERIOD_MS);
+//		// ESP_LOGI(TAG, "stopping wifi");
+//		// wifi_deinit_client(); //stop wifi client
+//		// vTaskDelay(5000 / portTICK_PERIOD_MS);
+//
+//
+//		//--- test button ---
+//		//buttonJoystick.handle();
+//		// if (buttonJoystick.risingEdge){
+//		//     ESP_LOGI(TAG, "button pressed, was released for %d ms", buttonJoystick.msReleased);
+//		//     buzzer.beep(2, 100, 50);
+//
+//		// }else if (buttonJoystick.fallingEdge){
+//		//     ESP_LOGI(TAG, "button released, was pressed for %d ms", buttonJoystick.msPressed);
+//		//     buzzer.beep(1, 200, 0);
+//		// }
+//
+//
+//		//--- test joystick commands ---
+//		// motorCommands_t commands = joystick_generateCommandsDriving(joystick);
+//		// motorRight.setTarget(commands.right.state, commands.right.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
+//		// motorLeft.setTarget(commands.left.state, commands.left.duty); //TODO make motorctl.setTarget also accept motorcommand struct directly
+//		// //motorRight.setTarget(commands.right.state, commands.right.duty);
+//
+//
+//		//--- test joystick class ---
+//		//joystickData_t data = joystick.getData();
+//		//ESP_LOGI(TAG, "position=%s, x=%.1f%%, y=%.1f%%, radius=%.1f%%, angle=%.2f",
+//		//        joystickPosStr[(int)data.position], data.x*100, data.y*100, data.radius*100, data.angle);
+//
+//		//--- test the motor driver ---
+//		//fade up duty - forward
+//		//   for (int duty=0; duty<=100; duty+=5) {
+//		//       motorLeft.setTarget(motorstate_t::FWD, duty);
+//		//       vTaskDelay(100 / portTICK_PERIOD_MS); 
+//		//   }
+//
+//
+//		//--- test controlledMotor --- (ramp)
+//		// //brake for 1 s
+//		// motorLeft.setTarget(motorstate_t::BRAKE);
+//		// vTaskDelay(1000 / portTICK_PERIOD_MS);
+//		// //command 90% - reverse
+//		// motorLeft.setTarget(motorstate_t::REV, 90);
+//		// vTaskDelay(5000 / portTICK_PERIOD_MS);
+//		// //command 100% - forward
+//		// motorLeft.setTarget(motorstate_t::FWD, 100);
+//		// vTaskDelay(1000 / portTICK_PERIOD_MS);
+//
+//	}
 
 }

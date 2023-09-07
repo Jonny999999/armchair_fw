@@ -63,3 +63,39 @@ class single100a {
 		bool brakeWaitingForRelay = false;
 		uint32_t timestamp_brakeRelayPowered;
 };
+
+
+////struct with all config parameters for single100a motor driver
+//typedef struct sabertooth2x60_config_t {
+//    gpio_num_t gpio_TX;
+//    ledc_timer_t ledc_timer;
+//    ledc_channel_t ledc_channel;
+//	bool aEnabledPinState;
+//	bool bEnabledPinState;
+//    ledc_timer_bit_t resolution;
+//    int pwmFreq;
+//} single100a_config_t;
+//
+////=================================
+////======= sabertooth 2x60a ========
+////=================================
+//class single100a {
+//    public:
+//        //--- constructor ---
+//        single100a(single100a_config_t config_f); //provide config struct (see above)
+//
+//        //--- functions ---
+//        void set(motorstate_t state, float duty_f = 0); //set mode and duty of the motor (see motorstate_t above)
+//        //TODO: add functions to get the current state and duty
+//
+//    private:
+//        //--- functions ---
+//        void init(); //initialize pwm and gpio outputs, calculate maxDuty
+//
+//        //--- variables ---
+//        single100a_config_t config;
+//        uint32_t dutyMax;
+//        motorstate_t state = motorstate_t::IDLE;
+//		bool brakeWaitingForRelay = false;
+//		uint32_t timestamp_brakeRelayPowered;
+//};
