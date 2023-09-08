@@ -11,11 +11,12 @@ static const char * TAG = "motor-control";
 //======== constructor ========
 //=============================
 //constructor, simultaniously initialize instance of motor driver 'motor' and current sensor 'cSensor' with provided config (see below lines after ':')
-controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control): 
-	motor(config_driver), 
+controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control): 
 	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent) {
 		//copy parameters for controlling the motor
 		config = config_control;
+		//pointer to update motot dury method
+		motorSetCommand = setCommandFunc;
 		//copy configured default fading durations to actually used variables
 		msFadeAccel = config.msFadeAccel;
 		msFadeDecel = config.msFadeDecel;
@@ -139,7 +140,7 @@ void controlledMotor::handle(){
 	//brake immediately, update state, duty and exit this cycle of handle function
 	if (state == motorstate_t::BRAKE){
 		ESP_LOGD(TAG, "braking - skip fading");
-		motor.set(motorstate_t::BRAKE, dutyTarget);
+		motorSetCommand({motorstate_t::BRAKE, dutyTarget});
 		//dutyNow = 0;
 		return; //no need to run the fade algorithm
 	}
@@ -229,7 +230,7 @@ void controlledMotor::handle(){
 
 
     //--- apply new target to motor ---
-    motor.set(state, fabs(dutyNow));
+    motorSetCommand({state, (float)fabs(dutyNow)});
     //note: BRAKE state is handled earlier
     
 

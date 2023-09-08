@@ -51,6 +51,7 @@ class single100a {
 
 		//--- functions ---
 		void set(motorstate_t state, float duty_f = 0); //set mode and duty of the motor (see motorstate_t above)
+		void set(motorCommand_t cmd);
 		//TODO: add functions to get the current state and duty
 
 	private:
@@ -79,18 +80,19 @@ class single100a {
 //===== sabertooth 2x60A motor driver ======
 //==========================================
 
-//struct with all config parameters for single100a motor driver
+//struct with all config parameters for sabertooth2x60a driver
 typedef struct  {
 	gpio_num_t gpio_TX;
 	uart_port_t uart_num; //(UART_NUM_1/2)
 } sabertooth2x60_config_t;
 
 
+//controll via simplified serial
+//=> set dip switches to 'simplified serial 9600 Baud' according to manual 101011
 class sabertooth2x60a {
 	public:
 		//--- constructor ---
 		sabertooth2x60a(sabertooth2x60_config_t config_f); //provide config struct (see above)
-
 		//--- functions ---
 		//set motor speed with float value from -100 to 100
 		void setLeft(float dutyPerSigned);

@@ -3,6 +3,7 @@
 //===================================
 //======= motor configuration =======
 //===================================
+/* ==> currently using other driver
 //--- configure left motor (hardware) ---
 single100a_config_t configDriverLeft = {
     .gpio_pwm = GPIO_NUM_26,
@@ -27,6 +28,13 @@ single100a_config_t configDriverRight = {
 	.bEnabledPinState = true,  //-> not inverted (direct)
     .resolution = LEDC_TIMER_11_BIT,
     .pwmFreq = 10000
+	};
+	*/
+
+//--- configure sabertooth driver --- (controls both motors in one instance)
+sabertooth2x60_config_t sabertoothConfig = {
+	.gpio_TX = GPIO_NUM_23,
+	.uart_num = UART_NUM_2
 };
 
 
@@ -125,10 +133,24 @@ fan_config_t configCooling = {
 //===== create global objects =====
 //=================================
 //TODO outsource global variables to e.g. global.cpp and only config options here?
+//create sabertooth motor driver instance
+sabertooth2x60a sabertoothDriver(sabertoothConfig);
 
+
+//--- controlledMotor ---
+//functions for updating the duty via certain/current driver that can then be passed to controlledMotor
+//-> makes it possible to easily use different motor drivers
+//note: ignoring warning "capture of variable 'sabertoothDriver' with non-automatic storage duration", since sabertoothDriver object does not get destroyed anywhere - no lifetime issue
+motorSetCommandFunc_t setLeftFunc = [&sabertoothDriver](motorCommand_t cmd) {
+    sabertoothDriver.setLeft(cmd);
+};
+motorSetCommandFunc_t setRightFunc = [&sabertoothDriver](motorCommand_t cmd) {
+    sabertoothDriver.setRight(cmd);
+};
 //create controlled motor instances (motorctl.hpp)
-controlledMotor motorLeft(configDriverLeft, configMotorControlLeft);
-controlledMotor motorRight(configDriverRight, configMotorControlRight);
+controlledMotor motorLeft(setLeftFunc, configMotorControlLeft);
+controlledMotor motorRight(setRightFunc, configMotorControlRight);
+
 
 //create global joystic instance (joystick.hpp)
 evaluatedJoystick joystick(configJoystick);
@@ -147,5 +169,6 @@ controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &joy
 
 //create global automatedArmchair object (for auto-mode) (auto.hpp)
 automatedArmchair armchair;
+
 
 

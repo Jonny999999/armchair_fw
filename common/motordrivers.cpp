@@ -80,6 +80,10 @@ void single100a::init(){
 //----------- set -----------
 //---------------------------
 //function to put the h-bridge module in the desired state and duty cycle
+void single100a::set(motorCommand_t cmd){
+	set(cmd.state, cmd.duty);
+}
+
 void single100a::set(motorstate_t state_f, float duty_f){
 
 	//scale provided target duty in percent to available resolution for ledc
@@ -190,7 +194,7 @@ sabertooth2x60a::sabertooth2x60a(sabertooth2x60_config_t config_f){
 void sabertooth2x60a::init(){
 	ESP_LOGW(TAG, "initializing uart...");
 	uart_config_t uart_config = {
-		.baud_rate = 38400,
+		.baud_rate = 9600, //dip switches: 101011
 		.data_bits = UART_DATA_8_BITS,
 		.parity    = UART_PARITY_DISABLE,
 		.stop_bits = UART_STOP_BITS_1,
