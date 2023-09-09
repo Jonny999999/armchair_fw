@@ -33,7 +33,7 @@ single100a_config_t configDriverRight = {
 
 //--- configure sabertooth driver --- (controls both motors in one instance)
 sabertooth2x60_config_t sabertoothConfig = {
-	.gpio_TX = GPIO_NUM_23,
+	.gpio_TX = GPIO_NUM_25,
 	.uart_num = UART_NUM_2
 };
 
@@ -41,13 +41,13 @@ sabertooth2x60_config_t sabertoothConfig = {
 //TODO add motor name string -> then use as log tag?
 //--- configure left motor (contol) ---
 motorctl_config_t configMotorControlLeft = {
-    .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
-	.currentLimitEnabled = true,
-	.currentSensor_adc =  ADC1_CHANNEL_6, //GPIO34
+    .msFadeAccel = 1800, //acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 2500, //deceleration of the motor (ms it takes from 100% to 0%)
+	.currentLimitEnabled = false,
+	.currentSensor_adc =  ADC1_CHANNEL_4, //GPIO32
 	.currentSensor_ratedCurrent = 50,
     .currentMax = 30,
-	.deadTimeMs = 900 //minimum time motor is off between direction change
+	.deadTimeMs = 300 //minimum time motor is off between direction change
 };
 
 //--- configure right motor (contol) ---
@@ -55,10 +55,10 @@ motorctl_config_t configMotorControlRight = {
     .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
 	.currentLimitEnabled = true,
-	.currentSensor_adc =  ADC1_CHANNEL_4, //GPIO32
+	.currentSensor_adc =  ADC1_CHANNEL_5, //GPIO33
 	.currentSensor_ratedCurrent = 50,
     .currentMax = 30,
-	.deadTimeMs = 900 //minimum time motor is off between direction change
+	.deadTimeMs = 300 //minimum time motor is off between direction change
 };
 
 
@@ -156,7 +156,7 @@ controlledMotor motorRight(setRightFunc, configMotorControlRight);
 evaluatedJoystick joystick(configJoystick);
 
 //create global evaluated switch instance for button next to joystick
-gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_25, true, false); //pullup true, not inverted (switch to GND use pullup of controller)
+gpio_evaluatedSwitch buttonJoystick(GPIO_NUM_21, true, false); //pullup true, not inverted (switch to GND use pullup of controller)
                                                                
 //create buzzer object on pin 12 with gap between queued events of 100ms 
 buzzer_t buzzer(GPIO_NUM_12, 100);
