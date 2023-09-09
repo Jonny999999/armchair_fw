@@ -42,23 +42,23 @@ sabertooth2x60_config_t sabertoothConfig = {
 //--- configure left motor (contol) ---
 motorctl_config_t configMotorControlLeft = {
     .msFadeAccel = 1800, //acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 2500, //deceleration of the motor (ms it takes from 100% to 0%)
+    .msFadeDecel = 1900, //deceleration of the motor (ms it takes from 100% to 0%)
 	.currentLimitEnabled = false,
 	.currentSensor_adc =  ADC1_CHANNEL_4, //GPIO32
 	.currentSensor_ratedCurrent = 50,
     .currentMax = 30,
-	.deadTimeMs = 300 //minimum time motor is off between direction change
+	.deadTimeMs = 0 //minimum time motor is off between direction change
 };
 
 //--- configure right motor (contol) ---
 motorctl_config_t configMotorControlRight = {
-    .msFadeAccel = 1900, //acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
-	.currentLimitEnabled = true,
+    .msFadeAccel = 1800, //acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 1900, //deceleration of the motor (ms it takes from 100% to 0%)
+	.currentLimitEnabled = false,
 	.currentSensor_adc =  ADC1_CHANNEL_5, //GPIO33
 	.currentSensor_ratedCurrent = 50,
     .currentMax = 30,
-	.deadTimeMs = 300 //minimum time motor is off between direction change
+	.deadTimeMs = 0 //minimum time motor is off between direction change
 };
 
 
@@ -69,7 +69,7 @@ motorctl_config_t configMotorControlRight = {
 control_config_t configControl = {
     .defaultMode = controlMode_t::JOYSTICK, //default mode after startup and toggling IDLE
     //--- timeout ---    
-    .timeoutMs = 5*60*1000,      //time of inactivity after which the mode gets switched to IDLE
+    .timeoutMs = 3*60*1000,      //time of inactivity after which the mode gets switched to IDLE
     .timeoutTolerancePer = 5,    //percentage the duty can vary between timeout checks considered still inactive
     //--- http mode ---
 
@@ -104,10 +104,10 @@ joystick_config_t configJoystick = {
     .tolerance_radius = 0.09,
 
     //min and max adc values of each axis, !!!AFTER INVERSION!!! is applied:
-    .x_min = 1392, //=> x=-1
-    .x_max = 2650, //=> x=1
-    .y_min = 1390, //=> y=-1
-    .y_max = 2640, //=> y=1
+    .x_min = 1710, //=> x=-1
+    .x_max = 2980, //=> x=1
+    .y_min = 1700, //=> y=-1
+    .y_max = 2970, //=> y=1
     //invert adc measurement
     .x_inverted = true,
     .y_inverted = true

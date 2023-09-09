@@ -14,7 +14,7 @@
 
 //in IDLE mode: set loglevel for evaluatedJoystick to DEBUG 
 //and repeatedly read joystick e.g. for manually calibrating / testing joystick
-//#define JOYSTICK_LOG_IN_IDLE
+#define JOYSTICK_LOG_IN_IDLE
 
 
 //TODO outsource global variables to e.g. global.cpp and only config options here?

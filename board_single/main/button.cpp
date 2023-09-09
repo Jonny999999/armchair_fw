@@ -61,10 +61,11 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
                 esp_restart();
                 return;
             } 
-
-            ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
-            //-> define joystick center or toggle freeze input (executed in control task)
-            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
+			//note: disabled joystick calibration due to accidential trigger
+//
+//            ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
+//            //-> define joystick center or toggle freeze input (executed in control task)
+//            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
             break;
         case 2:
             //run automatic commands to lift leg support when pressed 1x short 1x long
@@ -135,8 +136,10 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 
         case 8:
             //toggle deceleration fading between on and off
-            decelEnabled = motorLeft->toggleFade(fadeType_t::DECEL);
-            motorRight->toggleFade(fadeType_t::DECEL);
+            //decelEnabled = motorLeft->toggleFade(fadeType_t::DECEL);
+            //motorRight->toggleFade(fadeType_t::DECEL);
+            decelEnabled = motorLeft->toggleFade(fadeType_t::ACCEL);
+            motorRight->toggleFade(fadeType_t::ACCEL);
             ESP_LOGW(TAG, "cmd %d: toggle deceleration fading to: %d", count, (int)decelEnabled);
             if (decelEnabled){
                 buzzer->beep(3, 60, 50);
