@@ -236,12 +236,13 @@ float motorCommandToSignedDuty(motorCommand_t cmd){
 //-------- send byte --------
 //send byte via uart to sabertooth driver
 void sabertooth2x60a::sendByte(char data){
+	//TODO mutex?
 	if (!uart_isInitialized){
 		ESP_LOGE(TAG, "uart not initialized, not sending command %d...", data);
 		return;
 	}
 	uart_write_bytes(config.uart_num, &data, 1);
-	ESP_LOGI(TAG, "sent data=%d to sabertooth driver via uart", data);
+	ESP_LOGD(TAG, "sent data=%d to sabertooth driver via uart", data);
 }
 
 
@@ -299,7 +300,7 @@ void sabertooth2x60a::setRight(float dutyPerSigned) {
 		data = static_cast<uint8_t>(192 + (dutyPerSigned / 100.0) * 63);
 	}
 
-	ESP_LOGW(TAG, "set right motor to duty=%.2f, (data=%d)", dutyPerSigned, data);
+	ESP_LOGI(TAG, "set right motor to duty=%.2f, (data=%d)", dutyPerSigned, data);
 	sendByte(data);
 }
 

@@ -139,8 +139,8 @@ void setLoglevels(void){
     //--- set loglevel for individual tags ---
     esp_log_level_set("main", ESP_LOG_INFO);
     esp_log_level_set("buzzer", ESP_LOG_ERROR);
-    //esp_log_level_set("motordriver", ESP_LOG_INFO);
-    //esp_log_level_set("motor-control", ESP_LOG_DEBUG);
+    esp_log_level_set("motordriver", ESP_LOG_INFO);
+    esp_log_level_set("motor-control", ESP_LOG_INFO);
     //esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
@@ -176,40 +176,40 @@ extern "C" void app_main(void) {
 	//--- create task for controlling the motors ---
 	//----------------------------------------------
 	//task that receives commands, handles ramp and current limit and executes commands using the motordriver function
-	xTaskCreate(&task_motorctl, "task_motor-control", 2048, NULL, 6, NULL);
+	xTaskCreate(&task_motorctl, "task_motor-control", 2*4096, NULL, 6, NULL);
 
-//	//------------------------------
-//	//--- create task for buzzer ---
-//	//------------------------------
-//	xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
-//
-//	//-------------------------------
-//	//--- create task for control ---
-//	//-------------------------------
-//	//task that generates motor commands depending on the current mode and sends those to motorctl task
-//	xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
-//
-//	//------------------------------
-//	//--- create task for button ---
-//	//------------------------------
-//	//task that evaluates and processes the button input and runs the configured commands
-//	xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
-//
-//	//-----------------------------------
-//	//--- create task for fan control ---
-//	//-----------------------------------
-//	//task that evaluates and processes the button input and runs the configured commands
-//	xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
-//
-//
-//	//beep at startup
-//	buzzer.beep(3, 70, 50);
-//
-//	//--- initialize nvs-flash and netif (needed for wifi) ---
-//	wifi_initNvs_initNetif();
-//
-//	//--- initialize spiffs ---
-//	init_spiffs();
+	//------------------------------
+	//--- create task for buzzer ---
+	//------------------------------
+	xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
+
+	//-------------------------------
+	//--- create task for control ---
+	//-------------------------------
+	//task that generates motor commands depending on the current mode and sends those to motorctl task
+	xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
+
+	//------------------------------
+	//--- create task for button ---
+	//------------------------------
+	//task that evaluates and processes the button input and runs the configured commands
+	xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
+
+	//-----------------------------------
+	//--- create task for fan control ---
+	//-----------------------------------
+	//task that evaluates and processes the button input and runs the configured commands
+	xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
+
+
+	//beep at startup
+	buzzer.beep(3, 70, 50);
+
+	//--- initialize nvs-flash and netif (needed for wifi) ---
+	wifi_initNvs_initNetif();
+
+	//--- initialize spiffs ---
+	init_spiffs();
 
 	//--- initialize and start wifi ---
 	//FIXME: run wifi_init_client or wifi_init_ap as intended from control.cpp when switching state 
@@ -235,6 +235,7 @@ extern "C" void app_main(void) {
 	//--- main loop ---
 	//does nothing except for testing things
 	while(1){
+		vTaskDelay(5000 / portTICK_PERIOD_MS);
 		//test sabertooth driver
 		//		motors.setLeft({motorstate_t::FWD, 70});
 		//		vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -255,12 +256,12 @@ extern "C" void app_main(void) {
 		//motorLeft.setTarget(motorstate_t::BRAKE);
 		//vTaskDelay(1000 / portTICK_PERIOD_MS);
 		//command 90% - reverse
-		motorLeft.setTarget(motorstate_t::REV, 90);
-		vTaskDelay(5000 / portTICK_PERIOD_MS);
-		motorLeft.setTarget(motorstate_t::FWD, 80);
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		motorLeft.setTarget(motorstate_t::IDLE, 90);
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		//motorLeft.setTarget(motorstate_t::REV, 90);
+		//vTaskDelay(5000 / portTICK_PERIOD_MS);
+		//motorLeft.setTarget(motorstate_t::FWD, 80);
+		//vTaskDelay(1000 / portTICK_PERIOD_MS);
+		//motorLeft.setTarget(motorstate_t::IDLE, 90);
+		//vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 
 		//---------------------------------

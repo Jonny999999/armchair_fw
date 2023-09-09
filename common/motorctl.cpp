@@ -81,7 +81,7 @@ void controlledMotor::handle(){
     //--- receive commands from queue ---
     if( xQueueReceive( commandQueue, &commandReceive, ( TickType_t ) 0 ) )
     {
-        ESP_LOGI(TAG, "Read command from queue: state=%s, duty=%.2f", motorstateStr[(int)commandReceive.state], commandReceive.duty);
+        ESP_LOGD(TAG, "Read command from queue: state=%s, duty=%.2f", motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
         dutyTarget = commandReceive.duty;
 		receiveTimeout = false;
@@ -141,6 +141,7 @@ void controlledMotor::handle(){
 	if (state == motorstate_t::BRAKE){
 		ESP_LOGD(TAG, "braking - skip fading");
 		motorSetCommand({motorstate_t::BRAKE, dutyTarget});
+		ESP_LOGI(TAG, "Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", motorstateStr[(int)state], dutyNow, currentNow);
 		//dutyNow = 0;
 		return; //no need to run the fade algorithm
 	}
@@ -174,8 +175,8 @@ void controlledMotor::handle(){
 
 
 	//----- CURRENT LIMIT -----
+	currentNow = cSensor.read();
 	if ((config.currentLimitEnabled) && (dutyDelta != 0)){
-		currentNow = cSensor.read();
 		if (fabs(currentNow) > config.currentMax){
 			float dutyOld = dutyNow;
 			//adaptive decrement:
@@ -231,6 +232,7 @@ void controlledMotor::handle(){
 
     //--- apply new target to motor ---
     motorSetCommand({state, (float)fabs(dutyNow)});
+	ESP_LOGI(TAG, "Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", motorstateStr[(int)state], dutyNow, currentNow);
     //note: BRAKE state is handled earlier
     
 
