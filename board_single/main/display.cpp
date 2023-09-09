@@ -54,29 +54,25 @@ adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
 	int center, top, bottom;
 	char lineChar[20];
 
-#if I2C_INTERFACE
-	ESP_LOGI(tag, "INTERFACE is i2c");
-	ESP_LOGI(tag, "SDA_GPIO=%d",SDA_GPIO);
-	ESP_LOGI(tag, "SCL_GPIO=%d",SCL_GPIO);
-	ESP_LOGI(tag, "RESET_GPIO=%d",RESET_GPIO);
+	ESP_LOGW("display", "INTERFACE is i2c");
+	ESP_LOGW("display", "SDA_GPIO=%d",SDA_GPIO);
+	ESP_LOGW("display", "SCL_GPIO=%d",SCL_GPIO);
+	ESP_LOGW("display", "RESET_GPIO=%d",RESET_GPIO);
 	i2c_master_init(&dev, SDA_GPIO, SCL_GPIO, RESET_GPIO);
-#endif // I2C_INTERFACE
 
 
 #if FLIP
 	dev._flip = true;
-	ESP_LOGW(tag, "Flip upside down");
+	ESP_LOGW("display", "Flip upside down");
 #endif
 
-#if SSD1306_128x64
-	ESP_LOGI(tag, "Panel is 128x64");
+	ESP_LOGI("display", "Panel is 128x64");
 	ssd1306_init(&dev, 128, 64);
-#endif // SSD1306_128x64
 
 	ssd1306_clear_screen(&dev, false);
 	ssd1306_contrast(&dev, 0xff);
 	ssd1306_display_text_x3(&dev, 0, "Hello", 5, false);
-	vTaskDelay(3000 / portTICK_PERIOD_MS);
+	vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 	top = 2;
 	center = 3;
@@ -94,16 +90,20 @@ adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
 	//ssd1306_display_text(&dev, 6, "abcdefghijklmnop",16, true);
 	//ssd1306_display_text(&dev, 7, "Hello World!!", 13, true);
 
-	vTaskDelay(3000 / portTICK_PERIOD_MS);
+	vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 
 	while(1){
 		float voltage = getVoltage1( ADC1_CHANNEL_6, 1000);
-		float battVoltage = voltage * 9;
+		float battVoltage = voltage * 11.9;
 		char buf[20];
+		char buf1[20];
 		int len = snprintf(buf, sizeof(buf), "Batt: %.3fV", battVoltage);
-		ssd1306_display_text(&dev, 2, buf, len, false);
-		ssd1306_display_text(&dev, 2, buf, len, true);
+		int len1 = snprintf(buf1, sizeof(buf1), "%.1fV", battVoltage);
+		ESP_LOGD("display", "voltageAdc=%f, voltageConv=%f", voltage, battVoltage);
+		ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
+		ssd1306_display_text(&dev, 3, buf, len, false);
+		ssd1306_display_text(&dev, 4, buf, len, true);
 		vTaskDelay(2000 / portTICK_PERIOD_MS);
 	}
 	

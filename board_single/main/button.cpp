@@ -57,8 +57,10 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
             if (lastPressLong){
                 ESP_LOGW(TAG, "RESTART");
                 buzzer->beep(1,1000,1);
-                vTaskDelay(1000 / portTICK_PERIOD_MS);
-                esp_restart();
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+                //esp_restart();
+            //-> define joystick center or toggle freeze input (executed in control task)
+            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
                 return;
             } 
 			//note: disabled joystick calibration due to accidential trigger
