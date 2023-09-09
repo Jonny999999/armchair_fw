@@ -28,6 +28,8 @@ extern "C"
 
 #include "uart_common.hpp"
 
+#include "display.hpp"
+
 //tag for logging
 static const char * TAG = "main";
 
@@ -231,6 +233,10 @@ extern "C" void app_main(void) {
 	//--- testing force http mode after startup ---
 	//control.changeMode(controlMode_t::HTTP);
 
+
+
+	//========== display test ============
+	startDisplayTest();
 
 	//--- main loop ---
 	//does nothing except for testing things
