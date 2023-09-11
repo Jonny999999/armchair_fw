@@ -167,6 +167,7 @@ void sendByte(char data){
 //=================================
 extern "C" void app_main(void) {
 	//enable 5V volate regulator
+	ESP_LOGW(TAG, "enabling 5V regulator...");
 	gpio_pad_select_gpio(GPIO_NUM_17);                                                  
 	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
 	gpio_set_level(GPIO_NUM_17, 1);                                                      

@@ -93,8 +93,8 @@ httpJoystick_config_t configHttpJoystickMain{
 //======= joystick configuration =======
 //======================================
 joystick_config_t configJoystick = {
-    .adc_x = ADC1_CHANNEL_3, //GPIO39
-    .adc_y = ADC1_CHANNEL_0, //GPIO36
+    .adc_x = ADC1_CHANNEL_0, //GPIO36
+    .adc_y = ADC1_CHANNEL_3, //GPIO39
     //percentage of joystick range the coordinate of the axis snaps to 0 (0-100)
     .tolerance_zeroX_per = 7, //6
     .tolerance_zeroY_per = 10, //7
