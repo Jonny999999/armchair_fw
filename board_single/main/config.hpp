@@ -10,6 +10,7 @@
 #include "fan.hpp"
 #include "http.hpp"
 #include "auto.hpp"
+#include "speedsensor.hpp"
 
 
 //in IDLE mode: set loglevel for evaluatedJoystick to DEBUG 
@@ -43,4 +44,8 @@ extern automatedArmchair armchair;
 
 //configuration for fans / cooling
 extern fan_config_t configCooling;
+
+//create global objects for measuring speed
+extern speedSensor speedLeft;
+extern speedSensor speedRight;
 

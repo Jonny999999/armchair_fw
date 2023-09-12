@@ -10,6 +10,8 @@ extern "C" {
 #include "font8x8_basic.h"
 }
 
+#include "config.hpp"
+
 
 //task that inititialized the display, displays welcome message 
 //and releatedly updates the display with certain content

@@ -129,6 +129,28 @@ fan_config_t configCooling = {
 
 
 
+
+//============================================
+//======== speed sensor configuration ========
+//============================================
+speedSensor_config_t speedLeft_config{
+	.gpioPin = GPIO_NUM_5,
+		.degreePerGroup = 360/5,
+		.tireCircumferenceMeter = 210.0*3.141/1000.0,
+		.directionInverted = false,
+		.logName = "speedLeft",
+};
+
+speedSensor_config_t speedRight_config{
+	.gpioPin = GPIO_NUM_14,
+		.degreePerGroup = 360/12,
+		.tireCircumferenceMeter = 210.0*3.141/1000.0,
+		.directionInverted = true,
+		.logName = "speedRight",
+};
+
+
+
 //=================================
 //===== create global objects =====
 //=================================
@@ -151,6 +173,9 @@ motorSetCommandFunc_t setRightFunc = [&sabertoothDriver](motorCommand_t cmd) {
 controlledMotor motorLeft(setLeftFunc, configMotorControlLeft);
 controlledMotor motorRight(setRightFunc, configMotorControlRight);
 
+//create speedsensor instances
+speedSensor speedLeft (speedLeft_config);
+speedSensor speedRight (speedRight_config);
 
 //create global joystic instance (joystick.hpp)
 evaluatedJoystick joystick(configJoystick);

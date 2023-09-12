@@ -9,6 +9,7 @@ idf_component_register(
 		"currentsensor.cpp"
 		"joystick.cpp"
 		"http.cpp"
+		"speedsensor.cpp"
     INCLUDE_DIRS 
         "."
 		PRIV_REQUIRES nvs_flash mdns json spiffs esp_http_server

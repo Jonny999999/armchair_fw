@@ -44,6 +44,7 @@ public:
 	uint8_t pulseCounter = 0;
 	int debugCount = 0;
 	double currentRpm = 0;
+	bool isInitialized = false;
 
 private:
 

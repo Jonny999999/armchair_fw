@@ -84,8 +84,11 @@ void IRAM_ATTR onEncoderChange(void* arg) {
 speedSensor::speedSensor(speedSensor_config_t config_f){
 	//copy config
 	config = config_f;
+	//note: currently gets initialized at first method call 
+	//this prevents crash due to too early initialization at boot
+	//TODO: create global objects later after boot
 	//init gpio and ISR
-	init();
+	//init();
 }
 
 
@@ -106,6 +109,8 @@ void speedSensor::init() {
 	gpio_install_isr_service(0);
 	gpio_isr_handler_add(config.gpioPin, onEncoderChange, this);
 	ESP_LOGW(TAG, "%s, configured interrupt", config.logName);
+
+	isInitialized = true;
 }
 
 
@@ -116,6 +121,8 @@ void speedSensor::init() {
 //==========================
 //get rotational speed in revolutions per minute
 float speedSensor::getRpm(){
+	//check if initialized
+	if (!isInitialized) init();
 	uint32_t timeElapsed = esp_timer_get_time() - lastEdgeTime;
 	//timeout (standstill)
 	//TODO variable timeout considering config.degreePerGroup

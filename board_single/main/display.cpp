@@ -142,15 +142,20 @@ float getBatteryPercent(){
 //============================
 //======= display task =======
 //============================
+#define VERY_SLOW_LOOP_INTERVAL 30000
+#define SLOW_LOOP_INTERVAL 1000
+#define FAST_LOOP_INTERVAL 200
+//TODO: separate taks for each loop?
+
 void display_task( void * pvParameters ){
 	char buf[20];
 	char buf1[20];
 	int len, len1;
-	int countFastloop = 0;
-	int countSlowLoop = 0;
+	int countFastloop = SLOW_LOOP_INTERVAL;
+	int countSlowLoop = VERY_SLOW_LOOP_INTERVAL;
 
 	display_init();
-	//todo check if successfully initialized
+	//TODO check if successfully initialized
 
 	//welcome msg
 	strcpy(buf, "Hello");
@@ -159,17 +164,43 @@ void display_task( void * pvParameters ){
 
 	//update stats
 	while(1){
-		//--- battery ---
-		//TODO update only when no load (currentsensors = ~0A)
-		float battVoltage = getBatteryVoltage();
-		float battPercent = getBatteryPercent(battVoltage);
-		len = snprintf(buf, sizeof(buf), "Bat:%.1fV %.2fV", battVoltage, battVoltage/BAT_CELL_COUNT);
-		len1 = snprintf(buf1, sizeof(buf1), "B:%02.0f%%", battPercent);
-		ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
-		ssd1306_display_text(&dev, 3, buf, len, false);
-		ssd1306_display_text(&dev, 4, buf, len, true);
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
 
+		if (countFastloop >= SLOW_LOOP_INTERVAL / FAST_LOOP_INTERVAL){
+			//---- very slow loop ----
+			if (countSlowLoop >= VERY_SLOW_LOOP_INTERVAL/SLOW_LOOP_INTERVAL){
+				//clear display - workaround for bugged line order after a few minutes
+				countSlowLoop = 0;
+				ssd1306_clear_screen(&dev, false);
+			}
+			//---- slow loop ----
+			countSlowLoop ++;
+			countFastloop = 0;
+			//--- battery stats ---
+			//TODO update only when no load (currentsensors = ~0A)
+			float battVoltage = getBatteryVoltage();
+			float battPercent = getBatteryPercent(battVoltage);
+			len = snprintf(buf, sizeof(buf), "Bat:%.1fV %.2fV", battVoltage, battVoltage/BAT_CELL_COUNT);
+			len1 = snprintf(buf1, sizeof(buf1), "B:%02.0f%%", battPercent);
+			ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
+			ssd1306_display_text(&dev, 3, buf, len, false);
+			ssd1306_display_text(&dev, 4, buf, len, true);
+		}
+
+		//---- fast loop ----
+		//update speed/rpm
+		float sLeft = speedLeft.getKmph();
+		float rLeft = speedLeft.getRpm();
+		float sRight = speedRight.getKmph();
+		float rRight = speedRight.getRpm();
+		len = snprintf(buf, sizeof(buf), "L:%.1f R:%.1fkm/h", fabs(sLeft), fabs(sRight));
+		ssd1306_display_text(&dev, 5, buf, len, false);
+		len = snprintf(buf, sizeof(buf), "L:%4.0f R:%4.0fRPM", rLeft, rRight);
+		ssd1306_display_text(&dev, 6, buf, len, false);
+		//debug speed sensors
+		ESP_LOGD(TAG, "%s", buf);
+		//TODO show currentsensor values
+
+		vTaskDelay(FAST_LOOP_INTERVAL / portTICK_PERIOD_MS);
 		countFastloop++;
 	}
 	//TODO add pages and menus
