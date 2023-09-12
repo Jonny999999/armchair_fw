@@ -4,6 +4,7 @@ idf_component_register(
         "config.cpp"
         "fan.cpp"
 		"uart.cpp"
+		"speedsensor.cpp"
     INCLUDE_DIRS 
         "."
     )
