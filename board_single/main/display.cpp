@@ -9,7 +9,6 @@ extern "C"{
 //#
 #define GPIO_RANGE_MAX 33
 #define I2C_INTERFACE y
-//# SPI_INTERFACE is not set
 //# SSD1306_128x32 is not set
 #define SSD1306_128x64 y
 #define OFFSETX 0
@@ -21,6 +20,9 @@ extern "C"{
 //# I2C_PORT_1 is not set
 //# end of SSD1306 Configuration
 
+#define ADC_BATT_VOLTAGE ADC1_CHANNEL_6
+#define BAT_CELL_COUNT 7
+
 
 
 
@@ -28,6 +30,7 @@ extern "C"{
 //--------------------------
 //------- getVoltage -------
 //--------------------------
+//TODO duplicate code: getVoltage also defined in currentsensor.cpp -> outsource this
 //local function to get average voltage from adc
 float getVoltage1(adc1_channel_t adc, uint32_t samples){
 	//measure voltage
@@ -41,42 +44,141 @@ float getVoltage1(adc1_channel_t adc, uint32_t samples){
 
 
 
+//==========================
+//======= variables ========
+//==========================
+SSD1306_t dev;
+//int center, top, bottom;
+char lineChar[20];
+//top = 2;
+//center = 3;
+//bottom = 8;
+//tag for logging
+static const char * TAG = "display";
 
 
-void startDisplayTest(){
-
-adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
 
 
-
-
-	SSD1306_t dev;
-	int center, top, bottom;
-	char lineChar[20];
-
+//=================
+//===== init ======
+//=================
+void display_init(){
+	adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
 	ESP_LOGW("display", "INTERFACE is i2c");
 	ESP_LOGW("display", "SDA_GPIO=%d",SDA_GPIO);
 	ESP_LOGW("display", "SCL_GPIO=%d",SCL_GPIO);
 	ESP_LOGW("display", "RESET_GPIO=%d",RESET_GPIO);
 	i2c_master_init(&dev, SDA_GPIO, SCL_GPIO, RESET_GPIO);
-
-
 #if FLIP
 	dev._flip = true;
 	ESP_LOGW("display", "Flip upside down");
 #endif
-
 	ESP_LOGI("display", "Panel is 128x64");
 	ssd1306_init(&dev, 128, 64);
 
 	ssd1306_clear_screen(&dev, false);
 	ssd1306_contrast(&dev, 0xff);
-	ssd1306_display_text_x3(&dev, 0, "Hello", 5, false);
+}
+
+
+float getBatteryVoltage(){
+#define BAT_VOLTAGE_CONVERSION_FACTOR 11.9
+	float voltageRead = getVoltage1(ADC_BATT_VOLTAGE, 1000);
+	float battVoltage = voltageRead * 11.9; //note: factor comes from simple test with voltmeter
+	ESP_LOGD(TAG, "batteryVoltage - voltageAdc=%f, voltageConv=%f, factor=%.2f", voltageRead, battVoltage,  BAT_VOLTAGE_CONVERSION_FACTOR);
+	return battVoltage;
+}
+
+
+
+//----------------------------------
+//------- getBatteryPercent --------
+//----------------------------------
+//TODO find better/more accurate table?
+//configure discharge curve of one cell with corresponding known voltage->chargePercent values
+const float voltageLevels[] = {3.00, 3.45, 3.68, 3.74, 3.77, 3.79, 3.82, 3.87, 3.92, 3.98, 4.06, 4.20};
+const float percentageLevels[] = {0.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
+
+float getBatteryPercent(float voltage){
+	float cellVoltage = voltage/BAT_CELL_COUNT;
+	int size = sizeof(voltageLevels) / sizeof(voltageLevels[0]);
+	int sizePer = sizeof(percentageLevels) / sizeof(percentageLevels[0]);
+	//check if configured correctly
+	if (size != sizePer) {
+		ESP_LOGE(TAG, "getBatteryPercent - count of configured percentages do not match count of voltages");
+		return 0;
+	}
+	if (cellVoltage <= voltageLevels[0]) {
+		return 0.0;
+	} else if (cellVoltage >= voltageLevels[size - 1]) {
+		return 100.0;
+	}
+
+	//scale voltage linear to percent in matched range
+	for (int i = 1; i < size; ++i) {
+		if (cellVoltage <= voltageLevels[i]) {
+			float voltageRange = voltageLevels[i] - voltageLevels[i - 1];
+			float voltageOffset = cellVoltage - voltageLevels[i - 1];
+			float percentageRange = percentageLevels[i] - percentageLevels[i - 1];
+			float percentageOffset = percentageLevels[i - 1];
+			float percent = percentageOffset + (voltageOffset / voltageRange) * percentageRange;
+			ESP_LOGD(TAG, "getBatPercent - cellVoltage=%.3f => percentage=%.3f", cellVoltage, percent);
+			ESP_LOGD(TAG, "getBatPercent - matched range: %.2fV-%.2fV  => %.1f%%-%.1f%%", voltageLevels[i-1], voltageLevels[i], percentageLevels[i-1], percentageLevels[i]);
+			return percent;
+		}
+	}
+	ESP_LOGE(TAG, "getBatteryPercent - unknown voltage range");
+	return 0.0; //unknown range
+}
+
+float getBatteryPercent(){
+	float voltage = getBatteryVoltage();
+	return getBatteryPercent(voltage);
+}
+
+
+
+
+//============================
+//======= display task =======
+//============================
+void display_task( void * pvParameters ){
+	char buf[20];
+	char buf1[20];
+	int len, len1;
+	int countFastloop = 0;
+	int countSlowLoop = 0;
+
+	display_init();
+	//todo check if successfully initialized
+
+	//welcome msg
+	strcpy(buf, "Hello");
+	ssd1306_display_text_x3(&dev, 0, buf, 5, false);
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-	top = 2;
-	center = 3;
-	bottom = 8;
+	//update stats
+	while(1){
+		//--- battery ---
+		//TODO update only when no load (currentsensors = ~0A)
+		float battVoltage = getBatteryVoltage();
+		float battPercent = getBatteryPercent(battVoltage);
+		len = snprintf(buf, sizeof(buf), "Bat:%.1fV %.2fV", battVoltage, battVoltage/BAT_CELL_COUNT);
+		len1 = snprintf(buf1, sizeof(buf1), "B:%02.0f%%", battPercent);
+		ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
+		ssd1306_display_text(&dev, 3, buf, len, false);
+		ssd1306_display_text(&dev, 4, buf, len, true);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+		countFastloop++;
+	}
+	//TODO add pages and menus
+
+
+
+	//-----------------------------------
+	//---- text-related example code ----
+	//-----------------------------------
 	//ssd1306_display_text(&dev, 0, "SSD1306 128x64", 14, false);
 	//ssd1306_display_text(&dev, 1, "ABCDEFGHIJKLMNOP", 16, false);
 	//ssd1306_display_text(&dev, 2, "abcdefghijklmnop",16, false);
@@ -89,24 +191,7 @@ adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
 	//ssd1306_display_text(&dev, 5, "ABCDEFGHIJKLMNOP", 16, true);
 	//ssd1306_display_text(&dev, 6, "abcdefghijklmnop",16, true);
 	//ssd1306_display_text(&dev, 7, "Hello World!!", 13, true);
-
-	vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-
-	while(1){
-		float voltage = getVoltage1( ADC1_CHANNEL_6, 1000);
-		float battVoltage = voltage * 11.9;
-		char buf[20];
-		char buf1[20];
-		int len = snprintf(buf, sizeof(buf), "Batt: %.3fV", battVoltage);
-		int len1 = snprintf(buf1, sizeof(buf1), "%.1fV", battVoltage);
-		ESP_LOGD("display", "voltageAdc=%f, voltageConv=%f", voltage, battVoltage);
-		ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
-		ssd1306_display_text(&dev, 3, buf, len, false);
-		ssd1306_display_text(&dev, 4, buf, len, true);
-		vTaskDelay(2000 / portTICK_PERIOD_MS);
-	}
-	
+	//
 	//// Display Count Down
 	//uint8_t image[24];
 	//memset(image, 0, sizeof(image));
@@ -194,7 +279,7 @@ adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
 
 	//// Fade Out
 	//ssd1306_fadeout(&dev);
-	
+
 #if 0
 	// Fade Out
 	for(int contrast=0xff;contrast>0;contrast=contrast-0x20) {

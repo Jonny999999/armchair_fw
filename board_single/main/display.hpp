@@ -11,4 +11,6 @@ extern "C" {
 }
 
 
-void startDisplayTest();
+//task that inititialized the display, displays welcome message 
+//and releatedly updates the display with certain content
+void display_task( void * pvParameters );

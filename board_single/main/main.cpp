@@ -143,7 +143,7 @@ void setLoglevels(void){
     esp_log_level_set("buzzer", ESP_LOG_ERROR);
     //esp_log_level_set("motordriver", ESP_LOG_ERROR);
     //esp_log_level_set("motor-control", ESP_LOG_INFO);
-	esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
+	//esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
     esp_log_level_set("control", ESP_LOG_INFO);
@@ -151,6 +151,7 @@ void setLoglevels(void){
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("http", ESP_LOG_INFO);
     esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
+    esp_log_level_set("display", ESP_LOG_DEBUG);
     //esp_log_level_set("current-sensors", ESP_LOG_INFO);
 }
 
@@ -205,6 +206,13 @@ extern "C" void app_main(void) {
 	xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
 
 
+	//-----------------------------------
+	//----- create task for display -----
+	//-----------------------------------
+	//task that handles the display
+	xTaskCreate(&display_task, "display_task", 2048, NULL, 1, NULL);
+
+
 	//beep at startup
 	buzzer.beep(3, 70, 50);
 
@@ -235,9 +243,6 @@ extern "C" void app_main(void) {
 	//control.changeMode(controlMode_t::HTTP);
 
 
-
-	//========== display test ============
-	startDisplayTest();
 
 	//--- main loop ---
 	//does nothing except for testing things
