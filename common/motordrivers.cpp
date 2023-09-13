@@ -206,6 +206,8 @@ void sabertooth2x60a::init(){
 	ESP_ERROR_CHECK(uart_set_pin(config.uart_num, config.gpio_TX, GPIO_NUM_NC, 0, 0));
 	ESP_LOGI(TAG, "init...");
 	ESP_ERROR_CHECK(uart_driver_install(config.uart_num, 1024, 1024, 10, NULL, 0)); //todo ring buffer less / 0
+																					//
+	uart_mutex = xSemaphoreCreateMutex();
 	uart_isInitialized = true;
 }
 
@@ -235,14 +237,20 @@ float motorCommandToSignedDuty(motorCommand_t cmd){
 
 //-------- send byte --------
 //send byte via uart to sabertooth driver
+#define UART_MUTEX_TIMEOUT_MS 5000
 void sabertooth2x60a::sendByte(char data){
 	//TODO mutex?
 	if (!uart_isInitialized){
 		ESP_LOGE(TAG, "uart not initialized, not sending command %d...", data);
 		return;
 	}
-	uart_write_bytes(config.uart_num, &data, 1);
-	ESP_LOGD(TAG, "sent data=%d to sabertooth driver via uart", data);
+	if (xSemaphoreTake(uart_mutex,  pdMS_TO_TICKS(UART_MUTEX_TIMEOUT_MS)) == pdTRUE) {
+		uart_write_bytes(config.uart_num, &data, 1);
+		ESP_LOGD(TAG, "sent data=%d to sabertooth driver via uart", data);
+		//note 1byte takes 833us at 9600 baud
+		ets_delay_us(400); //wait for min time between each message
+		xSemaphoreGive(uart_mutex);
+	} else ESP_LOGE(TAG, "timeout waiting for uart mutex");
 }
 
 
@@ -270,6 +278,11 @@ void sabertooth2x60a::setLeft(float dutyPerSigned){
 		//scale positive values between 0 and 100 to control motor 1
 		data = static_cast<int>(64 + (dutyPerSigned / 100.0) * 63);
 	}
+
+	//check if both motors are off -> special off command
+	lastDataLeft = data;
+	if (data == 64 && lastDataRight == 192) data = 0;
+
 	ESP_LOGI(TAG, "set left motor to duty=%.2f, (data=%d)", dutyPerSigned, data);
 	sendByte(data);
 }
@@ -299,6 +312,10 @@ void sabertooth2x60a::setRight(float dutyPerSigned) {
 		// Scale positive values between 0 and 100 to control motor 2
 		data = static_cast<uint8_t>(192 + (dutyPerSigned / 100.0) * 63);
 	}
+	
+	//check if both motors are off -> special off command
+	lastDataRight = data;
+	if (data == 192 && lastDataLeft == 64) data = 0;
 
 	ESP_LOGI(TAG, "set right motor to duty=%.2f, (data=%d)", dutyPerSigned, data);
 	sendByte(data);

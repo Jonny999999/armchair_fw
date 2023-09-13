@@ -10,15 +10,25 @@ extern "C"
 #include "driver/ledc.h"
 #include "esp_err.h"
 #include "driver/uart.h"
+#include "freertos/semphr.h"
 }
 
 #include <cmath>
+#include "types.hpp"
+
+
+
+//-------------------------------
+//----- CommandToSignedDuty -----
+//-------------------------------
+//convert motor command (FWD/REV/INDLE, duty) to value from -100 to 100
+float motorCommandToSignedDuty(motorCommand_t cmd);
+
 
 
 //====================================
 //===== single100a motor driver ======
 //====================================
-
 //--------------------------------------------
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
@@ -38,7 +48,6 @@ typedef struct single100a_config_t {
 	ledc_timer_bit_t resolution;
 	int pwmFreq;
 } single100a_config_t;
-
 
 
 //--------------------------------
@@ -112,6 +121,11 @@ class sabertooth2x60a {
 		uint32_t dutyMax;
 		motorstate_t state = motorstate_t::IDLE;
 		bool uart_isInitialized = false;
+		SemaphoreHandle_t uart_mutex;
+		uint8_t lastDataLeft = 0;
+		uint8_t lastDataRight = 0;
+
+		
 };
 
 
