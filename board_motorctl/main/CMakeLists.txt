@@ -1,11 +1,8 @@
 idf_component_register(
     SRCS 
         "main.cpp"
-        "motordrivers.cpp"
-        "motorctl.cpp"
         "config.cpp"
         "fan.cpp"
-		"currentsensor.cpp"
 		"uart.cpp"
     INCLUDE_DIRS 
         "."

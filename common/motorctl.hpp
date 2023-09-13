@@ -19,7 +19,7 @@ extern "C"
 //outsourced to common/types.hpp
 #include "types.hpp"
 
-
+typedef void (*motorSetCommandFunc_t)(motorCommand_t cmd);
 
 
 //===================================
@@ -28,7 +28,7 @@ extern "C"
 class controlledMotor {
     public:
         //--- functions ---
-        controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control); //constructor with structs for configuring motordriver and parameters for control TODO: add configuration for currentsensor
+        controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control); //constructor with structs for configuring motordriver and parameters for control TODO: add configuration for currentsensor
         void handle(); //controls motor duty with fade and current limiting feature (has to be run frequently by another task)
         void setTarget(motorstate_t state_f, float duty_f = 0); //adds target command to queue for handle function
         motorCommand_t getStatus(); //get current status of the motor (returns struct with state and duty)
@@ -44,12 +44,13 @@ class controlledMotor {
         void init(); //creates currentsensor objects, motordriver objects and queue
 
         //--- objects ---
-        //motor driver
-        single100a motor;
         //queue for sending commands to the separate task running the handle() function very fast
         QueueHandle_t commandQueue = NULL;
 		//current sensor
 		currentSensor cSensor;
+
+		//function pointer that sets motor duty (driver)
+		motorSetCommandFunc_t motorSetCommand;
 
         //--- variables ---
         //struct for storing control specific parameters
