@@ -179,6 +179,20 @@ void single100a::set(motorstate_t state_f, float duty_f){
 //===== sabertooth 2x60A motor driver ======
 //==========================================
 
+/*
+fom driver documentation:
+ >Sabertooth controls two motors with one 8 byte character, when operating in Simplified Serial mode
+
+ >Sending a character between 1 and 127 will control motor 1. 
+ >1 is full reverse, 64 is stop and 127 is full forward. 
+
+ >Sending a character between 128 and 255 will control motor 2.
+ >128 is full reverse, 192 is stop and 255 is full forward.
+
+ >Character 0 (hex 0x00) is a special case. Sending this character will shut down both motors.
+*/
+
+
 //-----------------------------
 //-------- constructor --------
 //-----------------------------
@@ -261,27 +275,24 @@ void sabertooth2x60a::sendByte(char data){
 //between 1 and 127 will control motor 1. 1 is full reverse, 64 is stop and 127 is full forward.
 //Character 0 (hex 0x00) shut down both motors.
 void sabertooth2x60a::setLeft(float dutyPerSigned){
-	uint8_t data = 0;
+	uint8_t data = 64;
 	if (dutyPerSigned <= -100.0) {
-		//full reverse for motor 1
-		data = 1;
+		data = 1; //1 -> motor1 full reverse
 	} else if (dutyPerSigned >= 100) {
-		//full forward
-		data = 127;
+		data = 127; //127 -> motor1 full forward
 	} else if (dutyPerSigned == 0.0) {
-		// Stop motor 1
-		data = 64;
+		data = 64; //64 -> motor1 off
 	} else if (dutyPerSigned < 0.0) {
-		//scale negative values between -100 and 0 to  1-63
+		//REV: scale negative values between -100 and 0 to 1-63
 		data = static_cast<int>(64 - (- dutyPerSigned / 100.0) * 63);
 	} else if (dutyPerSigned <= 100.0) {
-		//scale positive values between 0 and 100 to control motor 1
+		//FWD: scale positive values between 0 and 100 to 65-127
 		data = static_cast<int>(64 + (dutyPerSigned / 100.0) * 63);
 	}
 
 	//check if both motors are off -> special off command
-	lastDataLeft = data;
-	if (data == 64 && lastDataRight == 192) data = 0;
+	dutyLeft = dutyPerSigned;
+	if (dutyLeft == 0 && dutyRight == 0) data = 0;
 
 	ESP_LOGI(TAG, "set left motor to duty=%.2f, (data=%d)", dutyPerSigned, data);
 	sendByte(data);
@@ -295,27 +306,25 @@ void sabertooth2x60a::setLeft(float dutyPerSigned){
 //between 128 and 255 will control motor 2. 128 is full reverse, 192 is stop and 255 is full forward.
 //Character 0 (hex 0x00) shut down both motors.
 void sabertooth2x60a::setRight(float dutyPerSigned) {
-	uint8_t data = 0;
+	uint8_t data = 192;
 	if (dutyPerSigned <= -100.0) {
-		// Full reverse for motor 2
-		data = 128;
+		data = 128; //128 -> motor2 full reverse
 	} else if (dutyPerSigned >= 100.0) {
-		// Full forward for motor 2
-		data = 255;
+		data = 255; //255 -> motor2 full forward
 	} else if (dutyPerSigned == 0.0) {
-		// Stop motor 2
-		data = 192; // Assuming 192 represents the stop value for motor 2
+		data = 192; //192 -> motor2 off
+					//NOTE: having issue with driver - after previously being on motor2 still spins slowly at command 192
 	} else if (dutyPerSigned < 0.0) {
-		// Scale negative values between -100 and 0 to control motor 2
+		//REV: scale negative values between -100 and 0 to 128-191
 		data = static_cast<uint8_t>(192 - (-dutyPerSigned / 100.0) * 64);
 	} else if (dutyPerSigned <= 100.0) {
-		// Scale positive values between 0 and 100 to control motor 2
+		//FWD: scale positive values between 0 and 100 to 193-255
 		data = static_cast<uint8_t>(192 + (dutyPerSigned / 100.0) * 63);
 	}
 	
 	//check if both motors are off -> special off command
-	lastDataRight = data;
-	if (data == 192 && lastDataLeft == 64) data = 0;
+	dutyRight = dutyPerSigned;
+	if (dutyRight == 0 && dutyLeft == 0) data = 0;
 
 	ESP_LOGI(TAG, "set right motor to duty=%.2f, (data=%d)", dutyPerSigned, data);
 	sendByte(data);

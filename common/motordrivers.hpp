@@ -122,10 +122,8 @@ class sabertooth2x60a {
 		motorstate_t state = motorstate_t::IDLE;
 		bool uart_isInitialized = false;
 		SemaphoreHandle_t uart_mutex;
-		uint8_t lastDataLeft = 0;
-		uint8_t lastDataRight = 0;
-
-		
+		float dutyLeft = 0;
+		float dutyRight = 0;
 };
 
 
