@@ -76,10 +76,22 @@ fan_config_t configCooling = {
 //===== create global objects =====
 //=================================
 //TODO outsource global variables to e.g. global.cpp and only config options here?
+single100a motorDriverLeft(configDriverLeft);
+single100a motorDriverRight(configDriverRight);
 
+//--- controlledMotor ---
+//functions for updating the duty via certain/current driver that can then be passed to controlledMotor
+//-> makes it possible to easily use different motor drivers
+//note: ignoring warning "capture of variable with non-automatic storage duration", since sabertoothDriver object does not get destroyed anywhere - no lifetime issue
+motorSetCommandFunc_t setLeftFunc = [&motorDriverLeft](motorCommand_t cmd) {
+    motorDriverLeft.set(cmd);
+};
+motorSetCommandFunc_t setRightFunc = [&motorDriverRight](motorCommand_t cmd) {
+    motorDriverRight.set(cmd);
+};
 //create controlled motor instances (motorctl.hpp)
-controlledMotor motorLeft(configDriverLeft, configMotorControlLeft);
-controlledMotor motorRight(configDriverRight, configMotorControlRight);
+controlledMotor motorLeft(setLeftFunc, configMotorControlLeft);
+controlledMotor motorRight(setRightFunc, configMotorControlRight);
 
 //create buzzer object on pin 12 with gap between queued events of 100ms 
 buzzer_t buzzer(GPIO_NUM_12, 100);
