@@ -41,8 +41,8 @@ sabertooth2x60_config_t sabertoothConfig = {
 //TODO add motor name string -> then use as log tag?
 //--- configure left motor (contol) ---
 motorctl_config_t configMotorControlLeft = {
-    .msFadeAccel = 1800, //acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 1900, //deceleration of the motor (ms it takes from 100% to 0%)
+    .msFadeAccel = 1500, //acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
 	.currentLimitEnabled = false,
 	.currentSensor_adc =  ADC1_CHANNEL_4, //GPIO32
 	.currentSensor_ratedCurrent = 50,
@@ -52,8 +52,8 @@ motorctl_config_t configMotorControlLeft = {
 
 //--- configure right motor (contol) ---
 motorctl_config_t configMotorControlRight = {
-    .msFadeAccel = 1800, //acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 1900, //deceleration of the motor (ms it takes from 100% to 0%)
+    .msFadeAccel = 1500, //acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 1000, //deceleration of the motor (ms it takes from 100% to 0%)
 	.currentLimitEnabled = false,
 	.currentSensor_adc =  ADC1_CHANNEL_5, //GPIO33
 	.currentSensor_ratedCurrent = 50,
@@ -107,7 +107,7 @@ joystick_config_t configJoystick = {
     .x_min = 1710, //=> x=-1
     .x_max = 2980, //=> x=1
     .y_min = 1700, //=> y=-1
-    .y_max = 2970, //=> y=1
+    .y_max = 2940, //=> y=1
     //invert adc measurement
     .x_inverted = true,
     .y_inverted = true
