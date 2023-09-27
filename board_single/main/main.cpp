@@ -140,27 +140,23 @@ void setLoglevels(void){
 
     //--- set loglevel for individual tags ---
     esp_log_level_set("main", ESP_LOG_INFO);
-    esp_log_level_set("buzzer", ESP_LOG_ERROR);
-    //esp_log_level_set("motordriver", ESP_LOG_ERROR);
+    //esp_log_level_set("buzzer", ESP_LOG_INFO);
+    //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
     //esp_log_level_set("motor-control", ESP_LOG_INFO);
 	//esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
     //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
     esp_log_level_set("control", ESP_LOG_INFO);
-    esp_log_level_set("fan-control", ESP_LOG_INFO);
+    //esp_log_level_set("fan-control", ESP_LOG_INFO);
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("http", ESP_LOG_INFO);
-    esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
-    esp_log_level_set("display", ESP_LOG_DEBUG);
+    //esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
+    esp_log_level_set("display", ESP_LOG_INFO);
     //esp_log_level_set("current-sensors", ESP_LOG_INFO);
+    //esp_log_level_set("speedSensor", ESP_LOG_INFO);
 }
 
 
-//send byte via uart to test sabertooth driver
-void sendByte(char data){
-	uart_write_bytes(UART_NUM_1, &data, 1);
-	ESP_LOGI(TAG, "sent %x  /  %d via uart", data, data);
-}
 
 
 //=================================
@@ -210,7 +206,7 @@ extern "C" void app_main(void) {
 	//----- create task for display -----
 	//-----------------------------------
 	//task that handles the display
-	xTaskCreate(&display_task, "display_task", 2048, NULL, 1, NULL);
+	xTaskCreate(&display_task, "display_task", 3*2048, NULL, 1, NULL);
 
 
 	//beep at startup
@@ -248,6 +244,9 @@ extern "C" void app_main(void) {
 	//does nothing except for testing things
 	while(1){
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
+		//---------------------------------
+		//-------- TESTING section --------
+		//---------------------------------
 		//test sabertooth driver
 		//		motors.setLeft({motorstate_t::FWD, 70});
 		//		vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -276,9 +275,6 @@ extern "C" void app_main(void) {
 		//vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 
-		//---------------------------------
-		//-------- TESTING section --------
-		//---------------------------------
 		// //--- test functions at mode change HTTP ---
 		// control.changeMode(controlMode_t::HTTP);
 		// vTaskDelay(10000 / portTICK_PERIOD_MS);
