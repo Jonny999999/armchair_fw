@@ -1,5 +1,7 @@
 Firmware for a homemade automated electric armchair.  
-More details about this project: https://pfusch.zone/electric-armchair
+More details about this project:  
+V1: https://pfusch.zone/electric-armchair  
+V2: https://pfusch.zone/electric-armchair-v2  
 
 
 
@@ -25,7 +27,7 @@ npm install
 
 
 
-# Compilation
+# Building the Project
 ## react-webapp
 For the webapp to work on the esp32 it has to be built.
 When flashing, the folder react-app/build is flashed to siffs (which is used as webroot) onto the esp32.
@@ -45,10 +47,11 @@ Note: Use `npm start` for starting the webapp locally for testing
 ```bash
 source /opt/esp-idf/export.sh
 ```
-(run once in terminal)
+(run once per terminal)
 
 ### Compile
 ```bash
+cd board_single
 idf.py build
 ```
 
@@ -60,7 +63,7 @@ idf.py build
 ```bash
 idf.py flash
 ```
-- once "connecting...' successfully, BOOT button can be released
+- once "connecting...' was successfully, BOOT button can be released
 
 ### Monitor
 - connect FTDI programmer to board (VCC to VCC; TX to RX; RX to TX)
@@ -93,8 +96,8 @@ A diagram which shows what components are connected to which terminals of the pc
 - Anti slip regulation
 - Self driving algorithm
 - Lights
-- drinks holder
-- improved webinterface
+- Improved webinterface
+- App
 
 
 
@@ -102,8 +105,6 @@ A diagram which shows what components are connected to which terminals of the pc
 **Add switch functions**
 - set loglevel
 - define max-speed
-- calibrate joystick (min, max, center)
-- testing mode / dry-run
 
 
 
@@ -139,5 +140,9 @@ Control armchair via virtual joystick on a webinterface.
 
 **Todo**
 - Set parameters
-- Control other modes
+  - max duty
+  - max current
+- Control other modes e.g. massage
 - Execute preset movement commands
+- Change seating position
+also see github issue
