@@ -68,3 +68,10 @@ class httpJoystick{
             .angle = 0
         };
 };
+
+
+
+//===== global object =====
+//create global instance of httpJoystick
+//note: is constructed/configured in config.cpp
+extern httpJoystick httpJoystickMain;
