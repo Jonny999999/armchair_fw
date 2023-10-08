@@ -85,3 +85,50 @@ class automatedArmchair {
 };
 
 
+//=========== EXAMPLE USAGE ============
+//the following was once used in button.cpp to make move that ejects the leg support of armchair v1
+/**
+if (trigger){
+    //define commands
+    cmds[0] =
+    {
+        .motorCmds = {
+            .left = {motorstate_t::REV, 90},
+            .right = {motorstate_t::REV, 90}
+        },
+        .msDuration = 1200,
+        .fadeDecel = 800,
+        .fadeAccel = 1300,
+        .instruction = auto_instruction_t::NONE
+    };
+    cmds[1] =
+    {
+        .motorCmds = {
+            .left = {motorstate_t::FWD, 70},
+            .right = {motorstate_t::FWD, 70}
+        },
+        .msDuration = 70,
+        .fadeDecel = 0,
+        .fadeAccel = 300,
+        .instruction = auto_instruction_t::NONE
+    };
+    cmds[2] =
+    {
+        .motorCmds = {
+            .left = {motorstate_t::IDLE, 0},
+            .right = {motorstate_t::IDLE, 0}
+        },
+        .msDuration = 10,
+        .fadeDecel = 800,
+        .fadeAccel = 1300,
+        .instruction = auto_instruction_t::SWITCH_JOYSTICK_MODE
+    };
+
+    //send commands to automatedArmchair command queue
+    armchair.addCommands(cmds, 3);
+
+    //change mode to AUTO
+    control->changeMode(controlMode_t::AUTO);
+    return;
+}
+*/

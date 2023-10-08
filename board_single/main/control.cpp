@@ -11,6 +11,7 @@ extern "C"
 
 #include "config.hpp"
 #include "control.hpp"
+#include "chairAdjust.hpp"
 
 
 //used definitions moved from config.hpp:
@@ -19,7 +20,7 @@ extern "C"
 
 //tag for logging
 static const char * TAG = "control";
-const char* controlModeStr[7] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", "BLUETOOTH", "AUTO"};
+const char* controlModeStr[8] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", "BLUETOOTH", "AUTO", "ADJUST_CHAIR"};
 
 
 //-----------------------------
@@ -167,6 +168,19 @@ void controlledArmchair::startHandleLoop() {
                        break;
                }
                break;
+
+
+            case controlMode_t::ADJUST_CHAIR:
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                //--- read joystick ---
+                stickData = joystick_l->getData();
+                //--- idle motors ---
+                commands = cmds_bothMotorsIdle;
+                motorRight->setTarget(commands.right.state, commands.right.duty); 
+                motorLeft->setTarget(commands.left.state, commands.left.duty); 
+                //--- control armchair position with joystick input ---
+                joystick_ControlChairAdjustment(stickData, 0);
+                break;
 
 
               //TODO: add other modes here
@@ -322,12 +336,13 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 			ESP_LOGI(TAG, "noting to execute when changing FROM this mode");
 			break;
 
-#ifdef JOYSTICK_LOG_IN_IDLE
 		case controlMode_t::IDLE:
+#ifdef JOYSTICK_LOG_IN_IDLE
 			ESP_LOGI(TAG, "disabling debug output for 'evaluatedJoystick'");
 			esp_log_level_set("evaluatedJoystick", ESP_LOG_WARN); //FIXME: loglevel from config
-			break;
 #endif
+            buzzer->beep(1,200,100);
+			break;
 
 		case controlMode_t::HTTP:
 			ESP_LOGW(TAG, "switching from http mode -> disabling http and wifi");
@@ -367,6 +382,14 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             motorLeft->setFade(fadeType_t::ACCEL, true);
             motorRight->setFade(fadeType_t::ACCEL, true);
             break;
+
+        case controlMode_t::ADJUST_CHAIR:
+            ESP_LOGW(TAG, "switching from ADJUST_CHAIR mode => turning off adjustment motors...");
+            //prevent motors from being always on in case of mode switch while joystick is not in center thus motors currently moving
+            setLegrestOff();
+            setBackrestOff();
+            break;
+
     }
 
 
@@ -383,6 +406,11 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 			esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
 #endif
 			break;
+
+        case controlMode_t::ADJUST_CHAIR:
+            ESP_LOGW(TAG, "switching to ADJUST_CHAIR mode -> beep");
+            buzzer->beep(4,200,100);
+            break;
 
         case controlMode_t::HTTP:
             ESP_LOGW(TAG, "switching to http mode -> enabling http and wifi");
@@ -445,13 +473,13 @@ void controlledArmchair::toggleModes(controlMode_t modePrimary, controlMode_t mo
     //switch to secondary mode when primary is already active
     if (mode == modePrimary){
         ESP_LOGW(TAG, "toggleModes: switching from primaryMode %s to secondarMode %s", controlModeStr[(int)mode], controlModeStr[(int)modeSecondary]);
-        buzzer->beep(2,200,100);
+        //buzzer->beep(2,200,100);
         changeMode(modeSecondary); //switch to secondary mode
     } 
     //switch to primary mode when any other mode is active
     else {
         ESP_LOGW(TAG, "toggleModes: switching from %s to primary mode %s", controlModeStr[(int)mode], controlModeStr[(int)modePrimary]);
-        buzzer->beep(4,200,100);
+        //buzzer->beep(4,200,100);
         changeMode(modePrimary);
     }
 }
