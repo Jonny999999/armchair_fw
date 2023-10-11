@@ -26,10 +26,29 @@ static const char * TAG = "chair-adjustment";
 //current motor states
 static restState_t stateLegRest = REST_OFF;
 static restState_t stateBackRest = REST_OFF;
+bool isInitialized = false;
 
 
 //TODO Add timestamps or even a task to keep track of current position (estimate)
 
+
+
+//====================
+//======= init =======
+//====================
+//init gpio pins for relays
+void chairAdjust_init(){
+    ESP_LOGW(TAG, "initializing gpio pins for relays...");
+    gpio_pad_select_gpio(GPIO_LEGREST_UP);
+    gpio_set_direction(GPIO_LEGREST_UP, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(GPIO_LEGREST_DOWN);
+    gpio_set_direction(GPIO_LEGREST_DOWN, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(GPIO_BACKREST_UP);
+    gpio_set_direction(GPIO_BACKREST_UP, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(GPIO_BACKREST_DOWN);
+    gpio_set_direction(GPIO_BACKREST_DOWN, GPIO_MODE_OUTPUT);
+    isInitialized = true;
+}
 
 
 
@@ -40,42 +59,48 @@ static restState_t stateBackRest = REST_OFF;
 //TODO evaluate if separate functions needed, can be merged with run..Rest(state) function?
 //--- leg-rest ---
 void setLegrestUp(){
-        gpio_set_level(GPIO_LEGREST_DOWN, 0);
-        gpio_set_level(GPIO_LEGREST_UP, 1);
-        stateLegRest = REST_UP;
-        ESP_LOGD(TAG, "switched relays to move leg-rest UP");
+    if (!isInitialized) chairAdjust_init();
+    gpio_set_level(GPIO_LEGREST_DOWN, 0);
+    gpio_set_level(GPIO_LEGREST_UP, 1);
+    stateLegRest = REST_UP;
+    ESP_LOGD(TAG, "switched relays to move leg-rest UP");
 }
 void setLegrestDown(){
-        gpio_set_level(GPIO_LEGREST_DOWN, 1);
-        gpio_set_level(GPIO_LEGREST_UP, 0);
-        stateLegRest = REST_DOWN;
-        ESP_LOGD(TAG, "switched relays to move leg-rest DOWN");
+    if (!isInitialized) chairAdjust_init();
+    gpio_set_level(GPIO_LEGREST_DOWN, 1);
+    gpio_set_level(GPIO_LEGREST_UP, 0);
+    stateLegRest = REST_DOWN;
+    ESP_LOGD(TAG, "switched relays to move leg-rest DOWN");
 }
 void setLegrestOff(){
-        gpio_set_level(GPIO_LEGREST_DOWN, 0);
-        gpio_set_level(GPIO_LEGREST_UP, 0);
-        stateLegRest = REST_OFF;
-        ESP_LOGD(TAG, "switched relays for leg-rest OFF");
+    if (!isInitialized) chairAdjust_init();
+    gpio_set_level(GPIO_LEGREST_DOWN, 0);
+    gpio_set_level(GPIO_LEGREST_UP, 0);
+    stateLegRest = REST_OFF;
+    ESP_LOGD(TAG, "switched relays for leg-rest OFF");
 }
 
 //--- back-rest ---
 void setBackrestUp(){
-        gpio_set_level(GPIO_BACKREST_DOWN, 0);
-        gpio_set_level(GPIO_BACKREST_UP, 1);
-        stateBackRest = REST_UP;
-        ESP_LOGD(TAG, "switched relays to move back-rest UP");
+    if (!isInitialized) chairAdjust_init();
+    gpio_set_level(GPIO_BACKREST_DOWN, 0);
+    gpio_set_level(GPIO_BACKREST_UP, 1);
+    stateBackRest = REST_UP;
+    ESP_LOGD(TAG, "switched relays to move back-rest UP");
 }
 void setBackrestDown(){
-        gpio_set_level(GPIO_BACKREST_DOWN, 1);
-        gpio_set_level(GPIO_BACKREST_UP, 0);
-        stateBackRest = REST_DOWN;
-        ESP_LOGD(TAG, "switched relays to move back-rest DOWN");
+    if (!isInitialized) chairAdjust_init();
+    gpio_set_level(GPIO_BACKREST_DOWN, 1);
+    gpio_set_level(GPIO_BACKREST_UP, 0);
+    stateBackRest = REST_DOWN;
+    ESP_LOGD(TAG, "switched relays to move back-rest DOWN");
 }
 void setBackrestOff(){
-        gpio_set_level(GPIO_BACKREST_DOWN, 0);
-        gpio_set_level(GPIO_BACKREST_UP, 0);
-        stateBackRest = REST_OFF;
-        ESP_LOGD(TAG, "switched relays for back-rest OFF");
+    if (!isInitialized) chairAdjust_init();
+    gpio_set_level(GPIO_BACKREST_DOWN, 0);
+    gpio_set_level(GPIO_BACKREST_UP, 0);
+    stateBackRest = REST_OFF;
+    ESP_LOGD(TAG, "switched relays for back-rest OFF");
 }
 
 
