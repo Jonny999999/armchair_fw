@@ -11,11 +11,12 @@
 #include "http.hpp"
 #include "auto.hpp"
 #include "speedsensor.hpp"
+#include "chairAdjust.hpp"
 
 
 //in IDLE mode: set loglevel for evaluatedJoystick to DEBUG 
 //and repeatedly read joystick e.g. for manually calibrating / testing joystick
-#define JOYSTICK_LOG_IN_IDLE
+//#define JOYSTICK_LOG_IN_IDLE
 
 
 //TODO outsource global variables to e.g. global.cpp and only config options here?
@@ -48,4 +49,8 @@ extern fan_config_t configCooling;
 //create global objects for measuring speed
 extern speedSensor speedLeft;
 extern speedSensor speedRight;
+
+//create global objects for controlling the chair position
+extern cControlledRest legRest;
+extern cControlledRest backRest;
 

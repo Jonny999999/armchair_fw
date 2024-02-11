@@ -77,8 +77,10 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
             }
 
             //toggle idle when 2x pressed
+            else {
             ESP_LOGW(TAG, "cmd %d: toggle IDLE", count);
             control->toggleIdle(); //toggle between idle and previous/default mode
+            }
             break;
 
         case 3:

@@ -154,6 +154,7 @@ void setLoglevels(void){
     esp_log_level_set("display", ESP_LOG_INFO);
     //esp_log_level_set("current-sensors", ESP_LOG_INFO);
     //esp_log_level_set("speedSensor", ESP_LOG_INFO);
+    esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
 }
 
 

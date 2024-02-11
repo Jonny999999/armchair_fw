@@ -12,7 +12,6 @@ extern "C"
 
 #include <cmath>
 #include "types.hpp"
-#include "chairAdjust.hpp"
 
 
 //======================================
@@ -114,14 +113,6 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
 //function that generates commands for both motors from the joystick data
 //motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick);
 motorCommands_t joystick_generateCommandsShaking(joystickData_t data );
-
-
-
-//=============================================
-//====== joystick_ControlChairAdjustment ======
-//=============================================
-//function that controls the motors for adjusting the chair position using joystick input
-void joystick_ControlChairAdjustment(joystickData_t data, bool disable);
 
 
 

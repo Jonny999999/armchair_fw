@@ -179,7 +179,7 @@ void controlledArmchair::startHandleLoop() {
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 //--- control armchair position with joystick input ---
-                joystick_ControlChairAdjustment(stickData, 0);
+                controlChairAdjustment(joystick_l->getData(), &legRest, &backRest);
                 break;
 
 
@@ -386,8 +386,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
         case controlMode_t::ADJUST_CHAIR:
             ESP_LOGW(TAG, "switching from ADJUST_CHAIR mode => turning off adjustment motors...");
             //prevent motors from being always on in case of mode switch while joystick is not in center thus motors currently moving
-            setLegrestOff();
-            setBackrestOff();
+            legRest.setState(REST_OFF);
+            backRest.setState(REST_OFF);
             break;
 
     }

@@ -195,5 +195,9 @@ controlledArmchair control(configControl, &buzzer, &motorLeft, &motorRight, &joy
 //create global automatedArmchair object (for auto-mode) (auto.hpp)
 automatedArmchair armchair;
 
+//create global objects for controlling the chair position
+//                      gpio_up, gpio_down, name
+cControlledRest legRest(GPIO_NUM_4, GPIO_NUM_16, "legRest");
+cControlledRest backRest(GPIO_NUM_2, GPIO_NUM_15, "backRest");
 
 

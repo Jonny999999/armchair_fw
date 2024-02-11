@@ -570,35 +570,3 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
 
     return commands;
 }
-
-
-
-
-
-//=============================================
-//====== joystick_ControlChairAdjustment ======
-//=============================================
-//function that controls the motors for adjusting the chair position using joystick input
-//FIXME: turn off after timeout / function not called anymore? => separate task
-//TODO: store current position
-//FIXME: control with webinterface too -> conflict? => separate task
-void joystick_ControlChairAdjustment(joystickData_t data, bool disable){
-	//--- variables ---
-    float radiusThreshold = 0.5; //min radius where movement starts
-    //TODO: Add additional tolerance range where coordinates snaps to axis (move 1 motor only) -> run scaleCoordinate and evaluagePosition again:
-    //float axisThreshold = 0.2; //axis tolerance (snap to 1 motor only)
-    //float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
-
-    //--- off threshold ---
-    //do not run when threshold not reached
-    if (data.radius < radiusThreshold){
-        data.x = 0;
-        data.y = 0;
-    }
-
-    //--- run rest motors ---
-    //state/direction depends on coodrdinate sign
-    runLegrest(data.x);
-    runBackrest(data.y);
-
-}
