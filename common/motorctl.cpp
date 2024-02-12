@@ -5,16 +5,18 @@
 //tag for logging
 static const char * TAG = "motor-control";
 
+#define TIMEOUT_IDLE_WHEN_NO_COMMAND 8000
 
 //=============================
 //======== constructor ========
 //=============================
 //constructor, simultaniously initialize instance of motor driver 'motor' and current sensor 'cSensor' with provided config (see below lines after ':')
-controlledMotor::controlledMotor(single100a_config_t config_driver,  motorctl_config_t config_control): 
-	motor(config_driver), 
+controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control): 
 	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent) {
 		//copy parameters for controlling the motor
 		config = config_control;
+		//pointer to update motot dury method
+		motorSetCommand = setCommandFunc;
 		//copy configured default fading durations to actually used variables
 		msFadeAccel = config.msFadeAccel;
 		msFadeDecel = config.msFadeDecel;
@@ -92,7 +94,8 @@ void controlledMotor::handle(){
             case motorstate_t::BRAKE:
                 //update state
                 state = motorstate_t::BRAKE;
-                dutyTarget = 0;
+                //dutyTarget = 0;
+                dutyTarget = fabs(commandReceive.duty);
                 break;
             case motorstate_t::IDLE:
                 dutyTarget = 0;
@@ -108,11 +111,12 @@ void controlledMotor::handle(){
 
 	//--- timeout, no data ---
 	//turn motors off if no data received for long time (e.g. no uart data / control offline)
-	if ((esp_log_timestamp() - timestamp_commandReceived) > 3000 && !receiveTimeout){
+	//TODO no timeout when braking?
+	if ((esp_log_timestamp() - timestamp_commandReceived) > TIMEOUT_IDLE_WHEN_NO_COMMAND && !receiveTimeout){
 		receiveTimeout = true;
 		state = motorstate_t::IDLE;
 		dutyTarget = 0;
-		ESP_LOGE(TAG, "TIMEOUT, no target data received for more than 3s -> switch to IDLE");
+		ESP_LOGE(TAG, "TIMEOUT, no target data received for more than %ds -> switch to IDLE", TIMEOUT_IDLE_WHEN_NO_COMMAND/1000);
 	}
 
     //--- calculate increment ---
@@ -131,14 +135,16 @@ void controlledMotor::handle(){
         dutyIncrementDecel = 100;
     }
 
-    
-    //--- BRAKE ---
-    //brake immediately, update state, duty and exit this cycle of handle function
-    if (state == motorstate_t::BRAKE){
-                motor.set(motorstate_t::BRAKE, 0);
-                dutyNow = 0;
-                return; //no need to run the fade algorithm
-    }
+
+	//--- BRAKE ---
+	//brake immediately, update state, duty and exit this cycle of handle function
+	if (state == motorstate_t::BRAKE){
+		ESP_LOGD(TAG, "braking - skip fading");
+		motorSetCommand({motorstate_t::BRAKE, dutyTarget});
+		ESP_LOGI(TAG, "Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", motorstateStr[(int)state], dutyNow, currentNow);
+		//dutyNow = 0;
+		return; //no need to run the fade algorithm
+	}
 
 
     //--- calculate difference ---
@@ -169,8 +175,8 @@ void controlledMotor::handle(){
 
 
 	//----- CURRENT LIMIT -----
+	currentNow = cSensor.read();
 	if ((config.currentLimitEnabled) && (dutyDelta != 0)){
-		currentNow = cSensor.read();
 		if (fabs(currentNow) > config.currentMax){
 			float dutyOld = dutyNow;
 			//adaptive decrement:
@@ -225,7 +231,8 @@ void controlledMotor::handle(){
 
 
     //--- apply new target to motor ---
-    motor.set(state, fabs(dutyNow));
+    motorSetCommand({state, (float)fabs(dutyNow)});
+	ESP_LOGI(TAG, "Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", motorstateStr[(int)state], dutyNow, currentNow);
     //note: BRAKE state is handled earlier
     
 

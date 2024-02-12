@@ -4,9 +4,9 @@ idf_component_register(
         "config.cpp"
         "control.cpp"
         "button.cpp"
+        "fan.cpp"
         "auto.cpp"
-		"uart.cpp"
-		"encoder.cpp"
+		"display.cpp"
     INCLUDE_DIRS 
         "."
     )

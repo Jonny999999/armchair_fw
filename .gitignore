@@ -1,12 +1,18 @@
 # ESP-IDF
 build
-sdkconfig
 sdkconfig.old
+dependencies.lock
 
 
 # VIM files
 *.swp
 *.swo
+**/.cache
+
+
+# drawio
+*.dtmp
+*.bkp
 
 
 # React
@@ -24,3 +30,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+
+# other
+octave-workspace
