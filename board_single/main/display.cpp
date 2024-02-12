@@ -1,29 +1,24 @@
 #include "display.hpp"
 extern "C"{
 #include <driver/adc.h>
+#include "esp_ota_ops.h"
 }
 
 
-//#
-//# SSD1306 Configuration
-//#
-#define GPIO_RANGE_MAX 33
+
+//==== display config ====
 #define I2C_INTERFACE y
-//# SSD1306_128x32 is not set
-#define SSD1306_128x64 y
-#define OFFSETX 0
-//# FLIP is not set
 #define SCL_GPIO 22
 #define SDA_GPIO 23
-#define RESET_GPIO 15 //FIXME remove this
-#define I2C_PORT_0 y
-//# I2C_PORT_1 is not set
-//# end of SSD1306 Configuration
+#define RESET_GPIO 15 // FIXME remove this
+// the following options are set in menuconfig: (see sdkconfig)
+//	#define CONFIG_OFFSETX 2 	//note: the larger display (actual 130x64) needs 2 pixel offset (prevents bugged column)
+//	#define CONFIG_I2C_PORT_0 y
 
+//=== content config ===
+#define STARTUP_MSG_TIMEOUT 2000
 #define ADC_BATT_VOLTAGE ADC1_CHANNEL_6
 #define BAT_CELL_COUNT 7
-
-
 
 
 
@@ -44,24 +39,20 @@ float getVoltage1(adc1_channel_t adc, uint32_t samples){
 
 
 
-//==========================
-//======= variables ========
-//==========================
+//======================
+//===== variables ======
+//======================
+//display
 SSD1306_t dev;
-//int center, top, bottom;
-char lineChar[20];
-//top = 2;
-//center = 3;
-//bottom = 8;
 //tag for logging
 static const char * TAG = "display";
 
 
 
-
-//=================
-//===== init ======
-//=================
+//======================
+//==== display_init ====
+//======================
+//note CONFIG_OFFSETX is used (from menuconfig)
 void display_init(){
 	adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
 	ESP_LOGW("display", "INTERFACE is i2c");
@@ -81,6 +72,10 @@ void display_init(){
 }
 
 
+
+//----------------------------------
+//------- getBatteryVoltage --------
+//----------------------------------
 float getBatteryVoltage(){
 #define BAT_VOLTAGE_CONVERSION_FACTOR 11.9
 	float voltageRead = getVoltage1(ADC_BATT_VOLTAGE, 1000);
@@ -99,7 +94,8 @@ float getBatteryVoltage(){
 const float voltageLevels[] = {3.00, 3.45, 3.68, 3.74, 3.77, 3.79, 3.82, 3.87, 3.92, 3.98, 4.06, 4.20};
 const float percentageLevels[] = {0.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
 
-float getBatteryPercent(float voltage){
+float getBatteryPercent(){
+	float voltage = getBatteryVoltage();
 	float cellVoltage = voltage/BAT_CELL_COUNT;
 	int size = sizeof(voltageLevels) / sizeof(voltageLevels[0]);
 	int sizePer = sizeof(percentageLevels) / sizeof(percentageLevels[0]);
@@ -131,9 +127,69 @@ float getBatteryPercent(float voltage){
 	return 0.0; //unknown range
 }
 
-float getBatteryPercent(){
-	float voltage = getBatteryVoltage();
-	return getBatteryPercent(voltage);
+
+
+//-----------------------
+//----- showScreen1 -----
+//-----------------------
+//shows overview on entire display:
+//percentage, voltage, current, mode, rpm, speed
+void showScreen1()
+{
+	char buf[20];
+	char buf1[20];
+	int len, len1;
+
+	//-- battery percentage --
+	// TODO update when no load (currentsensors = ~0A) only
+	len1 = snprintf(buf1, sizeof(buf1), "B:%02.0f%%", getBatteryPercent());
+	ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
+
+	//-- voltage and current --
+	len = snprintf(buf, sizeof(buf), "%04.1fV %04.1f:%04.1fA",
+				   getBatteryVoltage(),
+				   fabs(motorLeft.getCurrentA()),
+				   fabs(motorRight.getCurrentA()));
+	ssd1306_display_text(&dev, 3, buf, len, false);
+
+	//-- control state --
+	len = snprintf(buf, sizeof(buf), "%s ", control.getCurrentModeStr());
+	ssd1306_display_text_x3(&dev, 4, buf, len, false);
+
+	//-- speed and RPM --
+	len = snprintf(buf, sizeof(buf), "%3.1fkm/h %03.0f:%03.0fR",
+				   fabs((speedLeft.getKmph() + speedRight.getKmph()) / 2),
+				   speedLeft.getRpm(),
+				   speedRight.getRpm());
+	ssd1306_display_text(&dev, 7, buf, len, false);
+
+	// debug speed sensors
+	ESP_LOGD(TAG, "%s", buf);
+}
+
+
+
+//------------------------
+//---- showStartupMsg ----
+//------------------------
+//shows welcome message and information about current version
+void showStartupMsg(){
+	char buf[20];
+	int len;
+	const esp_app_desc_t * desc = esp_ota_get_app_description();
+
+	//show message
+	len = snprintf(buf, 20, "START");
+	ssd1306_display_text_x3(&dev, 0, buf, len, false);
+	//show git-tag
+	len = snprintf(buf, 20, "%s", desc->version);
+	ssd1306_display_text(&dev, 4, buf, len, false);
+	//show build-date (note: date,time of last clean build)
+	len = snprintf(buf, 20, "%s", desc->date);
+	ssd1306_display_text(&dev, 6, buf, len, false);
+	//show build-time
+	len = snprintf(buf, 20, "%s", desc->time);
+	ssd1306_display_text(&dev, 7, buf, len, false);
 }
 
 
@@ -142,70 +198,49 @@ float getBatteryPercent(){
 //============================
 //======= display task =======
 //============================
-#define VERY_SLOW_LOOP_INTERVAL 30000
-#define SLOW_LOOP_INTERVAL 1000
+#define VERY_SLOW_LOOP_INTERVAL 60000
+#define SLOW_LOOP_INTERVAL 5000
 #define FAST_LOOP_INTERVAL 200
-//TODO: separate taks for each loop?
+//TODO: separate task for each loop?
 
 void display_task( void * pvParameters ){
-	char buf[20];
-	char buf1[20];
-	int len, len1;
-	int countFastloop = SLOW_LOOP_INTERVAL;
-	int countSlowLoop = VERY_SLOW_LOOP_INTERVAL;
+	//variables
+	int countFastloop = 0;
+	int countSlowLoop = 0;
 
+	//initialize display
 	display_init();
 	//TODO check if successfully initialized
 
-	//welcome msg
-	strcpy(buf, "Hello");
-	ssd1306_display_text_x3(&dev, 0, buf, 5, false);
-	vTaskDelay(1000 / portTICK_PERIOD_MS);
+	//show startup message
+	showStartupMsg();
+	vTaskDelay(STARTUP_MSG_TIMEOUT / portTICK_PERIOD_MS);
 
-	//update stats
-	while(1){
+	// repeatedly update display with content
+	while (1)
+	{
+		//--- fast loop ---
+		showScreen1();
 
-		if (countFastloop >= SLOW_LOOP_INTERVAL / FAST_LOOP_INTERVAL){
-			//---- very slow loop ----
-			if (countSlowLoop >= VERY_SLOW_LOOP_INTERVAL/SLOW_LOOP_INTERVAL){
-				//clear display - workaround for bugged line order after a few minutes
+		if (countFastloop >= SLOW_LOOP_INTERVAL / FAST_LOOP_INTERVAL)
+		{
+			//--- slow loop ---
+
+			if (countSlowLoop >= VERY_SLOW_LOOP_INTERVAL / SLOW_LOOP_INTERVAL)
+			{
+				//--- very slow loop ---
+				// clear display - workaround for bugged line order after a few minutes
 				countSlowLoop = 0;
 				ssd1306_clear_screen(&dev, false);
 			}
-			//---- slow loop ----
-			countSlowLoop ++;
 			countFastloop = 0;
-			//--- battery stats ---
-			//TODO update only when no load (currentsensors = ~0A)
-			float battVoltage = getBatteryVoltage();
-			float battPercent = getBatteryPercent(battVoltage);
-			len = snprintf(buf, sizeof(buf), "Bat:%.1fV %.2fV", battVoltage, battVoltage/BAT_CELL_COUNT);
-			len1 = snprintf(buf1, sizeof(buf1), "B:%02.0f%%", battPercent);
-			ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
-			ssd1306_display_text(&dev, 3, buf, len, false);
-			ssd1306_display_text(&dev, 4, buf, len, true);
+			countSlowLoop++;
 		}
-
-		//---- fast loop ----
-		//update speed/rpm
-		float sLeft = speedLeft.getKmph();
-		float rLeft = speedLeft.getRpm();
-		float sRight = speedRight.getKmph();
-		float rRight = speedRight.getRpm();
-		len = snprintf(buf, sizeof(buf), "L:%.1f R:%.1fkm/h", fabs(sLeft), fabs(sRight));
-		ssd1306_display_text(&dev, 5, buf, len, false);
-		len = snprintf(buf, sizeof(buf), "L:%4.0f R:%4.0fRPM", rLeft, rRight);
-		ssd1306_display_text(&dev, 6, buf, len, false);
-		//debug speed sensors
-		ESP_LOGD(TAG, "%s", buf);
-		//TODO show currentsensor values
-
-		vTaskDelay(FAST_LOOP_INTERVAL / portTICK_PERIOD_MS);
 		countFastloop++;
+		vTaskDelay(FAST_LOOP_INTERVAL / portTICK_PERIOD_MS);
+		// TODO add pages and menus
 	}
-	//TODO add pages and menus
-
-
+}
 
 	//-----------------------------------
 	//---- text-related example code ----
@@ -310,14 +345,3 @@ void display_task( void * pvParameters ){
 
 	//// Fade Out
 	//ssd1306_fadeout(&dev);
-
-#if 0
-	// Fade Out
-	for(int contrast=0xff;contrast>0;contrast=contrast-0x20) {
-		ssd1306_contrast(&dev, contrast);
-		vTaskDelay(40);
-	}
-#endif
-
-}
-

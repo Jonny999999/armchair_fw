@@ -36,6 +36,8 @@ class controlledMotor {
         void setFade(fadeType_t fadeType, bool enabled); //enable/disable acceleration or deceleration fading
         void setFade(fadeType_t fadeType, uint32_t msFadeNew); //set acceleration or deceleration fade time
         bool toggleFade(fadeType_t fadeType); //toggle acceleration or deceleration on/off
+
+        float getCurrentA() {return cSensor.read();}; //read current-sensor of this motor (Ampere)
 											  
 		//TODO set current limit method
 

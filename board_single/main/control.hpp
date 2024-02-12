@@ -67,6 +67,10 @@ class controlledArmchair {
         //TODO: use queue instead?
         void sendButtonEvent(uint8_t count);
 
+        //methods to get the current control mode
+        controlMode_t getCurrentMode() const {return mode;};
+        const char * getCurrentModeStr() const {return controlModeStr[(int)mode];};
+
     private:
 
         //--- functions ---
