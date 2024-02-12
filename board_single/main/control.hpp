@@ -11,9 +11,9 @@
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
 //enum that decides how the motors get controlled
-enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO};
+enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO, ADJUST_CHAIR};
 //string array representing the mode enum (for printing the state as string)
-extern const char* controlModeStr[7];
+extern const char* controlModeStr[8];
 
 //--- control_config_t ---
 //struct with config parameters

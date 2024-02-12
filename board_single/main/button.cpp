@@ -72,54 +72,16 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         case 2:
             //run automatic commands to lift leg support when pressed 1x short 1x long
             if (lastPressLong){
-                //define commands
-                cmds[0] =
-                {
-                    .motorCmds = {
-                        .left = {motorstate_t::REV, 90},
-                        .right = {motorstate_t::REV, 90}
-                    },
-                    .msDuration = 1200,
-                    .fadeDecel = 800,
-                    .fadeAccel = 1300,
-                    .instruction = auto_instruction_t::NONE
-                };
-                cmds[1] =
-                {
-                    .motorCmds = {
-                        .left = {motorstate_t::FWD, 70},
-                        .right = {motorstate_t::FWD, 70}
-                    },
-                    .msDuration = 70,
-                    .fadeDecel = 0,
-                    .fadeAccel = 300,
-                    .instruction = auto_instruction_t::NONE
-                };
-                cmds[2] =
-                {
-                    .motorCmds = {
-                        .left = {motorstate_t::IDLE, 0},
-                        .right = {motorstate_t::IDLE, 0}
-                    },
-                    .msDuration = 10,
-                    .fadeDecel = 800,
-                    .fadeAccel = 1300,
-                    .instruction = auto_instruction_t::SWITCH_JOYSTICK_MODE
-                };
-
-                //send commands to automatedArmchair command queue
-                armchair.addCommands(cmds, 3);
-
-                //change mode to AUTO
-                control->changeMode(controlMode_t::AUTO);
-                return;
+            ESP_LOGW(TAG, "cmd %d: toggle ADJUST_CHAIR", count);
+            control->toggleMode(controlMode_t::ADJUST_CHAIR);
             }
 
             //toggle idle when 2x pressed
+            else {
             ESP_LOGW(TAG, "cmd %d: toggle IDLE", count);
             control->toggleIdle(); //toggle between idle and previous/default mode
+            }
             break;
-
 
         case 3:
             ESP_LOGW(TAG, "cmd %d: switch to JOYSTICK", count);
