@@ -29,6 +29,7 @@ extern "C"
 #include "uart_common.hpp"
 
 #include "display.hpp"
+#include "encoder.hpp"
 
 //tag for logging
 static const char * TAG = "main";
@@ -155,6 +156,7 @@ void setLoglevels(void){
     //esp_log_level_set("current-sensors", ESP_LOG_INFO);
     //esp_log_level_set("speedSensor", ESP_LOG_INFO);
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
+    esp_log_level_set("menu", ESP_LOG_INFO);
 }
 
 
@@ -172,6 +174,11 @@ extern "C" void app_main(void) {
 
 	//---- define log levels ----
 	setLoglevels();
+
+	// init encoder
+	//--- initialize encoder ---
+	encoder_init();
+	// now global encoderQueue providing all encoder events is available
 
 	//----------------------------------------------
 	//--- create task for controlling the motors ---
@@ -194,7 +201,11 @@ extern "C" void app_main(void) {
 	//--- create task for button ---
 	//------------------------------
 	//task that evaluates and processes the button input and runs the configured commands
+#define MENU_TEST
+//currently disabled due to using button/encoder for testing the menu
+#ifndef MENU_TEST
 	xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
+#endif
 
 	//-----------------------------------
 	//--- create task for fan control ---

@@ -4,6 +4,8 @@ extern "C"{
 #include "esp_ota_ops.h"
 }
 
+#include "menu.hpp"
+
 
 
 //==== display config ====
@@ -219,26 +221,32 @@ void display_task( void * pvParameters ){
 	// repeatedly update display with content
 	while (1)
 	{
-		//--- fast loop ---
-		showScreen1();
 
-		if (countFastloop >= SLOW_LOOP_INTERVAL / FAST_LOOP_INTERVAL)
-		{
-			//--- slow loop ---
+//currently only showing menu:
+		handleMenu(&dev);
 
-			if (countSlowLoop >= VERY_SLOW_LOOP_INTERVAL / SLOW_LOOP_INTERVAL)
-			{
-				//--- very slow loop ---
-				// clear display - workaround for bugged line order after a few minutes
-				countSlowLoop = 0;
-				ssd1306_clear_screen(&dev, false);
-			}
-			countFastloop = 0;
-			countSlowLoop++;
-		}
-		countFastloop++;
-		vTaskDelay(FAST_LOOP_INTERVAL / portTICK_PERIOD_MS);
-		// TODO add pages and menus
+
+//status screen currently disabled:
+	//	//--- fast loop ---
+	//	showScreen1();
+
+	//	if (countFastloop >= SLOW_LOOP_INTERVAL / FAST_LOOP_INTERVAL)
+	//	{
+	//		//--- slow loop ---
+
+	//		if (countSlowLoop >= VERY_SLOW_LOOP_INTERVAL / SLOW_LOOP_INTERVAL)
+	//		{
+	//			//--- very slow loop ---
+	//			// clear display - workaround for bugged line order after a few minutes
+	//			countSlowLoop = 0;
+	//			ssd1306_clear_screen(&dev, false);
+	//		}
+	//		countFastloop = 0;
+	//		countSlowLoop++;
+	//	}
+	//	countFastloop++;
+	//	vTaskDelay(FAST_LOOP_INTERVAL / portTICK_PERIOD_MS);
+	//	// TODO add pages and menus
 	}
 }
 
