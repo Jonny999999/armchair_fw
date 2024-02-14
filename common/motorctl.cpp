@@ -278,6 +278,24 @@ motorCommand_t controlledMotor::getStatus(){
 
 
 //===============================
+//=========== getFade ===========
+//===============================
+//return currently configured accel / decel time
+uint32_t controlledMotor::getFade(fadeType_t fadeType){
+    switch(fadeType){
+        case fadeType_t::ACCEL:
+            return msFadeAccel;
+            break;
+        case fadeType_t::DECEL:
+            return msFadeDecel;
+            break;
+    }
+    return 0;
+}
+
+
+
+//===============================
 //=========== setFade ===========
 //===============================
 //function for editing or enabling the fading/ramp of the motor control
@@ -287,9 +305,11 @@ void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew){
     //TODO: mutex for msFade variable also used in handle function
     switch(fadeType){
         case fadeType_t::ACCEL:
+            ESP_LOGW(TAG, "changed fade-up time from %d to %d", msFadeAccel, msFadeNew);
             msFadeAccel = msFadeNew; 
             break;
         case fadeType_t::DECEL:
+            ESP_LOGW(TAG, "changed fade-down time from %d to %d", msFadeDecel, msFadeNew);
             msFadeDecel = msFadeNew;
             break;
     }

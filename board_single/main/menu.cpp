@@ -11,6 +11,8 @@ extern "C"{
 
 #include "menu.hpp"
 #include "encoder.hpp"
+#include "config.hpp"
+#include "motorctl.hpp"
 
 
 //--- variables ---
@@ -25,40 +27,53 @@ static int value = 0;
 //================================
 // note: when line4 * and line5 * are empty the value is printed large
 
+//#########################
+//#### center Joystick ####
+//#########################
+void item_centerJoystick_action(int value){
+    if (!value) return;
+    ESP_LOGW(TAG, "defining joystick center");
+    joystick.defineCenter();
+}
+int item_centerJoystick_value(){
+    return 1;
+}
+
+menuItem_t item_centerJoystick = {
+    item_centerJoystick_action, // function action
+    item_centerJoystick_value,
+    0,                      // valueMin
+    1,                      // valueMAx
+    1,                      // valueIncrement
+    "Center Joystick",      // title
+    "Center Joystick", // line1 (above value)
+    "click to confirm",   // line2 (above value)
+    "defines current",                     // line4 * (below value)
+    "pos as center",                     // line5 *
+    "click to confirm",     // line6
+    "set 0 to cancel",  // line7
+};
+
+//########################
+//##### set max duty #####
+//########################
 void maxDuty_action(int value)
 {
     //TODO actually store the value
     ESP_LOGW(TAG, "set max duty to %d", value);
 }
-
 int maxDuty_currentValue()
 {
     //TODO get real current value
     return 84;
 }
-
-menuItem_t item_first = {
-    maxDuty_action, // function action
-    maxDuty_currentValue,
-    -255,             // valueMin
-    255,              // valueMAx
-    2,                // valueIncrement
-    "first item",     // title
-    "line 1 - above", // line1 (above value)
-    "line 2 - above", // line2 (above value)
-    "line 4 - below", // line4 * (below value)
-    "line 5 - below", // line5 *
-    "line 6 - below", // line6
-    "line 7 - last",  // line7
-};
-
 menuItem_t item_maxDuty = {
     maxDuty_action, // function action
     maxDuty_currentValue,
     1,                  // valueMin
     99,                 // valueMAx
     1,                  // valueIncrement
-    "set max duty",     // title
+    "max duty",     // title
     "",                 // line1 (above value)
     "  set max-duty: ", // line2 (above value)
     "",                 // line4 * (below value)
@@ -67,9 +82,86 @@ menuItem_t item_maxDuty = {
     "     percent    ", // line7
 };
 
-menuItem_t item_next = {
-    maxDuty_action, // function action
-    maxDuty_currentValue,
+//######################
+//##### accelLimit #####
+//######################
+void item_accelLimit_action(int value){
+    motorLeft.setFade(fadeType_t::ACCEL, (uint32_t)value);
+    motorRight.setFade(fadeType_t::ACCEL, (uint32_t)value);
+}
+int item_accelLimit_value()
+{
+    return motorLeft.getFade(fadeType_t::ACCEL);
+}
+menuItem_t item_accelLimit = {
+    item_accelLimit_action, // function action
+    item_accelLimit_value,
+    0,                // valueMin
+    10000,            // valueMAx
+    100,              // valueIncrement
+    "Accel limit",    // title
+    "Accel limit /",  // line1 (above value)
+    "Fade up time",   // line2 (above value)
+    "",               // line4 * (below value)
+    "",               // line5 *
+    "milliseconds",   // line6
+    "from 0 to 100%", // line7
+};
+
+// ######################
+// ##### decelLimit #####
+// ######################
+void item_decelLimit_action(int value)
+{
+    motorLeft.setFade(fadeType_t::DECEL, (uint32_t)value);
+    motorRight.setFade(fadeType_t::DECEL, (uint32_t)value);
+}
+int item_decelLimit_value()
+{
+    return motorLeft.getFade(fadeType_t::DECEL);
+}
+menuItem_t item_decelLimit = {
+    item_decelLimit_action, // function action
+    item_decelLimit_value,
+    0,                // valueMin
+    10000,            // valueMAx
+    100,              // valueIncrement
+    "Decel limit",    // title
+    "Decel limit /",  // line1 (above value)
+    "Fade down time", // line2 (above value)
+    "",               // line4 * (below value)
+    "",               // line5 *
+    "milliseconds",   // line6
+    "from 100 to 0%", // line7
+};
+
+//#####################
+//###### example ######
+//#####################
+void item_example_action(int value){
+    return;
+}
+int item_example_value(){
+    return 53;
+}
+menuItem_t item_example = {
+    item_example_action, // function action
+    item_example_value,
+    -255,             // valueMin
+    255,              // valueMAx
+    2,                // valueIncrement
+    "example-item-max",     // title
+    "line 1 - above", // line1 (above value)
+    "line 2 - above", // line2 (above value)
+    "line 4 - below", // line4 * (below value)
+    "line 5 - below", // line5 *
+    "line 6 - below", // line6
+    "line 7 - last",  // line7
+};
+
+menuItem_t item_last = {
+    item_example_action, // function action
+    item_example_value,
     -500,               // valueMin
     4500,               // valueMAx
     50,                 // valueIncrement
@@ -83,24 +175,9 @@ menuItem_t item_next = {
 
 };
 
-menuItem_t item_last = {
-    maxDuty_action, // function action
-    maxDuty_currentValue,
-    0,           // valueMin
-    100,         // valueMAx
-    5,           // valueIncrement
-    "last item", // title
-    "",          // line1 (above value)
-    "",          // line2 (above value)
-    "",          // line4 * (below value)
-    "",          // line5 *
-    "",          // line6
-    "",          // line7
-};
-
 //store all configured menu items in one array
-menuItem_t menuItems[] = {item_first, item_maxDuty, item_next, item_last};
-int itemCount = 4;
+menuItem_t menuItems[] = {item_centerJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_example, item_last};
+int itemCount = 6;
 
 
 
@@ -213,11 +290,15 @@ void showValueSelect(SSD1306_t *display, int selectedItem)
 //========================
 //controls menu with encoder input and displays the text on oled display
 //function is repeatedly called when in menu state
+#define QUEUE_TIMEOUT 3000 //timeout no encoder event - to handle timeout and not block the display loop
+#define MENU_TIMEOUT 30000 //inactivity timeout (switch to IDLE mode)
 void handleMenu(SSD1306_t *display)
 {
+    static uint32_t lastActivity = 0;
     static int selectedItem = 0;
     rotary_encoder_event_t event; // store event data
 
+    //--- handle different menu states ---
     switch (menuState)
     {
         //-------------------------
@@ -227,8 +308,9 @@ void handleMenu(SSD1306_t *display)
         // update display
         showItemList(display, selectedItem); // shows list of items with currently selected one on display
         // wait for encoder event
-        if (xQueueReceive(encoderQueue, &event, portMAX_DELAY))
+        if (xQueueReceive(encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
         {
+            lastActivity = esp_log_timestamp();
             switch (event.type)
             {
             case RE_ET_CHANGED:
@@ -262,7 +344,8 @@ void handleMenu(SSD1306_t *display)
 
             //exit menu mode
             case RE_ET_BTN_LONG_PRESSED:
-                control.changeMode(controlMode_t::IDLE);
+                //change to previous mode (e.g. JOYSTICK)
+                control.toggleMode(controlMode_t::MENU); //currently already in MENU -> changes to previous mode
                 ssd1306_clear_screen(display, false);
                 break;
 
@@ -280,8 +363,9 @@ void handleMenu(SSD1306_t *display)
         // wait for encoder event
         showValueSelect(display, selectedItem);
 
-        if (xQueueReceive(encoderQueue, &event, portMAX_DELAY))
+        if (xQueueReceive(encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
         {
+            lastActivity = esp_log_timestamp();
             switch (event.type)
             {
             case RE_ET_CHANGED:
@@ -310,5 +394,22 @@ void handleMenu(SSD1306_t *display)
             }
         }
         break;
+    }
+
+
+    //--------------------
+    //--- menu timeout ---
+    //--------------------
+    //close menu and switch to IDLE mode when no encoder event within MENU_TIMEOUT
+    if (esp_log_timestamp() - lastActivity > MENU_TIMEOUT)
+    {
+        ESP_LOGW(TAG, "TIMEOUT - no activity for more than %ds -> closing menu, switching to IDLE", MENU_TIMEOUT/1000);
+        // reset menu
+        selectedItem = 0;
+        menuState = MAIN_MENU;
+        ssd1306_clear_screen(display, false);
+        // change control mode
+        control.changeMode(controlMode_t::IDLE);
+        return;
     }
 }

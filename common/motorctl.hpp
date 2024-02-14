@@ -33,6 +33,7 @@ class controlledMotor {
         void setTarget(motorstate_t state_f, float duty_f = 0); //adds target command to queue for handle function
         motorCommand_t getStatus(); //get current status of the motor (returns struct with state and duty)
 
+        uint32_t getFade(fadeType_t fadeType); //get currently set acceleration or deceleration fading time
         void setFade(fadeType_t fadeType, bool enabled); //enable/disable acceleration or deceleration fading
         void setFade(fadeType_t fadeType, uint32_t msFadeNew); //set acceleration or deceleration fade time
         bool toggleFade(fadeType_t fadeType); //toggle acceleration or deceleration on/off
@@ -55,6 +56,7 @@ class controlledMotor {
 		motorSetCommandFunc_t motorSetCommand;
 
         //--- variables ---
+        //TODO add name for logging?
         //struct for storing control specific parameters
         motorctl_config_t config;
         motorstate_t state = motorstate_t::IDLE;

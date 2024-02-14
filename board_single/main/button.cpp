@@ -163,6 +163,7 @@ void buttonCommands::startHandleLoop()
         //-- get events from encoder --
         if (xQueueReceive(encoderQueue, &ev, INPUT_TIMEOUT / portTICK_PERIOD_MS))
         {
+            control->resetTimeout(); //reset inactivity IDLE timeout
             switch (ev.type)
             {
                 break;
