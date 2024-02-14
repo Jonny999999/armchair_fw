@@ -141,7 +141,7 @@ void setLoglevels(void){
 
     //--- set loglevel for individual tags ---
     esp_log_level_set("main", ESP_LOG_INFO);
-    //esp_log_level_set("buzzer", ESP_LOG_INFO);
+    esp_log_level_set("buzzer", ESP_LOG_ERROR);
     //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
     //esp_log_level_set("motor-control", ESP_LOG_INFO);
 	//esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
@@ -201,11 +201,7 @@ extern "C" void app_main(void) {
 	//--- create task for button ---
 	//------------------------------
 	//task that evaluates and processes the button input and runs the configured commands
-#define MENU_TEST
-//currently disabled due to using button/encoder for testing the menu
-#ifndef MENU_TEST
 	xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
-#endif
 
 	//-----------------------------------
 	//--- create task for fan control ---

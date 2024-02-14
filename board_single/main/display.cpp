@@ -200,53 +200,33 @@ void showStartupMsg(){
 //============================
 //======= display task =======
 //============================
-#define VERY_SLOW_LOOP_INTERVAL 60000
-#define SLOW_LOOP_INTERVAL 5000
-#define FAST_LOOP_INTERVAL 200
-//TODO: separate task for each loop?
+#define STATUS_SCREEN_UPDATE_INTERVAL 500
+// TODO: separate task for each loop?
 
-void display_task( void * pvParameters ){
-	//variables
-	int countFastloop = 0;
-	int countSlowLoop = 0;
-
-	//initialize display
+void display_task(void *pvParameters)
+{
+	// initialize display
 	display_init();
-	//TODO check if successfully initialized
+	// TODO check if successfully initialized
 
-	//show startup message
+	// show startup message
 	showStartupMsg();
 	vTaskDelay(STARTUP_MSG_TIMEOUT / portTICK_PERIOD_MS);
 
 	// repeatedly update display with content
 	while (1)
 	{
-
-//currently only showing menu:
-		handleMenu(&dev);
-
-
-//status screen currently disabled:
-	//	//--- fast loop ---
-	//	showScreen1();
-
-	//	if (countFastloop >= SLOW_LOOP_INTERVAL / FAST_LOOP_INTERVAL)
-	//	{
-	//		//--- slow loop ---
-
-	//		if (countSlowLoop >= VERY_SLOW_LOOP_INTERVAL / SLOW_LOOP_INTERVAL)
-	//		{
-	//			//--- very slow loop ---
-	//			// clear display - workaround for bugged line order after a few minutes
-	//			countSlowLoop = 0;
-	//			ssd1306_clear_screen(&dev, false);
-	//		}
-	//		countFastloop = 0;
-	//		countSlowLoop++;
-	//	}
-	//	countFastloop++;
-	//	vTaskDelay(FAST_LOOP_INTERVAL / portTICK_PERIOD_MS);
-	//	// TODO add pages and menus
+		if (control.getCurrentMode() == controlMode_t::MENU)
+		{
+			//uses encoder events to control menu and updates display
+			handleMenu(&dev);
+		}
+		else //show status screen in any other mode
+		{
+			showScreen1();
+			vTaskDelay(STATUS_SCREEN_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+		}
+		// TODO add pages and menus
 	}
 }
 

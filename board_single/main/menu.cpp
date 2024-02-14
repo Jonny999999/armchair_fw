@@ -155,7 +155,8 @@ void showItemList(SSD1306_t *display,  int selectedItem)
 //---------------------------
 //----- showValueSelect -----
 //---------------------------
-//TODO show previous value in one line?
+// TODO show previous value in one line?
+// TODO update changed line only (value)
 void showValueSelect(SSD1306_t *display, int selectedItem)
 {
     //--- variables ---
@@ -248,7 +249,7 @@ void handleMenu(SSD1306_t *display)
                 }
                 break;
 
-            case RE_ET_BTN_PRESSED:
+            case RE_ET_BTN_CLICKED:
                 //--- switch to edit value page ---
                 ESP_LOGI(TAG, "Button pressed - switching to state SET_VALUE");
                 // change state (menu to set value)
@@ -259,10 +260,15 @@ void handleMenu(SSD1306_t *display)
                 ssd1306_clear_screen(display, false);
                 break;
 
-            case RE_ET_BTN_RELEASED:
-            case RE_ET_BTN_CLICKED:
+            //exit menu mode
             case RE_ET_BTN_LONG_PRESSED:
+                control.changeMode(controlMode_t::IDLE);
+                ssd1306_clear_screen(display, false);
                 break;
+
+            case RE_ET_BTN_RELEASED:
+            case RE_ET_BTN_PRESSED:
+            break;
             }
         }
         break;
@@ -272,6 +278,8 @@ void handleMenu(SSD1306_t *display)
         //-------------------------
     case SET_VALUE:
         // wait for encoder event
+        showValueSelect(display, selectedItem);
+
         if (xQueueReceive(encoderQueue, &event, portMAX_DELAY))
         {
             switch (event.type)
@@ -289,19 +297,18 @@ void handleMenu(SSD1306_t *display)
                 if (value < menuItems[selectedItem].valueMin)
                     value = menuItems[selectedItem].valueMin;
                 break;
-            case RE_ET_BTN_PRESSED:
+            case RE_ET_BTN_CLICKED:
                 //-- apply value --
                 ESP_LOGI(TAG, "Button pressed - running action function with value=%d for item '%s'", value, menuItems[selectedItem].title);
                 menuItems[selectedItem].action(value);
                 menuState = MAIN_MENU;
                 break;
+            case RE_ET_BTN_PRESSED:
             case RE_ET_BTN_RELEASED:
-            case RE_ET_BTN_CLICKED:
             case RE_ET_BTN_LONG_PRESSED:
                 break;
             }
         }
-        showValueSelect(display, selectedItem);
         break;
     }
 }
