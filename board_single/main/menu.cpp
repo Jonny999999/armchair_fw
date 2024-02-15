@@ -30,7 +30,7 @@ static int value = 0;
 //#########################
 //#### center Joystick ####
 //#########################
-void item_centerJoystick_action(int value){
+void item_centerJoystick_action(int value, SSD1306_t * display){
     if (!value) return;
     ESP_LOGW(TAG, "defining joystick center");
     joystick.defineCenter();
@@ -54,10 +54,90 @@ menuItem_t item_centerJoystick = {
     "set 0 to cancel",  // line7
 };
 
+
+//########################
+//#### debug Joystick ####
+//########################
+//continously show/update joystick data on display
+void item_debugJoystick_action(int value, SSD1306_t * display)
+{
+    //--- variables ---
+    bool running = true;
+    rotary_encoder_event_t event;
+    char buf[20];
+    int len;
+
+    //-- pre loop instructions --
+    if (!value) // dont open menu when value was set to 0
+        return;
+    ESP_LOGW(TAG, "showing joystick debug page");
+    ssd1306_clear_screen(display, false);
+    // show title
+    len = snprintf(buf, 19, " - debug stick - ");
+    ssd1306_display_text(display, 0, buf, len, true);
+    // show info line
+    len = snprintf(buf, 20, "click to exit");
+    ssd1306_display_text(display, 7, buf, len, false);
+
+    //-- show/update values --
+    // stop when button pressed or control state changes (timeouts to IDLE)
+    while (running && control.getCurrentMode() == controlMode_t::MENU)
+    {
+        // repeatedly print all joystick data
+        joystickData_t data = joystick.getData();
+        len = snprintf(buf, 20, "x = %.3f", data.x);
+        ssd1306_display_text(display, 1, buf, len, false);
+        len = snprintf(buf, 20, "y = %.3f", data.y);
+        ssd1306_display_text(display, 2, buf, len, false);
+        len = snprintf(buf, 20, "radius = %.3f", data.radius);
+        ssd1306_display_text(display, 3, buf, len, false);
+        len = snprintf(buf, 20, "angle = %06.3f   ", data.angle);
+        ssd1306_display_text(display, 4, buf, len, false);
+        len = snprintf(buf, 20, "pos=%-12s ", joystickPosStr[(int)data.position]);
+        ssd1306_display_text(display, 5, buf, len, false);
+
+        // exit when button pressed
+        if (xQueueReceive(encoderQueue, &event, 20 / portTICK_PERIOD_MS))
+        {
+            switch (event.type)
+            {
+            case RE_ET_BTN_CLICKED:
+                running = false;
+                break;
+            case RE_ET_CHANGED:
+            case RE_ET_BTN_PRESSED:
+            case RE_ET_BTN_RELEASED:
+            case RE_ET_BTN_LONG_PRESSED:
+                break;
+            }
+        }
+    }
+}
+
+int item_debugJoystick_value(){
+    return 1;
+}
+
+menuItem_t item_debugJoystick = {
+    item_debugJoystick_action, // function action
+    item_debugJoystick_value,
+    0,                      // valueMin
+    1,                      // valueMAx
+    1,                      // valueIncrement
+    "Debug joystick",      // title
+    "Debug joystick", // line1 (above value)
+    "",   // line2 (above value)
+    "click to enter",                     // line4 * (below value)
+    "debug screen",                     // line5 *
+    "prints values",     // line6
+    "set 0 to cancel",  // line7
+};
+
+
 //########################
 //##### set max duty #####
 //########################
-void maxDuty_action(int value)
+void maxDuty_action(int value, SSD1306_t * display)
 {
     //TODO actually store the value
     ESP_LOGW(TAG, "set max duty to %d", value);
@@ -85,7 +165,8 @@ menuItem_t item_maxDuty = {
 //######################
 //##### accelLimit #####
 //######################
-void item_accelLimit_action(int value){
+void item_accelLimit_action(int value, SSD1306_t * display)
+{
     motorLeft.setFade(fadeType_t::ACCEL, (uint32_t)value);
     motorRight.setFade(fadeType_t::ACCEL, (uint32_t)value);
 }
@@ -111,7 +192,7 @@ menuItem_t item_accelLimit = {
 // ######################
 // ##### decelLimit #####
 // ######################
-void item_decelLimit_action(int value)
+void item_decelLimit_action(int value, SSD1306_t * display)
 {
     motorLeft.setFade(fadeType_t::DECEL, (uint32_t)value);
     motorRight.setFade(fadeType_t::DECEL, (uint32_t)value);
@@ -138,7 +219,8 @@ menuItem_t item_decelLimit = {
 //#####################
 //###### example ######
 //#####################
-void item_example_action(int value){
+void item_example_action(int value, SSD1306_t * display)
+{
     return;
 }
 int item_example_value(){
@@ -176,7 +258,7 @@ menuItem_t item_last = {
 };
 
 //store all configured menu items in one array
-menuItem_t menuItems[] = {item_centerJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_example, item_last};
+menuItem_t menuItems[] = {item_centerJoystick, item_debugJoystick, item_accelLimit, item_decelLimit, item_example, item_last};
 int itemCount = 6;
 
 
@@ -185,6 +267,8 @@ int itemCount = 6;
 //--------------------------
 //------ showItemList ------
 //--------------------------
+//function that renders main menu to display (one update)
+//list of all menu items with currently selected highlighted
 #define SELECTED_ITEM_LINE 4
 #define FIRST_ITEM_LINE 1
 #define LAST_ITEM_LINE 7
@@ -232,6 +316,8 @@ void showItemList(SSD1306_t *display,  int selectedItem)
 //---------------------------
 //----- showValueSelect -----
 //---------------------------
+//function that renders value-select screen to display (one update)
+//shows configured text of selected item and currently selected value
 // TODO show previous value in one line?
 // TODO update changed line only (value)
 void showValueSelect(SSD1306_t *display, int selectedItem)
@@ -289,9 +375,9 @@ void showValueSelect(SSD1306_t *display, int selectedItem)
 //====== handleMenu ======
 //========================
 //controls menu with encoder input and displays the text on oled display
-//function is repeatedly called when in menu state
+//function is repeatedly called by display task when in menu state
 #define QUEUE_TIMEOUT 3000 //timeout no encoder event - to handle timeout and not block the display loop
-#define MENU_TIMEOUT 30000 //inactivity timeout (switch to IDLE mode)
+#define MENU_TIMEOUT 60000 //inactivity timeout (switch to IDLE mode)
 void handleMenu(SSD1306_t *display)
 {
     static uint32_t lastActivity = 0;
@@ -384,7 +470,7 @@ void handleMenu(SSD1306_t *display)
             case RE_ET_BTN_CLICKED:
                 //-- apply value --
                 ESP_LOGI(TAG, "Button pressed - running action function with value=%d for item '%s'", value, menuItems[selectedItem].title);
-                menuItems[selectedItem].action(value);
+                menuItems[selectedItem].action(value, display);
                 menuState = MAIN_MENU;
                 break;
             case RE_ET_BTN_PRESSED:
