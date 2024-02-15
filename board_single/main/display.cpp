@@ -75,6 +75,74 @@ void display_init(){
 
 
 
+//===============================
+//======= displayTextLine =======
+//===============================
+//abstracted function for printing one line on the display, using a format string directly
+//and options: Large-font (3 lines, max 5 digits), or inverted color
+void displayTextLine(SSD1306_t *display, int line, bool isLarge, bool inverted, const char *format, ...)
+{
+	char buf[17];
+	int len;
+
+	// format string + arguments to string
+	va_list args;
+	va_start(args, format);
+	len = vsnprintf(buf, sizeof(buf), format, args);
+	va_end(args);
+
+	// show line on display
+	if (isLarge)
+		ssd1306_display_text_x3(display, line, buf, len, inverted);
+	else
+		ssd1306_display_text(display, line, buf, len, inverted);
+}
+
+
+
+//===================================
+//===== displayTextLineCentered =====
+//===================================
+//abstracted function for printing a string CENTERED on the display, using a format string
+//adds spaces left and right to fill the line (if not too long already)
+#define MAX_LEN_NORMAL 16 //count of available digits on display (normal/large font)
+#define MAX_LEN_LARGE 5
+void displayTextLineCentered(SSD1306_t *display, int line, bool isLarge, bool inverted, const char *format, ...)
+{
+	// variables
+	char buf[MAX_LEN_NORMAL*2 + 2];
+	char tmp[MAX_LEN_NORMAL + 1];
+	int len;
+
+	// format string + arguments to string (-> tmp)
+	va_list args;
+	va_start(args, format);
+	len = vsnprintf(tmp, sizeof(tmp), format, args);
+	va_end(args);
+
+	// define max available digits
+	int maxLen = MAX_LEN_NORMAL;
+	if (isLarge)
+		maxLen = MAX_LEN_LARGE;
+
+	// determine required spaces
+	int numSpaces = (maxLen - len) / 2;
+	if (numSpaces < 0) // limit to 0 in case string is too long already
+		numSpaces = 0;
+
+	// add certain spaces around string (-> buf)
+	snprintf(buf, MAX_LEN_NORMAL*2, "%*s%s%*s", numSpaces, "", tmp, maxLen - numSpaces - len, "");
+	ESP_LOGD(TAG, "print center - isLarge=%d, value='%s', needed-spaces=%d, resulted-string='%s'", isLarge, tmp, numSpaces, buf);
+
+	// show line on display
+	if (isLarge)
+		ssd1306_display_text_x3(display, line, buf, maxLen, inverted);
+	else
+		ssd1306_display_text(display, line, buf, maxLen, inverted);
+}
+
+
+
 //----------------------------------
 //------- getBatteryVoltage --------
 //----------------------------------
@@ -138,35 +206,32 @@ float getBatteryPercent(){
 //percentage, voltage, current, mode, rpm, speed
 void showScreen1()
 {
-	char buf[20];
-	char buf1[20];
-	int len, len1;
-
 	//-- battery percentage --
 	// TODO update when no load (currentsensors = ~0A) only
-	len1 = snprintf(buf1, sizeof(buf1), "B:%02.0f%%", getBatteryPercent());
-	ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
+	//large
+	displayTextLine(&dev, 0, true, false, "B:%02.0f%%", getBatteryPercent());
 
 	//-- voltage and current --
-	len = snprintf(buf, sizeof(buf), "%04.1fV %04.1f:%04.1fA",
+	displayTextLine(&dev, 3, false, false, "%04.1fV %04.1f:%04.1fA",
 				   getBatteryVoltage(),
 				   fabs(motorLeft.getCurrentA()),
 				   fabs(motorRight.getCurrentA()));
-	ssd1306_display_text(&dev, 3, buf, len, false);
 
 	//-- control state --
-	len = snprintf(buf, sizeof(buf), "%s ", control.getCurrentModeStr());
-	ssd1306_display_text_x3(&dev, 4, buf, len, false);
+	//print large line
+	displayTextLine(&dev, 4, true, false, "%s ", control.getCurrentModeStr());
 
 	//-- speed and RPM --
-	len = snprintf(buf, sizeof(buf), "%3.1fkm/h %03.0f:%03.0fR",
+	displayTextLine(&dev, 7, false, false, "%3.1fkm/h %03.0f:%03.0fR",
 				   fabs((speedLeft.getKmph() + speedRight.getKmph()) / 2),
 				   speedLeft.getRpm(),
 				   speedRight.getRpm());
-	ssd1306_display_text(&dev, 7, buf, len, false);
 
 	// debug speed sensors
-	ESP_LOGD(TAG, "%s", buf);
+	ESP_LOGD(TAG, "%3.1fkm/h %03.0f:%03.0fR",
+				   fabs((speedLeft.getKmph() + speedRight.getKmph()) / 2),
+				   speedLeft.getRpm(),
+				   speedRight.getRpm());
 }
 
 
@@ -176,22 +241,16 @@ void showScreen1()
 //------------------------
 //shows welcome message and information about current version
 void showStartupMsg(){
-	char buf[20];
-	int len;
 	const esp_app_desc_t * desc = esp_ota_get_app_description();
 
 	//show message
-	len = snprintf(buf, 20, "START");
-	ssd1306_display_text_x3(&dev, 0, buf, len, false);
+	displayTextLine(&dev, 0, true, false, "START");
 	//show git-tag
-	len = snprintf(buf, 20, "%s", desc->version);
-	ssd1306_display_text(&dev, 4, buf, len, false);
+	displayTextLine(&dev, 4, false, false, "%s", desc->version);
 	//show build-date (note: date,time of last clean build)
-	len = snprintf(buf, 20, "%s", desc->date);
-	ssd1306_display_text(&dev, 6, buf, len, false);
+	displayTextLine(&dev, 6, false, false, "%s", desc->date);
 	//show build-time
-	len = snprintf(buf, 20, "%s", desc->time);
-	ssd1306_display_text(&dev, 7, buf, len, false);
+	displayTextLine(&dev, 7, false, false, "%s", desc->time);
 }
 
 
@@ -212,6 +271,7 @@ void display_task(void *pvParameters)
 	// show startup message
 	showStartupMsg();
 	vTaskDelay(STARTUP_MSG_TIMEOUT / portTICK_PERIOD_MS);
+	ssd1306_clear_screen(&dev, false);
 
 	// repeatedly update display with content
 	while (1)

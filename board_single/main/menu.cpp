@@ -64,8 +64,6 @@ void item_debugJoystick_action(int value, SSD1306_t * display)
     //--- variables ---
     bool running = true;
     rotary_encoder_event_t event;
-    char buf[20];
-    int len;
 
     //-- pre loop instructions --
     if (!value) // dont open menu when value was set to 0
@@ -73,11 +71,9 @@ void item_debugJoystick_action(int value, SSD1306_t * display)
     ESP_LOGW(TAG, "showing joystick debug page");
     ssd1306_clear_screen(display, false);
     // show title
-    len = snprintf(buf, 19, " - debug stick - ");
-    ssd1306_display_text(display, 0, buf, len, true);
+    displayTextLine(display, 0, false, true, " - debug stick - ");
     // show info line
-    len = snprintf(buf, 20, "click to exit");
-    ssd1306_display_text(display, 7, buf, len, false);
+    displayTextLineCentered(display, 7, false, true, "click to exit");
 
     //-- show/update values --
     // stop when button pressed or control state changes (timeouts to IDLE)
@@ -85,16 +81,11 @@ void item_debugJoystick_action(int value, SSD1306_t * display)
     {
         // repeatedly print all joystick data
         joystickData_t data = joystick.getData();
-        len = snprintf(buf, 20, "x = %.3f", data.x);
-        ssd1306_display_text(display, 1, buf, len, false);
-        len = snprintf(buf, 20, "y = %.3f", data.y);
-        ssd1306_display_text(display, 2, buf, len, false);
-        len = snprintf(buf, 20, "radius = %.3f", data.radius);
-        ssd1306_display_text(display, 3, buf, len, false);
-        len = snprintf(buf, 20, "angle = %06.3f   ", data.angle);
-        ssd1306_display_text(display, 4, buf, len, false);
-        len = snprintf(buf, 20, "pos=%-12s ", joystickPosStr[(int)data.position]);
-        ssd1306_display_text(display, 5, buf, len, false);
+        displayTextLine(display, 1, false, false, "x = %.3f     ", data.x);
+        displayTextLine(display, 2, false, false, "y = %.3f     ", data.y);
+        displayTextLine(display, 3, false, false, "radius = %.3f", data.radius);
+        displayTextLine(display, 4, false, false, "angle = %-06.3f   ", data.angle);
+        displayTextLine(display, 5, false, false, "pos=%-12s ", joystickPosStr[(int)data.position]);
 
         // exit when button pressed
         if (xQueueReceive(encoderQueue, &event, 20 / portTICK_PERIOD_MS))
@@ -272,15 +263,10 @@ int itemCount = 6;
 #define SELECTED_ITEM_LINE 4
 #define FIRST_ITEM_LINE 1
 #define LAST_ITEM_LINE 7
-void showItemList(SSD1306_t *display,  int selectedItem)
+void showItemList(SSD1306_t *display, int selectedItem)
 {
-    //--- variables ---
-    char buf[20];
-    int len;
-
     //-- show title line --
-    len = snprintf(buf, 19, "  --- menu ---  ");
-    ssd1306_display_text(display, 0, buf, len, true);
+    displayTextLine(display, 0, false, true, "  --- menu ---  "); //inverted
 
     //-- show item list --
     for (int line = FIRST_ITEM_LINE; line <= LAST_ITEM_LINE; line++)
@@ -289,82 +275,60 @@ void showItemList(SSD1306_t *display,  int selectedItem)
         // TODO: when reaching end of items, instead of showing "empty" change position of selected item to still use the entire screen
         if (printItemIndex < 0 || printItemIndex >= itemCount) // out of range of available items
         {
-            len = snprintf(buf, 20, "  -- empty --   ");
+            // no item in this line
+            displayTextLine(display, line, false, false, "  -- empty --   ");
         }
         else
         {
             if (printItemIndex == selectedItem)
             {
-                // add '> <' when selected item
-                len = snprintf(buf, 20, "> %-13s<", menuItems[printItemIndex].title);
+                // selected item -> add '> ' and print inverted
+                displayTextLine(display, line, false, true, "> %-14s", menuItems[printItemIndex].title); // inverted
             }
             else
             {
-                len = snprintf(buf, 20, "%-16s", menuItems[printItemIndex].title);
+                // not the selected item -> print normal
+                displayTextLine(display, line, false, false, "%-16s", menuItems[printItemIndex].title);
             }
         }
-        // update display line
-        ssd1306_display_text(display, line, buf, len, line == SELECTED_ITEM_LINE);
         // logging
         ESP_LOGD(TAG, "showItemList: loop - line=%d, item=%d, (selected=%d '%s')", line, printItemIndex, selectedItem, menuItems[selectedItem].title);
     }
 }
 
-
-
-
 //---------------------------
 //----- showValueSelect -----
 //---------------------------
-//function that renders value-select screen to display (one update)
-//shows configured text of selected item and currently selected value
+// function that renders value-select screen to display (one update)
+// shows configured text of selected item and currently selected value
 // TODO show previous value in one line?
 // TODO update changed line only (value)
 void showValueSelect(SSD1306_t *display, int selectedItem)
 {
-    //--- variables ---
-    char buf[20];
-    int len;
-
     //-- show title line --
-    len = snprintf(buf, 19, " -- set value -- ");
-    ssd1306_display_text(display, 0, buf, len, true);
+    displayTextLine(display, 0, false, true, " -- set value -- "); // inverted
 
     //-- show text above value --
-    len = snprintf(buf, 20, "%-16s", menuItems[selectedItem].line1);
-    ssd1306_display_text(display, 1, buf, len, false);
-    len = snprintf(buf, 20, "%-16s", menuItems[selectedItem].line2);
-    ssd1306_display_text(display, 2, buf, len, false);
+    displayTextLine(display, 1, false, false, "%-16s", menuItems[selectedItem].line1);
+    displayTextLine(display, 2, false, false, "%-16s", menuItems[selectedItem].line2);
 
     //-- show value and other configured lines --
     // print value large, if 2 description lines are empty
-    if (strlen(menuItems[selectedItem].line4) == 0 && strlen(menuItems[selectedItem].line5) == 0 )
+    if (strlen(menuItems[selectedItem].line4) == 0 && strlen(menuItems[selectedItem].line5) == 0)
     {
-        //print large value + line5 and line6
-        len = snprintf(buf, 20, " %d   ", value);
-        ssd1306_display_text_x3(display, 3, buf, len, false);
-        len = snprintf(buf, 20, "%-16s", menuItems[selectedItem].line6);
-        ssd1306_display_text(display, 6, buf, len, false);
-        len = snprintf(buf, 20, "%-16s", menuItems[selectedItem].line7);
-        ssd1306_display_text(display, 7, buf, len, false);
+        // print large value + line5 and line6
+        displayTextLineCentered(display, 3, true, false, "%d", value); //large centered
+        displayTextLine(display, 6, false, false, "%-16s", menuItems[selectedItem].line6);
+        displayTextLine(display, 7, false, false, "%-16s", menuItems[selectedItem].line7);
     }
     else
     {
-        // print value centered
-        int numDigits = snprintf(NULL, 0, "%d", value);
-        int numSpaces = (16 - numDigits) / 2;
-        snprintf(buf, sizeof(buf), "%*s%d%*s", numSpaces, "", value, 16 - numSpaces - numDigits, "");
-        ESP_LOGD(TAG, "showValueSelect: center number - value=%d, needed-spaces=%d, resulted-string='%s'", value, numSpaces, buf);
-        ssd1306_display_text(display, 3, buf, len, false);
+        displayTextLineCentered(display, 3, false, false, "%d", value); //centered
         // print description lines 4 to 7
-        len = snprintf(buf, 20, "%-16s", menuItems[selectedItem].line4);
-        ssd1306_display_text(display, 4, buf, len, false);
-        len = snprintf(buf, 20, "%-16s", menuItems[selectedItem].line5);
-        ssd1306_display_text(display, 5, buf, len, false);
-        len = snprintf(buf, 20, "%-16s", menuItems[selectedItem].line6);
-        ssd1306_display_text(display, 6, buf, len, false);
-        len = snprintf(buf, 20, "%-16s", menuItems[selectedItem].line7);
-        ssd1306_display_text(display, 7, buf, len, false);
+        displayTextLine(display, 4, false, false, "%-16s", menuItems[selectedItem].line4);
+        displayTextLine(display, 5, false, false, "%-16s", menuItems[selectedItem].line5);
+        displayTextLine(display, 6, false, false, "%-16s", menuItems[selectedItem].line6);
+        displayTextLine(display, 7, false, false, "%-16s", menuItems[selectedItem].line7);
     }
 }
 
