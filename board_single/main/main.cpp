@@ -29,6 +29,7 @@ extern "C"
 #include "uart_common.hpp"
 
 #include "display.hpp"
+#include "encoder.hpp"
 
 //tag for logging
 static const char * TAG = "main";
@@ -140,7 +141,7 @@ void setLoglevels(void){
 
     //--- set loglevel for individual tags ---
     esp_log_level_set("main", ESP_LOG_INFO);
-    //esp_log_level_set("buzzer", ESP_LOG_INFO);
+    esp_log_level_set("buzzer", ESP_LOG_ERROR);
     //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
     //esp_log_level_set("motor-control", ESP_LOG_INFO);
 	//esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
@@ -155,6 +156,7 @@ void setLoglevels(void){
     //esp_log_level_set("current-sensors", ESP_LOG_INFO);
     //esp_log_level_set("speedSensor", ESP_LOG_INFO);
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
+    esp_log_level_set("menu", ESP_LOG_INFO);
 }
 
 
@@ -172,6 +174,11 @@ extern "C" void app_main(void) {
 
 	//---- define log levels ----
 	setLoglevels();
+
+	// init encoder
+	//--- initialize encoder ---
+	encoder_init();
+	// now global encoderQueue providing all encoder events is available
 
 	//----------------------------------------------
 	//--- create task for controlling the motors ---

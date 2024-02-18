@@ -20,7 +20,7 @@ extern "C"
 
 //tag for logging
 static const char * TAG = "control";
-const char* controlModeStr[8] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", "BLUETOOTH", "AUTO", "ADJUST_CHAIR"};
+const char* controlModeStr[9] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", "BLUETOOTH", "AUTO", "ADJUST_CHAIR", "MENU"};
 
 
 //-----------------------------
@@ -183,45 +183,17 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
 
+            case controlMode_t::MENU:
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+                //nothing to do here, display task handles the menu
+                //--- idle motors ---
+                commands = cmds_bothMotorsIdle;
+                motorRight->setTarget(commands.right.state, commands.right.duty); 
+                motorLeft->setTarget(commands.left.state, commands.left.duty); 
+                break;
+
               //TODO: add other modes here
         }
-
-
-        //--- run actions based on received button button event ---
-		//note: buttonCount received by sendButtonEvent method called from button.cpp
-        //TODO: what if variable gets set from other task during this code? -> mutex around this code
-        switch (buttonCount) {
-            case 1: //define joystick center or freeze input
-                if (mode == controlMode_t::JOYSTICK){
-                    //joystick mode: calibrate joystick
-                    joystick_l->defineCenter();
-                } else if (mode == controlMode_t::MASSAGE){
-                    //massage mode: toggle freeze of input (lock joystick at current values)
-                    freezeInput = !freezeInput;
-                    if (freezeInput){
-                        buzzer->beep(5, 40, 25);
-                    } else {
-                        buzzer->beep(1, 300, 100);
-                    }
-                }
-                break;
-
-            case 12: //toggle alternative joystick mapping (reverse swapped) 
-                altStickMapping = !altStickMapping;
-                if (altStickMapping){
-                    buzzer->beep(6, 70, 50);
-                } else {
-                    buzzer->beep(1, 500, 100);
-                }
-                break;
-        }
-        //--- reset button event --- (only one action per run)
-        if (buttonCount > 0){
-            ESP_LOGI(TAG, "resetting button event/count");
-            buttonCount = 0;
-        }
-
-
 
         //-----------------------
         //------ slow loop ------
@@ -240,23 +212,66 @@ void controlledArmchair::startHandleLoop() {
 
 
 
+
+//---------------------------------------
+//------ toggleFreezeInputMassage -------
+//---------------------------------------
+// releases or locks joystick in place when in massage mode
+bool controlledArmchair::toggleFreezeInputMassage()
+{
+    if (mode == controlMode_t::MASSAGE)
+    {
+        // massage mode: toggle freeze of input (lock joystick at current values)
+        freezeInput = !freezeInput;
+        if (freezeInput)
+        {
+            buzzer->beep(5, 40, 25);
+            ESP_LOGW(TAG, "joystick input is now locked in place");
+        }
+        else
+        {
+            buzzer->beep(1, 300, 100);
+            ESP_LOGW(TAG, "joystick input gets updated again");
+        }
+        return freezeInput;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "can not freeze/unfreeze joystick input - not in MASSAGE mode!");
+        return 0;
+    }
+}
+
+
+
+//-------------------------------------
+//------- toggleAltStickMapping -------
+//-------------------------------------
+// toggle between normal and alternative stick mapping (joystick reverse position inverted)
+bool controlledArmchair::toggleAltStickMapping()
+{
+    altStickMapping = !altStickMapping;
+    if (altStickMapping)
+    {
+        buzzer->beep(6, 70, 50);
+        ESP_LOGW(TAG, "changed to alternative stick mapping");
+    }
+    else
+    {
+        buzzer->beep(1, 500, 100);
+        ESP_LOGW(TAG, "changed to default stick mapping");
+    }
+    return altStickMapping;
+}
+
+
+
 //-----------------------------------
 //---------- resetTimeout -----------
 //-----------------------------------
 void controlledArmchair::resetTimeout(){
     //TODO mutex
     timestamp_lastActivity = esp_log_timestamp();
-}
-
-
-
-//------------------------------------
-//--------- sendButtonEvent ----------
-//------------------------------------
-void controlledArmchair::sendButtonEvent(uint8_t count){
-    //TODO mutex - if not replaced with queue
-    ESP_LOGI(TAG, "setting button event");
-    buttonCount = count;
 }
 
 

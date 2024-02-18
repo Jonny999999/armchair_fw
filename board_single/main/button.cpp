@@ -8,6 +8,7 @@ extern "C"
 }
 
 #include "button.hpp"
+#include "encoder.hpp"
 
 
 
@@ -37,46 +38,53 @@ buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, evaluatedJoystic
 //----------------------------
 //function that runs commands depending on a count value
 void buttonCommands::action (uint8_t count, bool lastPressLong){
-    //--- variable declarations ---
+    //--- variables ---
     bool decelEnabled; //for different beeping when toggling
     commandSimple_t cmds[8]; //array for commands for automatedArmchair
 
     //--- get joystick position ---
+    //in case joystick is used for additional cases:
     //joystickData_t stickData = joystick->getData();
 
-    //--- actions based on count ---
-    switch (count){
-        //no such command
-        default:
-            ESP_LOGE(TAG, "no command for count=%d defined", count);
-            buzzer->beep(3, 400, 100);
-            break;
+    //--- run actions based on count ---
+    switch (count)
+    {
+    // ## no command ##
+    default:
+        ESP_LOGE(TAG, "no command for count=%d and long=%d defined", count, lastPressLong);
+        buzzer->beep(3, 400, 100);
+        break;
 
-        case 1:
-            //restart contoller when 1x long pressed
-            if (lastPressLong){
-                ESP_LOGW(TAG, "RESTART");
-                buzzer->beep(1,1000,1);
-                vTaskDelay(500 / portTICK_PERIOD_MS);
-                //esp_restart();
-            //-> define joystick center or toggle freeze input (executed in control task)
-            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
-                return;
-            } 
-			//note: disabled joystick calibration due to accidential trigger
-//
-//            ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
-//            //-> define joystick center or toggle freeze input (executed in control task)
-//            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1) -> control.cpp has to be changed
-            break;
-        case 2:
-            //run automatic commands to lift leg support when pressed 1x short 1x long
-            if (lastPressLong){
+    case 1:
+        // ## switch to MENU state ##
+        if (lastPressLong)
+        {
+            control->changeMode(controlMode_t::MENU);
+            ESP_LOGW(TAG, "1x long press -> change to menu mode");
+            buzzer->beep(1, 1000, 1);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+        }
+        // ## toggle joystick freeze ##
+        else if (control->getCurrentMode() == controlMode_t::MASSAGE)
+        {
+            control->toggleFreezeInputMassage();
+        }
+        // ## define joystick center ##
+        else
+        {
+            // note: disabled joystick calibration due to accidential trigger
+            //joystick->defineCenter();
+        }
+        break;
+
+    case 2:
+        // ## switch to ADJUST_CHAIR mode ##
+        if (lastPressLong)
+        {
             ESP_LOGW(TAG, "cmd %d: toggle ADJUST_CHAIR", count);
             control->toggleMode(controlMode_t::ADJUST_CHAIR);
             }
-
-            //toggle idle when 2x pressed
+            // ## toggle IDLE ##
             else {
             ESP_LOGW(TAG, "cmd %d: toggle IDLE", count);
             control->toggleIdle(); //toggle between idle and previous/default mode
@@ -84,21 +92,25 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
             break;
 
         case 3:
+        // ## switch to JOYSTICK mode ##
             ESP_LOGW(TAG, "cmd %d: switch to JOYSTICK", count);
             control->changeMode(controlMode_t::JOYSTICK); //switch to JOYSTICK mode
             break;
 
         case 4:
+        // ## switch to HTTP mode ##
             ESP_LOGW(TAG, "cmd %d: toggle between HTTP and JOYSTICK", count);
             control->toggleModes(controlMode_t::HTTP, controlMode_t::JOYSTICK); //toggle between HTTP and JOYSTICK mode
             break;
 
         case 6:
+        // ## switch to MASSAGE mode ##
             ESP_LOGW(TAG, "cmd %d: toggle between MASSAGE and JOYSTICK", count);
             control->toggleModes(controlMode_t::MASSAGE, controlMode_t::JOYSTICK); //toggle between MASSAGE and JOYSTICK mode
             break;
 
         case 8:
+        // ## toggle "sport-mode" ##
             //toggle deceleration fading between on and off
             //decelEnabled = motorLeft->toggleFade(fadeType_t::DECEL);
             //motorRight->toggleFade(fadeType_t::DECEL);
@@ -113,12 +125,10 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
             break;
 
         case 12:
-            ESP_LOGW(TAG, "cmd %d: sending button event to control task", count);
-            //-> toggle altStickMapping (executed in control task)
-            control->sendButtonEvent(count); //TODO: always send button event to control task (not just at count=1)?
+        // ## toggle alternative stick mapping ##
+            control->toggleAltStickMapping();
             break;
-
-    }
+        }
 }
 
 
@@ -127,56 +137,66 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 //-----------------------------
 //------ startHandleLoop ------
 //-----------------------------
-//this function has to be started once in a separate task
-//repeatedly evaluates and processes button events then takes the corresponding action
-void buttonCommands::startHandleLoop() {
+// when not in MENU mode, repeatedly receives events from encoder button
+// and takes the corresponding action
+// this function has to be started once in a separate task
+#define INPUT_TIMEOUT 800 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
+void buttonCommands::startHandleLoop()
+{
+    //-- variables --
+    bool isPressed = false;
+    static rotary_encoder_event_t ev; // store event data
+    // int count = 0; (from class)
 
-    while(1) {
-        vTaskDelay(20 / portTICK_PERIOD_MS);
-        //run handle function of evaluatedSwitch object
-        button->handle();
-
-        //--- count button presses and run action ---
-        switch(state) {
-            case inputState_t::IDLE: //wait for initial button press
-                if (button->risingEdge) {
-                    count = 1;
-                    buzzer->beep(1, 65, 0);
-                    timestamp_lastAction = esp_log_timestamp();
-                    state = inputState_t::WAIT_FOR_INPUT;
-                    ESP_LOGI(TAG, "first button press detected -> waiting for further events");
-                }
-                break;
-
-            case inputState_t::WAIT_FOR_INPUT: //wait for further presses
-                //button pressed again
-                if (button->risingEdge){
-                    count++;
-                    buzzer->beep(1, 65, 0);
-                    timestamp_lastAction = esp_log_timestamp();
-                    ESP_LOGI(TAG, "another press detected -> count=%d -> waiting for further events", count);
-                }
-                //timeout
-                else if (esp_log_timestamp() - timestamp_lastAction > 1000) {
-                    state = inputState_t::IDLE;
-                    buzzer->beep(count, 50, 50);
-                    //TODO: add optional "bool wait" parameter to beep function to delay until finished beeping
-                    ESP_LOGI(TAG, "timeout - running action function for count=%d", count);
-                    //--- run action function ---
-                    //check if still pressed
-                    bool lastPressLong = false;
-                    if (button->state == true){
-                        //run special case when last press was longer than timeout
-                        lastPressLong = true;
-                    }
-                        //run action function with current count of button presses
-                        action(count, lastPressLong);
-                    }
-                break;
+    while (1)
+    {
+        //-- disable functionality when in menu mode --
+        //(display task uses encoder in that mode)
+        if (control->getCurrentMode() == controlMode_t::MENU)
+        {
+            //do nothing every loop cycle
+            ESP_LOGD(TAG, "in MENU mode -> button commands disabled");
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            continue;
         }
-    }
-}
 
-
-
-
+        //-- get events from encoder --
+        if (xQueueReceive(encoderQueue, &ev, INPUT_TIMEOUT / portTICK_PERIOD_MS))
+        {
+            control->resetTimeout(); //reset inactivity IDLE timeout
+            switch (ev.type)
+            {
+                break;
+            case RE_ET_BTN_PRESSED:
+                ESP_LOGD(TAG, "Button pressed");
+                buzzer->beep(1, 65, 0);
+                isPressed = true;
+                count++; // count each pressed event
+                break;
+            case RE_ET_BTN_RELEASED:
+                ESP_LOGD(TAG, "Button released");
+                isPressed = false; // rest stored state
+                break;
+            case RE_ET_BTN_LONG_PRESSED:
+            case RE_ET_BTN_CLICKED:
+            case RE_ET_CHANGED:
+            default:
+                break;
+            }
+        }
+        else // timeout (no event received within TIMEOUT)
+        {
+            if (count > 0)
+            {
+                //-- run action with count of presses --
+                ESP_LOGI(TAG, "timeout: count=%d, lastPressLong=%d -> running action", count, isPressed);
+                buzzer->beep(count, 50, 50);
+                action(count, isPressed); // run action - if currently still on the last press is considered long
+                count = 0;                // reset count
+            }
+            else {
+                ESP_LOGD(TAG, "no button event received in this cycle (count=0)");
+            }
+        } //end queue
+    } //end while(1)
+} //end function

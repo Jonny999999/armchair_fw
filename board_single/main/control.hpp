@@ -11,9 +11,9 @@
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
 //enum that decides how the motors get controlled
-enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO, ADJUST_CHAIR};
+enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO, ADJUST_CHAIR, MENU};
 //string array representing the mode enum (for printing the state as string)
-extern const char* controlModeStr[8];
+extern const char* controlModeStr[9];
 
 //--- control_config_t ---
 //struct with config parameters
@@ -63,9 +63,15 @@ class controlledArmchair {
         //function that restarts timer which initiates the automatic timeout (switch to IDLE) after certain time of inactivity
         void resetTimeout();
 
-        //function for sending a button event (e.g. from button task at event) to control task
-        //TODO: use queue instead?
-        void sendButtonEvent(uint8_t count);
+        //methods to get the current control mode
+        controlMode_t getCurrentMode() const {return mode;};
+        const char *getCurrentModeStr() const { return controlModeStr[(int)mode]; };
+
+        // releases or locks joystick in place when in massage mode, returns true when input is frozen
+        bool toggleFreezeInputMassage();
+
+        // toggle between normal and alternative stick mapping (joystick reverse position inverted), returns true when alt mapping is active
+        bool toggleAltStickMapping();
 
     private:
 
