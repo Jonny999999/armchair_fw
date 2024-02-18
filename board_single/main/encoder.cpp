@@ -39,11 +39,17 @@ rotary_encoder_t encoderConfig = {
 //==================================
 //========== encoder_init ==========
 //==================================
-//initialize encoder
-void encoder_init(){
-	encoderQueue = xQueueCreate(QUEUE_SIZE, sizeof(rotary_encoder_event_t));
+//initialize encoder //TODO pass config to this function
+QueueHandle_t encoder_init()
+{
+	QueueHandle_t encoderQueue = xQueueCreate(QUEUE_SIZE, sizeof(rotary_encoder_event_t));
 	rotary_encoder_init(encoderQueue);
 	rotary_encoder_add(&encoderConfig);
+	if (encoderQueue == NULL)
+		ESP_LOGE(TAG, "Error initializing encoder or queue");
+	else
+		ESP_LOGW(TAG, "Initialized encoder and encoderQueue");
+	return encoderQueue;
 }
 
 
@@ -52,7 +58,9 @@ void encoder_init(){
 //====== task_encoderExample =======
 //==================================
 //receive and handle all available encoder events
-void task_encoderExample(void *arg) {
+void task_encoderExample(void * arg) {
+	//get queue with encoder events from task parameter:
+	QueueHandle_t encoderQueue = (QueueHandle_t)arg;
 	static rotary_encoder_event_t ev; //store event data
 	while (1) {
 		if (xQueueReceive(encoderQueue, &ev, portMAX_DELAY)) {

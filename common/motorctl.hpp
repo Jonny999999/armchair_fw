@@ -86,3 +86,21 @@ class controlledMotor {
 		uint32_t timestamp_commandReceived = 0;
 		bool receiveTimeout = false;
 };
+
+
+
+// struct with variables passed to task from main
+typedef struct task_motorctl_parameters_t {
+    controlledMotor * motorLeft;
+    controlledMotor * motorRight;
+} task_motorctl_parameters_t;
+
+
+//====================================
+//========== motorctl task ===========
+//====================================
+//task that inititialized the display, displays welcome message 
+//and releatedly updates the display with certain content
+//note: pointer to required objects have to be provided as task-parameter
+void task_motorctl( void * task_motorctl_parameters );
+

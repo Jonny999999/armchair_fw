@@ -201,27 +201,17 @@ joystickData_t httpJoystick::getData(){
 }
 
 
-//--------------------------------------------
-//--- receiveHttpData for httpJoystickMain ---
-//--------------------------------------------
-//function that wraps pointer to member function of httpJoystickMain instance in a "normal" function which the webserver can run on joystick URL
-
-//declare pointer to receiveHttpData method of httpJoystick class
-esp_err_t (httpJoystick::*pointerToReceiveFunc)(httpd_req_t *req) = &httpJoystick::receiveHttpData;
-
-esp_err_t on_joystick_url(httpd_req_t *req){
-    //run pointer to receiveHttpData function of httpJoystickMain instance
-    return (httpJoystickMain.*pointerToReceiveFunc)(req);
-}
-
-
 
 //============================
 //===== init http server =====
 //============================
-//function that initializes http server and configures available urls
-void http_init_server()
+//function that initializes http server and configures available url's
+
+//parameter: provide pointer to function that handle incomming joystick data (for configuring the url)
+//TODO add handle functions to future additional endpoints/urls here too
+void http_init_server(http_handler_t onJoystickUrl)
 {
+  ESP_LOGI(TAG, "initializing HTTP-Server...");
 
   //---- configure webserver ----
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -236,7 +226,7 @@ void http_init_server()
     httpd_uri_t joystick_url = {
       .uri = "/api/joystick",
       .method = HTTP_POST,
-      .handler = on_joystick_url,
+      .handler = onJoystickUrl,
       };
   httpd_register_uri_handler(server, &joystick_url);
 
@@ -265,8 +255,8 @@ void http_init_server()
 //function that destroys the http server
 void http_stop_server()
 {
-    printf("stopping http\n");
-    httpd_stop(server);
+  ESP_LOGW(TAG, "stopping HTTP-Server");
+  httpd_stop(server);
 }
 
 

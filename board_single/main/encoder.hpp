@@ -10,11 +10,11 @@ extern "C" {
 #define PIN_B GPIO_NUM_26
 #define PIN_BUTTON GPIO_NUM_27
 
-//global encoder queue
-extern QueueHandle_t encoderQueue;
-
 //init encoder with config in encoder.cpp
-void encoder_init();
+QueueHandle_t encoder_init(); //TODO pass config to function
+
 
 //task that handles encoder events
-void task_encoderExample(void *arg);
+//note: queue obtained from encoder_init() has to be passed to that task
+void task_encoderExample(void *encoderQueue);
+//example: xTaskCreate(&task_encoderExample, "task_buzzer", 2048, encoderQueue, 2, NULL);

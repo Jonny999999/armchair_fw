@@ -7,6 +7,24 @@ static const char * TAG = "motor-control";
 
 #define TIMEOUT_IDLE_WHEN_NO_COMMAND 8000
 
+
+
+//====================================
+//========== motorctl task ===========
+//====================================
+//task for handling the motors (ramp, current limit, driver)
+void task_motorctl( void * task_motorctl_parameters ){
+	task_motorctl_parameters_t *objects = (task_motorctl_parameters_t *)task_motorctl_parameters;
+    ESP_LOGW(TAG, "Task-motorctl: starting handle loop...");
+    while(1){
+    	objects->motorRight->handle();
+    	objects->motorLeft->handle();
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+    }
+}
+
+
+
 //=============================
 //======== constructor ========
 //=============================
@@ -33,6 +51,11 @@ controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl
 //============================
 void controlledMotor::init(){
     commandQueue = xQueueCreate( 1, sizeof( struct motorCommand_t ) );
+    if (commandQueue == NULL)
+    ESP_LOGE(TAG, "Failed to create command-queue");
+    else
+    ESP_LOGW(TAG, "Initialized command-queue");
+
 	//cSensor.calibrateZeroAmpere(); //currently done in currentsensor constructor TODO do this regularly e.g. in idle?
 }
 
@@ -252,11 +275,11 @@ void controlledMotor::setTarget(motorstate_t state_f, float duty_f){
         .state = state_f,
         .duty = duty_f
     };
-
-    ESP_LOGD(TAG, "Inserted command to queue: state=%s, duty=%.2f", motorstateStr[(int)commandSend.state], commandSend.duty);
+    ESP_LOGI(TAG, "setTarget: Inserting command to queue: state='%s'(%d), duty=%.2f", motorstateStr[(int)commandSend.state], (int)commandSend.state, commandSend.duty);
     //send command to queue (overwrite if an old command is still in the queue and not processed)
     xQueueOverwrite( commandQueue, ( void * )&commandSend);
     //xQueueSend( commandQueue, ( void * )&commandSend, ( TickType_t ) 0 );
+    ESP_LOGD(TAG, "finished inserting new command");
 
 }
 

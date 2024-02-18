@@ -5,6 +5,8 @@
 #include "buzzer.hpp"
 #include "http.hpp"
 #include "auto.hpp"
+#include "speedsensor.hpp"
+#include "chairAdjust.hpp"
 
 
 //--------------------------------------------
@@ -25,6 +27,13 @@ typedef struct control_config_t {
 } control_config_t;
 
 
+//=======================================
+//============ control task =============
+//=======================================
+//task that controls the armchair modes and initiates commands generation and applies them to driver
+//parameter: pointer to controlledArmchair object 
+void task_control( void * pvParameters );
+
 
 
 //==================================
@@ -41,7 +50,10 @@ class controlledArmchair {
                 controlledMotor* motorLeft_f,
                 controlledMotor* motorRight_f,
                 evaluatedJoystick* joystick_f,
-                httpJoystick* httpJoystick_f
+                httpJoystick* httpJoystick_f,
+                automatedArmchair_c* automatedArmchair,
+                cControlledRest * legRest,
+                cControlledRest * backRest
                 );
 
         //--- functions ---
@@ -85,6 +97,9 @@ class controlledArmchair {
         controlledMotor* motorRight;
         httpJoystick* httpJoystickMain_l;
         evaluatedJoystick* joystick_l;
+        automatedArmchair_c *automatedArmchair;
+        cControlledRest * legRest;
+        cControlledRest * backRest;
 
         //---variables ---
         //struct for motor commands returned by generate functions of each mode
@@ -103,7 +118,7 @@ class controlledArmchair {
         bool freezeInput = false;
 
         //variables for AUTO mode
-        auto_instruction_t instruction = auto_instruction_t::NONE; //variable to receive instructions from automatedArmchair
+        auto_instruction_t instruction = auto_instruction_t::NONE; //variable to receive instructions from automatedArmchair_c
         
         //variable to store button event
         uint8_t buttonCount = 0;

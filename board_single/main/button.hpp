@@ -17,14 +17,13 @@
 class buttonCommands {
     public:
         //--- constructor ---
-        buttonCommands (
-                gpio_evaluatedSwitch * button_f,
-                evaluatedJoystick * joystick_f,
-                controlledArmchair * control_f,
-                buzzer_t * buzzer_f,
-                controlledMotor * motorLeft_f, 
-                controlledMotor * motorRight_f
-                ); 
+        buttonCommands(
+            controlledArmchair *control_f,
+            evaluatedJoystick *joystick_f,
+            QueueHandle_t encoderQueue_f,
+            controlledMotor * motorLeft_f,
+            controlledMotor *motorRight_f,
+            buzzer_t *buzzer_f);
 
         //--- functions ---
         //the following function has to be started once in a separate task. 
@@ -36,12 +35,12 @@ class buttonCommands {
         void action(uint8_t count, bool lastPressLong);
 
         //--- objects ---
-        gpio_evaluatedSwitch* button;
-        evaluatedJoystick* joystick;
         controlledArmchair * control;
-        buzzer_t* buzzer;
+        evaluatedJoystick* joystick;
         controlledMotor * motorLeft;
         controlledMotor * motorRight;
+        buzzer_t* buzzer;
+        QueueHandle_t encoderQueue;
 
         //--- variables ---
         uint8_t count = 0;
@@ -51,3 +50,21 @@ class buttonCommands {
 
 };
 
+
+
+//======================================
+//============ button task =============
+//======================================
+// struct with variables passed to task from main
+typedef struct task_button_parameters_t
+{
+    controlledArmchair *control;
+    evaluatedJoystick *joystick;
+    QueueHandle_t encoderQueue;
+    controlledMotor *motorLeft;
+    controlledMotor *motorRight;
+    buzzer_t *buzzer;
+} task_button_parameters_t;
+
+//task that handles the button interface/commands
+void task_button( void * task_button_parameters );

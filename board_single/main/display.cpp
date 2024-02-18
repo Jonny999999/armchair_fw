@@ -204,7 +204,7 @@ float getBatteryPercent(){
 //-----------------------
 //shows overview on entire display:
 //percentage, voltage, current, mode, rpm, speed
-void showScreen1()
+void showScreen1(display_task_parameters_t * objects)
 {
 	//-- battery percentage --
 	// TODO update when no load (currentsensors = ~0A) only
@@ -214,24 +214,24 @@ void showScreen1()
 	//-- voltage and current --
 	displayTextLine(&dev, 3, false, false, "%04.1fV %04.1f:%04.1fA",
 				   getBatteryVoltage(),
-				   fabs(motorLeft.getCurrentA()),
-				   fabs(motorRight.getCurrentA()));
+				   fabs(objects->motorLeft->getCurrentA()),
+				   fabs(objects->motorRight->getCurrentA()));
 
 	//-- control state --
 	//print large line
-	displayTextLine(&dev, 4, true, false, "%s ", control.getCurrentModeStr());
+	displayTextLine(&dev, 4, true, false, "%s ", objects->control->getCurrentModeStr());
 
 	//-- speed and RPM --
 	displayTextLine(&dev, 7, false, false, "%3.1fkm/h %03.0f:%03.0fR",
-				   fabs((speedLeft.getKmph() + speedRight.getKmph()) / 2),
-				   speedLeft.getRpm(),
-				   speedRight.getRpm());
+				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
+				   objects->speedLeft->getRpm(),
+				   objects->speedRight->getRpm());
 
 	// debug speed sensors
 	ESP_LOGD(TAG, "%3.1fkm/h %03.0f:%03.0fR",
-				   fabs((speedLeft.getKmph() + speedRight.getKmph()) / 2),
-				   speedLeft.getRpm(),
-				   speedRight.getRpm());
+				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
+				   objects->speedLeft->getRpm(),
+				   objects->speedRight->getRpm());
 }
 
 
@@ -264,6 +264,9 @@ void showStartupMsg(){
 
 void display_task(void *pvParameters)
 {
+	//get struct with pointers to all needed global objects from task parameter
+	display_task_parameters_t *objects = (display_task_parameters_t *)pvParameters;
+
 	// initialize display
 	display_init();
 	// TODO check if successfully initialized
@@ -276,14 +279,14 @@ void display_task(void *pvParameters)
 	// repeatedly update display with content
 	while (1)
 	{
-		if (control.getCurrentMode() == controlMode_t::MENU)
+		if (objects->control->getCurrentMode() == controlMode_t::MENU)
 		{
 			//uses encoder events to control menu and updates display
-			handleMenu(&dev);
+			handleMenu(objects, &dev);
 		}
 		else //show status screen in any other mode
 		{
-			showScreen1();
+			showScreen1(objects);
 			vTaskDelay(STATUS_SCREEN_UPDATE_INTERVAL / portTICK_PERIOD_MS);
 		}
 		// TODO add pages and menus

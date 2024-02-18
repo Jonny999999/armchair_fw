@@ -30,12 +30,14 @@ static int value = 0;
 //#########################
 //#### center Joystick ####
 //#########################
-void item_centerJoystick_action(int value, SSD1306_t * display){
+void item_centerJoystick_action(display_task_parameters_t * objects, SSD1306_t * display, int value){
     if (!value) return;
     ESP_LOGW(TAG, "defining joystick center");
-    joystick.defineCenter();
+    (*objects).joystick->defineCenter();
+    //objects->joystick->defineCenter();
+    //joystick->defineCenter();
 }
-int item_centerJoystick_value(){
+int item_centerJoystick_value(display_task_parameters_t * objects){
     return 1;
 }
 
@@ -59,7 +61,7 @@ menuItem_t item_centerJoystick = {
 //#### debug Joystick ####
 //########################
 //continously show/update joystick data on display
-void item_debugJoystick_action(int value, SSD1306_t * display)
+void item_debugJoystick_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
     //--- variables ---
     bool running = true;
@@ -77,10 +79,10 @@ void item_debugJoystick_action(int value, SSD1306_t * display)
 
     //-- show/update values --
     // stop when button pressed or control state changes (timeouts to IDLE)
-    while (running && control.getCurrentMode() == controlMode_t::MENU)
+    while (running && objects->control->getCurrentMode() == controlMode_t::MENU)
     {
         // repeatedly print all joystick data
-        joystickData_t data = joystick.getData();
+        joystickData_t data = objects->joystick->getData();
         displayTextLine(display, 1, false, false, "x = %.3f     ", data.x);
         displayTextLine(display, 2, false, false, "y = %.3f     ", data.y);
         displayTextLine(display, 3, false, false, "radius = %.3f", data.radius);
@@ -88,7 +90,7 @@ void item_debugJoystick_action(int value, SSD1306_t * display)
         displayTextLine(display, 5, false, false, "pos=%-12s ", joystickPosStr[(int)data.position]);
 
         // exit when button pressed
-        if (xQueueReceive(encoderQueue, &event, 20 / portTICK_PERIOD_MS))
+        if (xQueueReceive(objects->encoderQueue, &event, 20 / portTICK_PERIOD_MS))
         {
             switch (event.type)
             {
@@ -105,7 +107,7 @@ void item_debugJoystick_action(int value, SSD1306_t * display)
     }
 }
 
-int item_debugJoystick_value(){
+int item_debugJoystick_value(display_task_parameters_t * objects){
     return 1;
 }
 
@@ -128,12 +130,12 @@ menuItem_t item_debugJoystick = {
 //########################
 //##### set max duty #####
 //########################
-void maxDuty_action(int value, SSD1306_t * display)
+void maxDuty_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
     //TODO actually store the value
     ESP_LOGW(TAG, "set max duty to %d", value);
 }
-int maxDuty_currentValue()
+int maxDuty_currentValue(display_task_parameters_t * objects)
 {
     //TODO get real current value
     return 84;
@@ -156,14 +158,14 @@ menuItem_t item_maxDuty = {
 //######################
 //##### accelLimit #####
 //######################
-void item_accelLimit_action(int value, SSD1306_t * display)
+void item_accelLimit_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
-    motorLeft.setFade(fadeType_t::ACCEL, (uint32_t)value);
-    motorRight.setFade(fadeType_t::ACCEL, (uint32_t)value);
+    objects->motorLeft->setFade(fadeType_t::ACCEL, (uint32_t)value);
+    objects->motorRight->setFade(fadeType_t::ACCEL, (uint32_t)value);
 }
-int item_accelLimit_value()
+int item_accelLimit_value(display_task_parameters_t * objects)
 {
-    return motorLeft.getFade(fadeType_t::ACCEL);
+    return objects->motorLeft->getFade(fadeType_t::ACCEL);
 }
 menuItem_t item_accelLimit = {
     item_accelLimit_action, // function action
@@ -183,14 +185,14 @@ menuItem_t item_accelLimit = {
 // ######################
 // ##### decelLimit #####
 // ######################
-void item_decelLimit_action(int value, SSD1306_t * display)
+void item_decelLimit_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
-    motorLeft.setFade(fadeType_t::DECEL, (uint32_t)value);
-    motorRight.setFade(fadeType_t::DECEL, (uint32_t)value);
+    objects->motorLeft->setFade(fadeType_t::DECEL, (uint32_t)value);
+    objects->motorRight->setFade(fadeType_t::DECEL, (uint32_t)value);
 }
-int item_decelLimit_value()
+int item_decelLimit_value(display_task_parameters_t * objects)
 {
-    return motorLeft.getFade(fadeType_t::DECEL);
+    return objects->motorLeft->getFade(fadeType_t::DECEL);
 }
 menuItem_t item_decelLimit = {
     item_decelLimit_action, // function action
@@ -210,11 +212,11 @@ menuItem_t item_decelLimit = {
 //#####################
 //###### example ######
 //#####################
-void item_example_action(int value, SSD1306_t * display)
+void item_example_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
     return;
 }
-int item_example_value(){
+int item_example_value(display_task_parameters_t * objects){
     return 53;
 }
 menuItem_t item_example = {
@@ -342,7 +344,7 @@ void showValueSelect(SSD1306_t *display, int selectedItem)
 //function is repeatedly called by display task when in menu state
 #define QUEUE_TIMEOUT 3000 //timeout no encoder event - to handle timeout and not block the display loop
 #define MENU_TIMEOUT 60000 //inactivity timeout (switch to IDLE mode)
-void handleMenu(SSD1306_t *display)
+void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
 {
     static uint32_t lastActivity = 0;
     static int selectedItem = 0;
@@ -358,7 +360,7 @@ void handleMenu(SSD1306_t *display)
         // update display
         showItemList(display, selectedItem); // shows list of items with currently selected one on display
         // wait for encoder event
-        if (xQueueReceive(encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
+        if (xQueueReceive(objects->encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
         {
             lastActivity = esp_log_timestamp();
             switch (event.type)
@@ -387,7 +389,7 @@ void handleMenu(SSD1306_t *display)
                 // change state (menu to set value)
                 menuState = SET_VALUE;
                 // get currently configured value
-                value = menuItems[selectedItem].currentValue();
+                value = menuItems[selectedItem].currentValue(objects);
                 // clear display
                 ssd1306_clear_screen(display, false);
                 break;
@@ -395,7 +397,7 @@ void handleMenu(SSD1306_t *display)
             //exit menu mode
             case RE_ET_BTN_LONG_PRESSED:
                 //change to previous mode (e.g. JOYSTICK)
-                control.toggleMode(controlMode_t::MENU); //currently already in MENU -> changes to previous mode
+                objects->control->toggleMode(controlMode_t::MENU); //currently already in MENU -> changes to previous mode
                 ssd1306_clear_screen(display, false);
                 break;
 
@@ -413,7 +415,7 @@ void handleMenu(SSD1306_t *display)
         // wait for encoder event
         showValueSelect(display, selectedItem);
 
-        if (xQueueReceive(encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
+        if (xQueueReceive(objects->encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
         {
             lastActivity = esp_log_timestamp();
             switch (event.type)
@@ -434,7 +436,7 @@ void handleMenu(SSD1306_t *display)
             case RE_ET_BTN_CLICKED:
                 //-- apply value --
                 ESP_LOGI(TAG, "Button pressed - running action function with value=%d for item '%s'", value, menuItems[selectedItem].title);
-                menuItems[selectedItem].action(value, display);
+                menuItems[selectedItem].action(objects, display, value);
                 menuState = MAIN_MENU;
                 break;
             case RE_ET_BTN_PRESSED:
@@ -459,7 +461,7 @@ void handleMenu(SSD1306_t *display)
         menuState = MAIN_MENU;
         ssd1306_clear_screen(display, false);
         // change control mode
-        control.changeMode(controlMode_t::IDLE);
+        objects->control->changeMode(controlMode_t::IDLE);
         return;
     }
 }

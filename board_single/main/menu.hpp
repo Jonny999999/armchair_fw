@@ -13,9 +13,10 @@ typedef enum {
 
 //--- menuItem_t ---
 // struct describes one menu element (all defined in menu.cpp)
-typedef struct {
-    void (*action)(int value, SSD1306_t * display);   // pointer to function run when confirmed
-    int (*currentValue)(); // pointer to function to get currently configured value
+typedef struct
+{
+    void (*action)(display_task_parameters_t * objects, SSD1306_t * display, int value);   // pointer to function run when confirmed
+    int (*currentValue)(display_task_parameters_t * objects); // pointer to function to get currently configured value
     int valueMin;          // min allowed value
     int valueMax;          // max allowed value
     int valueIncrement;    // amount changed at one encoder tick (+/-)
@@ -28,5 +29,4 @@ typedef struct {
     const char line7[17];  // below value
 } menuItem_t;
 
-
-void handleMenu(SSD1306_t * display);
+void handleMenu(display_task_parameters_t * objects, SSD1306_t *display);

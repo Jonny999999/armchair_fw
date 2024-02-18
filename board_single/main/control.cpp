@@ -26,14 +26,17 @@ const char* controlModeStr[9] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", 
 //-----------------------------
 //-------- constructor --------
 //-----------------------------
-controlledArmchair::controlledArmchair (
-        control_config_t config_f,
-        buzzer_t * buzzer_f,
-        controlledMotor* motorLeft_f,
-        controlledMotor* motorRight_f,
-        evaluatedJoystick* joystick_f,
-        httpJoystick* httpJoystick_f
-        ){
+controlledArmchair::controlledArmchair(
+    control_config_t config_f,
+    buzzer_t *buzzer_f,
+    controlledMotor *motorLeft_f,
+    controlledMotor *motorRight_f,
+    evaluatedJoystick *joystick_f,
+    httpJoystick *httpJoystick_f,
+    automatedArmchair_c *automatedArmchair_f,
+    cControlledRest *legRest_f,
+    cControlledRest *backRest_f)
+{
 
     //copy configuration
     config = config_f;
@@ -43,13 +46,28 @@ controlledArmchair::controlledArmchair (
     motorRight = motorRight_f;
     joystick_l = joystick_f,
     httpJoystickMain_l = httpJoystick_f;
+    automatedArmchair = automatedArmchair_f;
+    legRest = legRest_f;
+    backRest = backRest_f;
     //set default mode from config
     modePrevious = config.defaultMode;
     
     //TODO declare / configure controlled motors here instead of config (unnecessary that button object is globally available - only used here)?
 }
 
-
+//=======================================
+//============ control task =============
+//=======================================
+//task that controls the armchair modes and initiates commands generation and applies them to driver
+//parameter: pointer to controlledArmchair object 
+void task_control( void * pvParameters ){
+    //control_task_parameters_t * objects = (control_task_parameters_t *)pvParameters;
+    controlledArmchair * control = (controlledArmchair *)pvParameters;
+    ESP_LOGI(TAG, "Initializing controlledArmchair and starting handle loop");
+    //start handle loop (control object declared in config.hpp)
+    //objects->control->startHandleLoop();
+    control->startHandleLoop();
+}
 
 //----------------------------------
 //---------- Handle loop -----------
@@ -70,7 +88,7 @@ void controlledArmchair::startHandleLoop() {
                 commands = cmds_bothMotorsIdle;
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
-                vTaskDelay(200 / portTICK_PERIOD_MS);
+                vTaskDelay(300 / portTICK_PERIOD_MS);
 #ifdef JOYSTICK_LOG_IN_IDLE
 				//get joystick data here (without using it)
 				//since loglevel is DEBUG, calculateion details is output
@@ -132,7 +150,7 @@ void controlledArmchair::startHandleLoop() {
             case controlMode_t::AUTO:
                 vTaskDelay(20 / portTICK_PERIOD_MS);
                //generate commands
-               commands = armchair.generateCommands(&instruction);
+               commands = automatedArmchair->generateCommands(&instruction);
                 //--- apply commands to motors ---
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
                motorRight->setTarget(commands.right.state, commands.right.duty); 
@@ -179,7 +197,7 @@ void controlledArmchair::startHandleLoop() {
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 //--- control armchair position with joystick input ---
-                controlChairAdjustment(joystick_l->getData(), &legRest, &backRest);
+                controlChairAdjustment(joystick_l->getData(), legRest, backRest);
                 break;
 
 
@@ -359,21 +377,6 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             buzzer->beep(1,200,100);
 			break;
 
-		case controlMode_t::HTTP:
-			ESP_LOGW(TAG, "switching from http mode -> disabling http and wifi");
-			//stop http server
-			ESP_LOGI(TAG, "disabling http server...");
-			http_stop_server();
-
-			//FIXME: make wifi function work here - currently starting wifi at startup (see notes main.cpp)
-            //stop wifi
-            //TODO: decide whether ap or client is currently used - which has to be disabled?
-            //ESP_LOGI(TAG, "deinit wifi...");
-            //wifi_deinit_client();
-            //wifi_deinit_ap();
-            ESP_LOGI(TAG, "done stopping http mode");
-            break;
-
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading, reset frozen input");
             //TODO: fix issue when downfading was disabled before switching to massage mode - currently it gets enabled again here...
@@ -401,8 +404,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
         case controlMode_t::ADJUST_CHAIR:
             ESP_LOGW(TAG, "switching from ADJUST_CHAIR mode => turning off adjustment motors...");
             //prevent motors from being always on in case of mode switch while joystick is not in center thus motors currently moving
-            legRest.setState(REST_OFF);
-            backRest.setState(REST_OFF);
+            legRest->setState(REST_OFF);
+            backRest->setState(REST_OFF);
             break;
 
     }
@@ -425,26 +428,6 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
         case controlMode_t::ADJUST_CHAIR:
             ESP_LOGW(TAG, "switching to ADJUST_CHAIR mode -> beep");
             buzzer->beep(4,200,100);
-            break;
-
-        case controlMode_t::HTTP:
-            ESP_LOGW(TAG, "switching to http mode -> enabling http and wifi");
-            //start wifi
-            //TODO: decide wether ap or client should be started
-            ESP_LOGI(TAG, "init wifi...");
-
-            //FIXME: make wifi function work here - currently starting wifi at startup (see notes main.cpp)
-            //wifi_init_client();
-            //wifi_init_ap();
-
-            //wait for wifi
-            //ESP_LOGI(TAG, "waiting for wifi...");
-            //vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-            //start http server
-            ESP_LOGI(TAG, "init http server...");
-            http_init_server();
-            ESP_LOGI(TAG, "done initializing http mode");
             break;
 
         case controlMode_t::MASSAGE:

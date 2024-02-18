@@ -10,28 +10,43 @@ extern "C"
 #include "button.hpp"
 #include "encoder.hpp"
 
+// tag for logging
+static const char *TAG = "button";
 
-
-//tag for logging
-static const char * TAG = "button";
-
-
+//======================================
+//============ button task =============
+//======================================
+// task that handles the button interface/commands
+void task_button(void *task_button_parameters)
+{
+    task_button_parameters_t *objects = (task_button_parameters_t *)task_button_parameters;
+    ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
+    // create button instance
+    buttonCommands commandButton(objects->control, objects->joystick, objects->encoderQueue, objects->motorLeft, objects->motorRight, objects->buzzer);
+    // start handle loop
+    commandButton.startHandleLoop();
+}
 
 //-----------------------------
 //-------- constructor --------
 //-----------------------------
-buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, evaluatedJoystick * joystick_f, controlledArmchair * control_f, buzzer_t * buzzer_f, controlledMotor * motorLeft_f, controlledMotor * motorRight_f){
-    //copy object pointers
-    button = button_f;
-    joystick = joystick_f;
+buttonCommands::buttonCommands(
+    controlledArmchair *control_f,
+    evaluatedJoystick *joystick_f,
+    QueueHandle_t encoderQueue_f,
+    controlledMotor *motorLeft_f,
+    controlledMotor *motorRight_f,
+    buzzer_t *buzzer_f)
+{
+    // copy object pointers
     control = control_f;
-    buzzer = buzzer_f;
+    joystick = joystick_f;
+    encoderQueue = encoderQueue_f;
     motorLeft = motorLeft_f;
     motorRight = motorRight_f;
-    //TODO declare / configure evaluatedSwitch here instead of config (unnecessary that button object is globally available - only used here)?
+    buzzer = buzzer_f;
+    // TODO declare / configure evaluatedSwitch here instead of config (unnecessary that button object is globally available - only used here)?
 }
-
-
 
 //----------------------------
 //--------- action -----------
@@ -40,7 +55,7 @@ buttonCommands::buttonCommands(gpio_evaluatedSwitch * button_f, evaluatedJoystic
 void buttonCommands::action (uint8_t count, bool lastPressLong){
     //--- variables ---
     bool decelEnabled; //for different beeping when toggling
-    commandSimple_t cmds[8]; //array for commands for automatedArmchair
+    commandSimple_t cmds[8]; //array for commands for automatedArmchair_c
 
     //--- get joystick position ---
     //in case joystick is used for additional cases:

@@ -13,7 +13,18 @@ extern "C"
 //===== init http server =====
 //============================
 //function that initializes http server and configures available urls
-void http_init_server();
+//parameter: provide pointer to function that handles incomming joystick data (for configuring the url)
+//TODO add handle functions to future additional endpoints/urls here too
+typedef esp_err_t (*http_handler_t)(httpd_req_t *req);
+void http_init_server(http_handler_t onJoystickUrl);
+
+//example with lambda function to pass method of a class instance:
+//esp_err_t (httpJoystick::*pointerToReceiveFunc)(httpd_req_t *req) = &httpJoystick::receiveHttpData;
+//esp_err_t on_joystick_url(httpd_req_t *req){
+//    //run pointer to receiveHttpData function of httpJoystickMain instance
+//    return (httpJoystickMain->*pointerToReceiveFunc)(req);
+//}
+//http_init_server(on_joystick_url);
 
 
 //==============================
@@ -27,7 +38,7 @@ void start_mdns_service();
 //===== stop http server =====
 //============================
 //function that destroys the http server
-void http_stop_server();
+void http_stop_server(httpd_handle_t * httpServer);
 
 
 //==============================
@@ -47,7 +58,7 @@ typedef struct httpJoystick_config_t {
 class httpJoystick{
     public:
         //--- constructor ---
-        httpJoystick( httpJoystick_config_t config_f );
+        httpJoystick(httpJoystick_config_t config_f);
 
         //--- functions ---
         joystickData_t getData(); //wait for and return joystick data from queue, if timeout return CENTER
@@ -68,10 +79,3 @@ class httpJoystick{
             .angle = 0
         };
 };
-
-
-
-//===== global object =====
-//create global instance of httpJoystick
-//note: is constructed/configured in config.cpp
-extern httpJoystick httpJoystickMain;

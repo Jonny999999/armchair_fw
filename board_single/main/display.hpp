@@ -13,7 +13,22 @@ extern "C" {
 #include "font8x8_basic.h"
 }
 
-#include "config.hpp"
+
+#include "joystick.hpp"
+#include "control.hpp"
+#include "speedsensor.hpp"
+
+// struct with variables passed to task from main()
+typedef struct display_task_parameters_t {
+    controlledArmchair * control;
+    evaluatedJoystick * joystick;
+    QueueHandle_t encoderQueue;
+    controlledMotor * motorLeft;
+    controlledMotor * motorRight;
+    speedSensor * speedLeft;
+    speedSensor * speedRight;
+    buzzer_t *buzzer;
+} display_task_parameters_t;
 
 
 //task that inititialized the display, displays welcome message 
