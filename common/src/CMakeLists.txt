@@ -13,6 +13,7 @@ idf_component_register(
         "chairAdjust.cpp"
     INCLUDE_DIRS 
         "."
+		"../include"
 		PRIV_REQUIRES nvs_flash mdns json spiffs esp_http_server
     )
 
