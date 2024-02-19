@@ -31,6 +31,7 @@ extern "C"
 #include "display.hpp"
 #include "encoder.hpp"
 
+#include <new>
 
 //only extends this file (no library):
 //outsourced all configuration related structures
@@ -69,11 +70,11 @@ cControlledRest *backRest;
 //-> makes it possible to easily use different motor drivers
 motorSetCommandFunc_t setLeftFunc = [&sabertoothDriver](motorCommand_t cmd)
 {
-    sabertoothDriver->setLeft(cmd);
+    sabertoothDriver->setLeft(cmd); //<= note: still using pointer to method in here (but stored in STACK)
 };
 motorSetCommandFunc_t setRightFunc = [&sabertoothDriver](motorCommand_t cmd)
 {
-    sabertoothDriver->setRight(cmd);
+    sabertoothDriver->setRight(cmd); //<= note: still using pointer to method in here (but stored in STACK)
 };
 
 //--- lambda function http-joystick ---
@@ -163,9 +164,9 @@ void createObjects()
     // create sabertooth motor driver instance
     // sabertooth2x60a sabertoothDriver(sabertoothConfig);
     // with configuration above
-    sabertoothDriver = new sabertooth2x60a(sabertoothConfig);
+	//sabertoothDriver = new sabertooth2x60a(sabertoothConfig);
 
-    // create controlled motor instances (motorctl.hpp)
+	// create controlled motor instances (motorctl.hpp)
     // with configurations above
     motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft);
     motorRight = new controlledMotor(setRightFunc, configMotorControlRight);
@@ -197,6 +198,7 @@ void createObjects()
     legRest = new cControlledRest(GPIO_NUM_4, GPIO_NUM_16, "legRest");
     backRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, "backRest");
 }
+    //sabertooth2x60a sabertoothDriver(sabertoothConfig);
 
 
 
@@ -236,8 +238,11 @@ extern "C" void app_main(void) {
 	//--- create all objects ---
 	ESP_LOGW(TAG, "===== CREATING SHARED OBJECTS =====");
 
-	//create all class instances used below
-	//see 'createObjects.hpp'
+	//initialize sabertooth object in STACK (due to performance issues in heap)
+	sabertoothDriver = static_cast<sabertooth2x60a*>(alloca(sizeof(sabertooth2x60a)));
+	new (sabertoothDriver) sabertooth2x60a(sabertoothConfig);
+
+	//create all class instances used below in HEAP
 	createObjects();
 
 
