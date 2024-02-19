@@ -45,7 +45,8 @@ extern "C"
 controlledMotor *motorLeft;
 controlledMotor *motorRight;
 
-sabertooth2x60a *sabertoothDriver;
+//create sabertooth motor driver instance (in stack, direct usw, without pointer)
+sabertooth2x60a sabertoothDriver(sabertoothConfig);
 
 evaluatedJoystick *joystick;
 
@@ -69,11 +70,11 @@ cControlledRest *backRest;
 //-> makes it possible to easily use different motor drivers
 motorSetCommandFunc_t setLeftFunc = [&sabertoothDriver](motorCommand_t cmd)
 {
-    sabertoothDriver->setLeft(cmd);
+    sabertoothDriver.setLeft(cmd);
 };
 motorSetCommandFunc_t setRightFunc = [&sabertoothDriver](motorCommand_t cmd)
 {
-    sabertoothDriver->setRight(cmd);
+    sabertoothDriver.setRight(cmd);
 };
 
 //--- lambda function http-joystick ---
@@ -160,11 +161,6 @@ void init_spiffs(){
 
 void createObjects()
 {
-    // create sabertooth motor driver instance
-    // sabertooth2x60a sabertoothDriver(sabertoothConfig);
-    // with configuration above
-    sabertoothDriver = new sabertooth2x60a(sabertoothConfig);
-
     // create controlled motor instances (motorctl.hpp)
     // with configurations above
     motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft);
