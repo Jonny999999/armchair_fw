@@ -12,6 +12,7 @@ extern "C"
 //====== struct/type  declarations ======
 //=======================================
 //global structs and types that need to be available for all boards
+//this file is necessary to prevent dependency loop between motordrivers.hpp and motorctl.hpp since 
 
 
 //===============================

@@ -19,7 +19,7 @@ void task_motorctl( void * task_motorctl_parameters ){
     while(1){
     	objects->motorRight->handle();
     	objects->motorLeft->handle();
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(15 / portTICK_PERIOD_MS);
     }
 }
 

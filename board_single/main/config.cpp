@@ -153,7 +153,7 @@ joystick_config_t configJoystick = {
 //----------------------------
 //--- configure fan contol ---
 //----------------------------
-fan_config_t configCooling = {
+fan_config_t configFans = {
     .gpio_fan = GPIO_NUM_13,
     .dutyThreshold = 40,
     .minOnMs = 1500,

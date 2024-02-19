@@ -2,6 +2,19 @@
 
 static const char *TAG_BUZZER = "buzzer";
 
+//======================================
+//============ buzzer task =============
+//======================================
+// Task that repeatedly handles the buzzer object (process Queued beeps)
+void task_buzzer(void * param_buzzerObject){
+    ESP_LOGI("task_buzzer", "Start of buzzer task...");
+    buzzer_t * buzzer = (buzzer_t *)param_buzzerObject;
+        //run function that waits for a beep events to arrive in the queue
+        //and processes them
+        buzzer->processQueue();
+}
+
+
 //============================
 //========== init ============
 //============================

@@ -15,12 +15,13 @@ extern "C"
 #include "wifi.h"
 }
 
+#include <new>
+
 //custom C++ files
 //folder common
 #include "uart_common.hpp"
 #include "motordrivers.hpp"
 #include "http.hpp"
-#include "types.hpp"
 #include "speedsensor.hpp"
 #include "motorctl.hpp"
 
@@ -30,8 +31,6 @@ extern "C"
 #include "button.hpp"
 #include "display.hpp"
 #include "encoder.hpp"
-
-#include <new>
 
 //only extends this file (no library):
 //outsourced all configuration related structures
@@ -89,40 +88,9 @@ esp_err_t on_joystick_url(httpd_req_t *req)
     return (httpJoystickMain->*pointerToReceiveFunc)(req);
 }
 
-//tag for logging
+//-- tag for logging --
 static const char * TAG = "main";
 
-
-
-//======================================
-//============ buzzer task =============
-//======================================
-//TODO: move the task creation to buzzer class (buzzer.cpp)
-//e.g. only have function buzzer.createTask() in app_main
-void task_buzzer( void * pvParameters ){
-    ESP_LOGI("task_buzzer", "Start of buzzer task...");
-        //run function that waits for a beep events to arrive in the queue
-        //and processes them
-        buzzer->processQueue();
-}
-
-
-
-//=======================================
-//============== fan task ===============
-//=======================================
-//TODO: move this definition to fan.cpp
-//task that controlls fans for cooling the drivers
-void task_fans( void * pvParameters ){
-    ESP_LOGI(TAG, "Initializing fans and starting fan handle loop");
-    //create fan instances with config defined in config.cpp
-    controlledFan fan(configCooling, motorLeft, motorRight);
-    //repeatedly run fan handle function in a slow loop
-    while(1){
-        fan.handle();
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
-}
 
 
 
@@ -146,7 +114,6 @@ void init_spiffs(){
     ESP_LOGI(TAG, "SPIFFS: total %d, used %d", total, used);
     esp_vfs_spiffs_unregister(NULL);
 }
-
 
 
 
@@ -198,7 +165,6 @@ void createObjects()
     legRest = new cControlledRest(GPIO_NUM_4, GPIO_NUM_16, "legRest");
     backRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, "backRest");
 }
-    //sabertooth2x60a sabertoothDriver(sabertoothConfig);
 
 
 
@@ -247,7 +213,6 @@ extern "C" void app_main(void) {
 
 
 
-#ifndef ENCODER_TEST
 	//--- create tasks ---
 	ESP_LOGW(TAG, "===== CREATING TASKS =====");
 
@@ -261,7 +226,9 @@ extern "C" void app_main(void) {
 	//------------------------------
 	//--- create task for buzzer ---
 	//------------------------------
-	xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
+	//task that processes queued beeps
+	//note: pointer to shard object 'buzzer' is passed as task parameter:
+	xTaskCreate(&task_buzzer, "task_buzzer", 2048, buzzer, 2, NULL);
 
 	//-------------------------------
 	//--- create task for control ---
@@ -275,23 +242,23 @@ extern "C" void app_main(void) {
 	//------------------------------
 	//task that handles button/encoder events in any mode except 'MENU' (e.g. switch modes by pressing certain count)
 	task_button_parameters_t button_param = {control, joystick, encoderQueue, motorLeft, motorRight, buzzer};
-	xTaskCreate(&task_button, "task_button", 4096, &button_param, 4, NULL);
+	xTaskCreate(&task_button, "task_button", 4096, &button_param, 3, NULL);
 
 	//-----------------------------------
 	//--- create task for fan control ---
 	//-----------------------------------
 	//task that controls cooling fans of the motor driver
-	xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
+	task_fans_parameters_t fans_param = {configFans, motorLeft, motorRight};
+	xTaskCreate(&task_fans, "task_fans", 2048, &fans_param, 1, NULL);
 
 	//-----------------------------------
 	//----- create task for display -----
 	//-----------------------------------
 	////task that handles the display (show stats, handle menu in 'MENU' mode)
 	display_task_parameters_t display_param = {control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer};
-	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 1, NULL);
+	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 3, NULL);
 
 
-#endif
 
 	//--- startup finished ---
 	ESP_LOGW(TAG, "===== STARTUP FINISHED =====");
@@ -315,7 +282,9 @@ extern "C" void app_main(void) {
 	//--- main loop ---
 	//does nothing except for testing things
 	while(1){
-		vTaskDelay(5000 / portTICK_PERIOD_MS);
+		vTaskDelay(portMAX_DELAY);
+		//vTaskDelay(5000 / portTICK_PERIOD_MS);
+
 		//---------------------------------
 		//-------- TESTING section --------
 		//---------------------------------

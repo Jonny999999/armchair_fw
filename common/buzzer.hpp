@@ -53,4 +53,9 @@ class buzzer_t {
 };
 
 
-
+//======================================
+//============ buzzer task =============
+//======================================
+// Task that repeatedly handles the buzzer object (process Queued beeps)
+// Note: pointer to globally initialized buzzer object has to be passed as task-parameter
+void task_buzzer(void * param_buzzerObject);
