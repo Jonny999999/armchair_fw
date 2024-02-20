@@ -45,7 +45,11 @@ extern "C"
 controlledMotor *motorLeft;
 controlledMotor *motorRight;
 
-sabertooth2x60a *sabertoothDriver;
+// TODO initialize driver in createOjects like everything else
+// (as in 6e9b3d96d96947c53188be1dec421bd7ff87478e) 
+// issue with laggy encoder wenn calling methods via pointer though
+//sabertooth2x60a *sabertoothDriver;
+sabertooth2x60a sabertoothDriver(sabertoothConfig);
 
 evaluatedJoystick *joystick;
 
@@ -69,11 +73,12 @@ cControlledRest *backRest;
 //-> makes it possible to easily use different motor drivers
 motorSetCommandFunc_t setLeftFunc = [&sabertoothDriver](motorCommand_t cmd)
 {
-	sabertoothDriver->setLeft(cmd); //<= note: still using pointer to method in here (but stored in STACK)
+	//TODO why encoder lag when call via pointer?
+    sabertoothDriver.setLeft(cmd);
 };
 motorSetCommandFunc_t setRightFunc = [&sabertoothDriver](motorCommand_t cmd)
 {
-    sabertoothDriver->setRight(cmd); //<= note: still using pointer to method in here (but stored in STACK)
+    sabertoothDriver.setRight(cmd);
 };
 
 //--- lambda function http-joystick ---
