@@ -41,6 +41,7 @@ typedef struct motorCommands_t {
 
 //struct with all config parameters for a motor regarding ramp and current limit
 typedef struct motorctl_config_t {
+    char * name;    //name for unique nvs storage-key prefix and logging
     uint32_t msFadeAccel; //acceleration of the motor (ms it takes from 0% to 100%)
     uint32_t msFadeDecel; //deceleration of the motor (ms it takes from 100% to 0%)
 	bool currentLimitEnabled;

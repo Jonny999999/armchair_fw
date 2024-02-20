@@ -4,6 +4,7 @@ extern "C"
 #include <esp_system.h>
 #include <esp_event.h>
 #include <nvs_flash.h>
+#include "nvs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -93,8 +94,11 @@ esp_err_t on_joystick_url(httpd_req_t *req)
     return (httpJoystickMain->*pointerToReceiveFunc)(req);
 }
 
-//-- tag for logging --
+//--- tag for logging ---
 static const char * TAG = "main";
+
+//-- handle passed to tasks for accessing nvs --
+nvs_handle_t nvsHandle;
 
 
 
@@ -140,8 +144,8 @@ void createObjects()
 
 	// create controlled motor instances (motorctl.hpp)
     // with configurations from config.cpp
-    motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft);
-    motorRight = new controlledMotor(setRightFunc, configMotorControlRight);
+    motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft, &nvsHandle);
+    motorRight = new controlledMotor(setRightFunc, configMotorControlRight, &nvsHandle);
 
     // create speedsensor instances
     // with configurations from config.cpp
@@ -206,6 +210,22 @@ extern "C" void app_main(void) {
 
 	//--- initialize encoder ---
 	const QueueHandle_t encoderQueue = encoder_init(&encoder_config);
+
+	//--- initialize nvs-flash ---  (for persistant config values)
+	ESP_LOGW(TAG, "initializing nvs-flash...");
+	esp_err_t err = nvs_flash_init();
+	if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+	{
+		ESP_LOGE(TAG, "NVS truncated -> deleting flash");
+		// Retry nvs_flash_init
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		err = nvs_flash_init();
+	}
+	ESP_ERROR_CHECK(err);
+	//--- open nvs-flash ---
+	err = nvs_open("storage", NVS_READWRITE, &nvsHandle);
+	if (err != ESP_OK)
+		ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
 
 	printf("\n");
 
