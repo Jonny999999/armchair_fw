@@ -351,7 +351,7 @@ void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew){
             break;
         case fadeType_t::DECEL:
             ESP_LOGW(TAG, "[%s] changed fade-down time from %d to %d",config.name, msFadeDecel, msFadeNew);
-            msFadeDecel = msFadeNew;
+            // write new value to nvs and update the variable
             writeDecelDuration(msFadeNew);
             break;
     }
@@ -474,6 +474,11 @@ void controlledMotor::loadDecelDuration(void)
 // write provided value to nvs to be persistent and update the local variable msFadeAccel
 void controlledMotor::writeAccelDuration(uint32_t newValue)
 {
+    // check if unchanged
+    if(msFadeAccel == newValue){
+        ESP_LOGW(TAG, "value unchanged at %d, not writing to nvs", newValue);
+        return;
+    }
     // generate nvs storage key
     char key[15];
     snprintf(key, 15, "m-%s-accel", config.name);
@@ -498,6 +503,11 @@ void controlledMotor::writeAccelDuration(uint32_t newValue)
 // TODO: reduce duplicate code
 void controlledMotor::writeDecelDuration(uint32_t newValue)
 {
+    // check if unchanged
+    if(msFadeDecel == newValue){
+        ESP_LOGW(TAG, "value unchanged at %d, not writing to nvs", newValue);
+        return;
+    }
     // generate nvs storage key
     char key[15];
     snprintf(key, 15, "m-%s-decel", config.name);
