@@ -64,8 +64,8 @@ class controlledMotor {
         float currentMax;
         float currentNow;
 
-        float dutyTarget;
-        float dutyNow;
+        float dutyTarget = 0;
+        float dutyNow = 0;
         float dutyIncrementAccel;
         float dutyIncrementDecel;
         float dutyDelta;
@@ -74,7 +74,7 @@ class controlledMotor {
         uint32_t msFadeDecel;
 
         uint32_t ramp;
-        int64_t timestampLastRunUs;
+        int64_t timestampLastRunUs = 0;
 
 		bool deadTimeWaiting = false;
 		uint32_t timestampsModeLastActive[4] = {};
