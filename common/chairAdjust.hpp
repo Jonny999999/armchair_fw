@@ -17,12 +17,12 @@ extern const char* restStateStr[];
 //class that controls 2 relays powering a motor that moves a rest of the armchair up or down
 //2 instances will be created one for back and one for leg rest
 class cControlledRest {
-    public:
-    cControlledRest(gpio_num_t gpio_up, gpio_num_t gpio_down, const char * name);
+public:
+    cControlledRest(gpio_num_t gpio_up, gpio_num_t gpio_down, const char *name);
     void setState(restState_t targetState);
     void stop();
 
-    private:
+private:
     void init();
 
     char name[32];

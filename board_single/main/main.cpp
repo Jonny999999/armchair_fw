@@ -134,12 +134,12 @@ void createObjects()
 	//sabertoothDriver = new sabertooth2x60a(sabertoothConfig);
 
 	// create controlled motor instances (motorctl.hpp)
-    // with configurations above
+    // with configurations from config.cpp
     motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft);
     motorRight = new controlledMotor(setRightFunc, configMotorControlRight);
 
     // create speedsensor instances
-    // with configurations above
+    // with configurations from config.cpp
     speedLeft = new speedSensor(speedLeft_config);
     speedRight = new speedSensor(speedRight_config);
 
@@ -153,17 +153,18 @@ void createObjects()
     // create buzzer object on pin 12 with gap between queued events of 100ms
     buzzer = new buzzer_t(GPIO_NUM_12, 100);
 
+    // create objects for controlling the chair position
+    //                       gpio_up, gpio_down, name
+    legRest = new cControlledRest(GPIO_NUM_4, GPIO_NUM_16, "legRest");
+    backRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, "backRest");
+
     // create control object (control.hpp)
-    // with configuration above
+    // with configuration from config.cpp
     control = new controlledArmchair(configControl, buzzer, motorLeft, motorRight, joystick, httpJoystickMain, automatedArmchair, legRest, backRest);
 
     // create automatedArmchair_c object (for auto-mode) (auto.hpp)
     automatedArmchair = new automatedArmchair_c(motorLeft, motorRight);
 
-    // create objects for controlling the chair position
-    //                       gpio_up, gpio_down, name
-    legRest = new cControlledRest(GPIO_NUM_4, GPIO_NUM_16, "legRest");
-    backRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, "backRest");
 }
 
 
