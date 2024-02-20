@@ -48,6 +48,7 @@ void cControlledRest::init()
     // both relays off initially
     gpio_set_level(gpio_down, 0);
     gpio_set_level(gpio_up, 0);
+    state = REST_OFF;
 }
 
 
@@ -105,7 +106,10 @@ void controlChairAdjustment(joystickData_t data, cControlledRest * legRest, cCon
     //leg rest (x-axis)
     if (data.x > stickThreshold) legRest->setState(REST_UP);
     else if (data.x < -stickThreshold) legRest->setState(REST_DOWN);
+    else legRest->setState(REST_OFF);
+
     //back rest (y-axis)
     if (data.y > stickThreshold) backRest->setState(REST_UP);
     else if (data.y < -stickThreshold) backRest->setState(REST_DOWN);
+    else backRest->setState(REST_OFF);
 }

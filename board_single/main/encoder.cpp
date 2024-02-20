@@ -17,33 +17,23 @@ extern "C"
 //------- variables -------
 //-------------------------
 static const char * TAG = "encoder";
-uint16_t encoderCount;
-rotary_encoder_btn_state_t encoderButtonState = {};
-//global event queue:
-QueueHandle_t encoderQueue = NULL;
-
-//encoder config
-rotary_encoder_t encoderConfig = {
-	.pin_a = PIN_A,
-	.pin_b = PIN_B,
-	.pin_btn = PIN_BUTTON,
-	.code = 1,
-	.store = encoderCount,
-	.index = 0,
-	.btn_pressed_time_us = 20000,
-	.btn_state = encoderButtonState
-};
 
 
 
 //==================================
 //========== encoder_init ==========
 //==================================
-//initialize encoder
-void encoder_init(){
-	encoderQueue = xQueueCreate(QUEUE_SIZE, sizeof(rotary_encoder_event_t));
+//initialize encoder //TODO pass config to this function
+QueueHandle_t encoder_init(rotary_encoder_t * encoderConfig)
+{
+	QueueHandle_t encoderQueue = xQueueCreate(QUEUE_SIZE, sizeof(rotary_encoder_event_t));
 	rotary_encoder_init(encoderQueue);
-	rotary_encoder_add(&encoderConfig);
+	rotary_encoder_add(encoderConfig);
+	if (encoderQueue == NULL)
+		ESP_LOGE(TAG, "Error initializing encoder or queue");
+	else
+		ESP_LOGW(TAG, "Initialized encoder and encoderQueue");
+	return encoderQueue;
 }
 
 
@@ -52,7 +42,9 @@ void encoder_init(){
 //====== task_encoderExample =======
 //==================================
 //receive and handle all available encoder events
-void task_encoderExample(void *arg) {
+void task_encoderExample(void * arg) {
+	//get queue with encoder events from task parameter:
+	QueueHandle_t encoderQueue = (QueueHandle_t)arg;
 	static rotary_encoder_event_t ev; //store event data
 	while (1) {
 		if (xQueueReceive(encoderQueue, &ev, portMAX_DELAY)) {

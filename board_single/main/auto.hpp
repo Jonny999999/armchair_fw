@@ -33,13 +33,13 @@ typedef struct commandSimple_t{
 
 
 //------------------------------------
-//----- automatedArmchair class  -----
+//----- automatedArmchair_c class  -----
 //------------------------------------
-class automatedArmchair {
+class automatedArmchair_c {
     public:
         //--- methods ---
         //constructor
-        automatedArmchair(void);
+        automatedArmchair_c(controlledMotor * motorLeft, controlledMotor * motorRight);
         //function to generate motor commands
         //can be also seen as handle function 
         //TODO: go with other approach: separate task for handling auto mode
@@ -62,6 +62,8 @@ class automatedArmchair {
     private:
         //--- methods ---
         //--- objects ---
+        controlledMotor * motorLeft;
+        controlledMotor * motorRight;
         //TODO: add buzzer here
         //--- variables ---
         //queue for storing pending commands
@@ -124,7 +126,7 @@ if (trigger){
         .instruction = auto_instruction_t::SWITCH_JOYSTICK_MODE
     };
 
-    //send commands to automatedArmchair command queue
+    //send commands to automatedArmchair_c command queue
     armchair.addCommands(cmds, 3);
 
     //change mode to AUTO

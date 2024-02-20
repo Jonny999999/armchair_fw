@@ -24,8 +24,8 @@ class speedSensor {
 public:
 	//constructor
     speedSensor(speedSensor_config_t config);
- //initializes gpio pin and configures interrupt
-    void init();
+	// initializes gpio pin, configures and starts interrupt
+	void init();
 	
 	//negative values = reverse direction
 	//positive values = forward direction
@@ -35,8 +35,7 @@ public:
 
 	//1=forward, -1=reverse
     int direction;
-
-	//variables for handling the encoder
+	//variables for handling the encoder (public because ISR needs access)
 	speedSensor_config_t config;
     int prevState = 0;
 	uint64_t pulseDurations[3] = {};
@@ -44,10 +43,9 @@ public:
 	uint8_t pulseCounter = 0;
 	int debugCount = 0;
 	double currentRpm = 0;
-	bool isInitialized = false;
 
 private:
-
+	static bool isrIsInitialized; // default false due to static
 };
 
 

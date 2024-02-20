@@ -158,7 +158,8 @@ void spi_display_image(SSD1306_t * dev, int page, int seg, uint8_t * images, int
 	if (page >= dev->_pages) return;
 	if (seg >= dev->_width) return;
 
-	int _seg = seg + CONFIG_OFFSETX;
+	//int _seg = seg + CONFIG_OFFSETX; //original
+	int _seg = seg + dev->_offsetX;
 	uint8_t columLow = _seg & 0x0F;
 	uint8_t columHigh = (_seg >> 4) & 0x0F;
 

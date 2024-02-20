@@ -64,8 +64,8 @@ class controlledMotor {
         float currentMax;
         float currentNow;
 
-        float dutyTarget;
-        float dutyNow;
+        float dutyTarget = 0;
+        float dutyNow = 0;
         float dutyIncrementAccel;
         float dutyIncrementDecel;
         float dutyDelta;
@@ -74,7 +74,7 @@ class controlledMotor {
         uint32_t msFadeDecel;
 
         uint32_t ramp;
-        int64_t timestampLastRunUs;
+        int64_t timestampLastRunUs = 0;
 
 		bool deadTimeWaiting = false;
 		uint32_t timestampsModeLastActive[4] = {};
@@ -86,3 +86,21 @@ class controlledMotor {
 		uint32_t timestamp_commandReceived = 0;
 		bool receiveTimeout = false;
 };
+
+
+
+// struct with variables passed to task from main
+typedef struct task_motorctl_parameters_t {
+    controlledMotor * motorLeft;
+    controlledMotor * motorRight;
+} task_motorctl_parameters_t;
+
+
+//====================================
+//========== motorctl task ===========
+//====================================
+//task that inititialized the display, displays welcome message 
+//and releatedly updates the display with certain content
+//note: pointer to required objects have to be provided as task-parameter
+void task_motorctl( void * task_motorctl_parameters );
+

@@ -8,15 +8,6 @@ extern "C"{
 
 
 
-//==== display config ====
-#define I2C_INTERFACE y
-#define SCL_GPIO 22
-#define SDA_GPIO 23
-#define RESET_GPIO 15 // FIXME remove this
-// the following options are set in menuconfig: (see sdkconfig)
-//	#define CONFIG_OFFSETX 2 	//note: the larger display (actual 130x64) needs 2 pixel offset (prevents bugged column)
-//	#define CONFIG_I2C_PORT_0 y
-
 //=== content config ===
 #define STARTUP_MSG_TIMEOUT 2000
 #define ADC_BATT_VOLTAGE ADC1_CHANNEL_6
@@ -55,22 +46,21 @@ static const char * TAG = "display";
 //==== display_init ====
 //======================
 //note CONFIG_OFFSETX is used (from menuconfig)
-void display_init(){
+void display_init(display_config_t config){
 	adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
-	ESP_LOGW("display", "INTERFACE is i2c");
-	ESP_LOGW("display", "SDA_GPIO=%d",SDA_GPIO);
-	ESP_LOGW("display", "SCL_GPIO=%d",SCL_GPIO);
-	ESP_LOGW("display", "RESET_GPIO=%d",RESET_GPIO);
-	i2c_master_init(&dev, SDA_GPIO, SCL_GPIO, RESET_GPIO);
-#if FLIP
-	dev._flip = true;
-	ESP_LOGW("display", "Flip upside down");
-#endif
-	ESP_LOGI("display", "Panel is 128x64");
-	ssd1306_init(&dev, 128, 64);
+	ESP_LOGW(TAG, "Initializing Display...");
+	ESP_LOGI(TAG, "config: sda=%d, sdl=%d, reset=%d,  offset=%d, flip=%d, size: %dx%d", 
+	config.gpio_sda, config.gpio_scl, config.gpio_reset, config.offsetX, config.flip, config.width, config.height);
+
+	i2c_master_init(&dev, config.gpio_sda, config.gpio_scl, config.gpio_reset);
+	if (config.flip) {
+		dev._flip = true;
+		ESP_LOGW(TAG, "Flip upside down");
+	}
+	ssd1306_init(&dev, config.width, config.height, config.offsetX);
 
 	ssd1306_clear_screen(&dev, false);
-	ssd1306_contrast(&dev, 0xff);
+	ssd1306_contrast(&dev, config.contrast);
 }
 
 
@@ -204,7 +194,7 @@ float getBatteryPercent(){
 //-----------------------
 //shows overview on entire display:
 //percentage, voltage, current, mode, rpm, speed
-void showScreen1()
+void showScreen1(display_task_parameters_t * objects)
 {
 	//-- battery percentage --
 	// TODO update when no load (currentsensors = ~0A) only
@@ -214,24 +204,24 @@ void showScreen1()
 	//-- voltage and current --
 	displayTextLine(&dev, 3, false, false, "%04.1fV %04.1f:%04.1fA",
 				   getBatteryVoltage(),
-				   fabs(motorLeft.getCurrentA()),
-				   fabs(motorRight.getCurrentA()));
+				   fabs(objects->motorLeft->getCurrentA()),
+				   fabs(objects->motorRight->getCurrentA()));
 
 	//-- control state --
 	//print large line
-	displayTextLine(&dev, 4, true, false, "%s ", control.getCurrentModeStr());
+	displayTextLine(&dev, 4, true, false, "%s ", objects->control->getCurrentModeStr());
 
 	//-- speed and RPM --
 	displayTextLine(&dev, 7, false, false, "%3.1fkm/h %03.0f:%03.0fR",
-				   fabs((speedLeft.getKmph() + speedRight.getKmph()) / 2),
-				   speedLeft.getRpm(),
-				   speedRight.getRpm());
+				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
+				   objects->speedLeft->getRpm(),
+				   objects->speedRight->getRpm());
 
 	// debug speed sensors
 	ESP_LOGD(TAG, "%3.1fkm/h %03.0f:%03.0fR",
-				   fabs((speedLeft.getKmph() + speedRight.getKmph()) / 2),
-				   speedLeft.getRpm(),
-				   speedRight.getRpm());
+				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
+				   objects->speedLeft->getRpm(),
+				   objects->speedRight->getRpm());
 }
 
 
@@ -264,8 +254,12 @@ void showStartupMsg(){
 
 void display_task(void *pvParameters)
 {
+	ESP_LOGW(TAG, "Initializing display and starting handle loop");
+	//get struct with pointers to all needed global objects from task parameter
+	display_task_parameters_t *objects = (display_task_parameters_t *)pvParameters;
+
 	// initialize display
-	display_init();
+	display_init(objects->displayConfig);
 	// TODO check if successfully initialized
 
 	// show startup message
@@ -276,14 +270,14 @@ void display_task(void *pvParameters)
 	// repeatedly update display with content
 	while (1)
 	{
-		if (control.getCurrentMode() == controlMode_t::MENU)
+		if (objects->control->getCurrentMode() == controlMode_t::MENU)
 		{
 			//uses encoder events to control menu and updates display
-			handleMenu(&dev);
+			handleMenu(objects, &dev);
 		}
 		else //show status screen in any other mode
 		{
-			showScreen1();
+			showScreen1(objects);
 			vTaskDelay(STATUS_SCREEN_UPDATE_INTERVAL / portTICK_PERIOD_MS);
 		}
 		// TODO add pages and menus
