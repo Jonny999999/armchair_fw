@@ -98,6 +98,7 @@ typedef struct {
 	int _scDirection;
 	PAGE_t _page[8];
 	bool _flip;
+	int _offsetX; //added offset here instead of using macro variable
 } SSD1306_t;
 
 #ifdef __cplusplus
@@ -105,7 +106,7 @@ extern "C"
 {
 #endif
 
-void ssd1306_init(SSD1306_t * dev, int width, int height);
+void ssd1306_init(SSD1306_t * dev, int width, int height, int offsetX);
 int ssd1306_get_width(SSD1306_t * dev);
 int ssd1306_get_height(SSD1306_t * dev);
 int ssd1306_get_pages(SSD1306_t * dev);
@@ -128,6 +129,7 @@ void _ssd1306_pixel(SSD1306_t * dev, int xpos, int ypos, bool invert);
 void _ssd1306_line(SSD1306_t * dev, int x1, int y1, int x2, int y2,  bool invert);
 void ssd1306_invert(uint8_t *buf, size_t blen);
 void ssd1306_flip(uint8_t *buf, size_t blen);
+void ssd1306_setOffset(SSD1306_t * dev, int offset);
 uint8_t ssd1306_copy_bit(uint8_t src, int srcBits, uint8_t dst, int dstBits);
 uint8_t ssd1306_rotate_byte(uint8_t ch1);
 void ssd1306_fadeout(SSD1306_t * dev);

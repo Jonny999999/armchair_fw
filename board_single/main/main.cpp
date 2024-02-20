@@ -69,7 +69,7 @@ cControlledRest *backRest;
 //-> makes it possible to easily use different motor drivers
 motorSetCommandFunc_t setLeftFunc = [&sabertoothDriver](motorCommand_t cmd)
 {
-    sabertoothDriver->setLeft(cmd); //<= note: still using pointer to method in here (but stored in STACK)
+	sabertoothDriver->setLeft(cmd); //<= note: still using pointer to method in here (but stored in STACK)
 };
 motorSetCommandFunc_t setRightFunc = [&sabertoothDriver](motorCommand_t cmd)
 {
@@ -99,7 +99,7 @@ static const char * TAG = "main";
 //=================================
 //initialize spi flash filesystem (used for webserver)
 void init_spiffs(){
-    ESP_LOGI(TAG, "init spiffs");
+    ESP_LOGW(TAG, "initializing spiffs...");
     esp_vfs_spiffs_conf_t esp_vfs_spiffs_conf = {
         .base_path = "/spiffs",
         .partition_label = NULL,
@@ -174,6 +174,7 @@ void createObjects()
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
+	ESP_LOGW(TAG, "===== BOOT (pre main) Completed =====\n");
 
 	ESP_LOGW(TAG, "===== INITIALIZING COMPONENTS =====");
 	//--- define log levels ---
@@ -186,19 +187,22 @@ extern "C" void app_main(void) {
 	gpio_set_level(GPIO_NUM_17, 1);                                                      
 
 	//--- initialize nvs-flash and netif (needed for wifi) ---
+	ESP_LOGW(TAG,"initializing wifi...");
 	wifi_initNvs_initNetif();
 
 	//--- initialize spiffs ---
 	init_spiffs();
 
 	//--- initialize and start wifi ---
-	ESP_LOGD(TAG,"starting wifi...");
+	ESP_LOGW(TAG,"starting wifi...");
 	//wifi_init_client(); //connect to existing wifi
 	wifi_init_ap(); //start access point
 	ESP_LOGD(TAG,"done starting wifi");
 
 	//--- initialize encoder ---
-	const QueueHandle_t encoderQueue = encoder_init();
+	const QueueHandle_t encoderQueue = encoder_init(&encoder_config);
+
+	printf("\n");
 
 
 
@@ -206,11 +210,13 @@ extern "C" void app_main(void) {
 	ESP_LOGW(TAG, "===== CREATING SHARED OBJECTS =====");
 
 	//initialize sabertooth object in STACK (due to performance issues in heap)
-	sabertoothDriver = static_cast<sabertooth2x60a*>(alloca(sizeof(sabertooth2x60a)));
-	new (sabertoothDriver) sabertooth2x60a(sabertoothConfig);
+	///sabertoothDriver = static_cast<sabertooth2x60a*>(alloca(sizeof(sabertooth2x60a)));
+	///new (sabertoothDriver) sabertooth2x60a(sabertoothConfig);
 
 	//create all class instances used below in HEAP
 	createObjects();
+
+	printf("\n");
 
 
 
@@ -256,13 +262,16 @@ extern "C" void app_main(void) {
 	//----- create task for display -----
 	//-----------------------------------
 	////task that handles the display (show stats, handle menu in 'MENU' mode)
-	display_task_parameters_t display_param = {control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer};
+	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer};
 	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 3, NULL);
+
+	vTaskDelay(200 / portTICK_PERIOD_MS); //wait for all tasks to finish initializing
+	printf("\n");
 
 
 
 	//--- startup finished ---
-	ESP_LOGW(TAG, "===== STARTUP FINISHED =====");
+	ESP_LOGW(TAG, "===== STARTUP FINISHED =====\n");
 	buzzer->beep(3, 70, 50);
 
 	//--- testing encoder ---

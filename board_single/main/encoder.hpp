@@ -6,12 +6,9 @@ extern "C" {
 
 //config
 #define QUEUE_SIZE 10
-#define PIN_A GPIO_NUM_25
-#define PIN_B GPIO_NUM_26
-#define PIN_BUTTON GPIO_NUM_27
 
-//init encoder with config in encoder.cpp
-QueueHandle_t encoder_init(); //TODO pass config to function
+//init encoder with pointer to encoder config
+QueueHandle_t encoder_init(rotary_encoder_t * encoderConfig);
 
 
 //task that handles encoder events

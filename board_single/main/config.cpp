@@ -1,17 +1,22 @@
 // NOTE: this file is included in main.cpp only.
 // outsourced all configuration related functions and structures to this file:
 
+extern "C"
+{
+#include "esp_log.h"
+}
 #include "motordrivers.hpp"
 #include "motorctl.hpp"
 #include "joystick.hpp"
 #include "http.hpp"
 #include "speedsensor.hpp"
-
 #include "buzzer.hpp"
 #include "control.hpp"
 #include "fan.hpp"
 #include "auto.hpp"
 #include "chairAdjust.hpp"
+#include "display.hpp"
+#include "encoder.h"
 
 //==================================
 //======== define loglevels ========
@@ -180,4 +185,37 @@ speedSensor_config_t speedRight_config{
     .tireCircumferenceMeter = 210.0 * 3.141 / 1000.0,
     .directionInverted = true,
     .logName = "speedRight",
+};
+
+
+
+//-------------------------
+//-------- display --------
+//-------------------------
+display_config_t display_config {
+    .gpio_scl = GPIO_NUM_22,
+    .gpio_sda = GPIO_NUM_23,
+    .gpio_reset = GPIO_NUM_15,
+    .width = 128,
+    .height = 64,
+    .offsetX = 2,
+    .flip = false,
+    .contrast = 0xff, //max: 255
+};
+
+
+
+//-------------------------
+//-------- encoder --------
+//-------------------------
+//configure rotary encoder (next to joystick)
+rotary_encoder_t encoder_config = {
+	.pin_a = GPIO_NUM_25,
+	.pin_b = GPIO_NUM_26,
+	.pin_btn = GPIO_NUM_27,
+	.code = 1,
+	.store = 0, //encoder count
+	.index = 0,
+	.btn_pressed_time_us = 20000,
+	.btn_state = RE_BTN_RELEASED //default state
 };

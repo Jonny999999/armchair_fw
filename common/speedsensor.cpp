@@ -7,6 +7,9 @@
 static const char* TAG = "speedSensor";
 
 
+//initialize ISR only once (for multiple instances)
+bool speedSensor::isrIsInitialized = false;
+
 
 uint32_t min(uint32_t a, uint32_t b){
 	if (a>b) return b;
@@ -84,11 +87,8 @@ void IRAM_ATTR onEncoderChange(void* arg) {
 speedSensor::speedSensor(speedSensor_config_t config_f){
 	//copy config
 	config = config_f;
-	//note: currently gets initialized at first method call 
-	//this prevents crash due to too early initialization at boot
-	//TODO: create global objects later after boot
 	//init gpio and ISR
-	//init();
+	init();
 }
 
 
@@ -102,15 +102,16 @@ void speedSensor::init() {
 	gpio_pad_select_gpio(config.gpioPin);
 	gpio_set_direction(config.gpioPin, GPIO_MODE_INPUT);
 	gpio_set_pull_mode(config.gpioPin, GPIO_PULLUP_ONLY);
-	ESP_LOGW(TAG, "%s, configured gpio-pin %d", config.logName, (int)config.gpioPin);
 
 	//configure interrupt
 	gpio_set_intr_type(config.gpioPin, GPIO_INTR_ANYEDGE);
-	gpio_install_isr_service(0);
+	if (!isrIsInitialized) {
+		gpio_install_isr_service(0);
+		isrIsInitialized = true;
+		ESP_LOGW(TAG, "Initialized ISR service");
+	}
 	gpio_isr_handler_add(config.gpioPin, onEncoderChange, this);
-	ESP_LOGW(TAG, "%s, configured interrupt", config.logName);
-
-	isInitialized = true;
+	ESP_LOGW(TAG, "[%s], configured gpio-pin %d and interrupt routine", config.logName, (int)config.gpioPin);
 }
 
 
@@ -121,8 +122,6 @@ void speedSensor::init() {
 //==========================
 //get rotational speed in revolutions per minute
 float speedSensor::getRpm(){
-	//check if initialized
-	if (!isInitialized) init();
 	uint32_t timeElapsed = esp_timer_get_time() - lastEdgeTime;
 	//timeout (standstill)
 	//TODO variable timeout considering config.degreePerGroup

@@ -8,15 +8,6 @@ extern "C"{
 
 
 
-//==== display config ====
-#define I2C_INTERFACE y
-#define SCL_GPIO 22
-#define SDA_GPIO 23
-#define RESET_GPIO 15 // FIXME remove this
-// the following options are set in menuconfig: (see sdkconfig)
-//	#define CONFIG_OFFSETX 2 	//note: the larger display (actual 130x64) needs 2 pixel offset (prevents bugged column)
-//	#define CONFIG_I2C_PORT_0 y
-
 //=== content config ===
 #define STARTUP_MSG_TIMEOUT 2000
 #define ADC_BATT_VOLTAGE ADC1_CHANNEL_6
@@ -55,22 +46,21 @@ static const char * TAG = "display";
 //==== display_init ====
 //======================
 //note CONFIG_OFFSETX is used (from menuconfig)
-void display_init(){
+void display_init(display_config_t config){
 	adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
-	ESP_LOGW("display", "INTERFACE is i2c");
-	ESP_LOGW("display", "SDA_GPIO=%d",SDA_GPIO);
-	ESP_LOGW("display", "SCL_GPIO=%d",SCL_GPIO);
-	ESP_LOGW("display", "RESET_GPIO=%d",RESET_GPIO);
-	i2c_master_init(&dev, SDA_GPIO, SCL_GPIO, RESET_GPIO);
-#if FLIP
-	dev._flip = true;
-	ESP_LOGW("display", "Flip upside down");
-#endif
-	ESP_LOGI("display", "Panel is 128x64");
-	ssd1306_init(&dev, 128, 64);
+	ESP_LOGW(TAG, "Initializing Display...");
+	ESP_LOGI(TAG, "config: sda=%d, sdl=%d, reset=%d,  offset=%d, flip=%d, size: %dx%d", 
+	config.gpio_sda, config.gpio_scl, config.gpio_reset, config.offsetX, config.flip, config.width, config.height);
+
+	i2c_master_init(&dev, config.gpio_sda, config.gpio_scl, config.gpio_reset);
+	if (config.flip) {
+		dev._flip = true;
+		ESP_LOGW(TAG, "Flip upside down");
+	}
+	ssd1306_init(&dev, config.width, config.height, config.offsetX);
 
 	ssd1306_clear_screen(&dev, false);
-	ssd1306_contrast(&dev, 0xff);
+	ssd1306_contrast(&dev, config.contrast);
 }
 
 
@@ -264,11 +254,12 @@ void showStartupMsg(){
 
 void display_task(void *pvParameters)
 {
+	ESP_LOGW(TAG, "Initializing display and starting handle loop");
 	//get struct with pointers to all needed global objects from task parameter
 	display_task_parameters_t *objects = (display_task_parameters_t *)pvParameters;
 
 	// initialize display
-	display_init();
+	display_init(objects->displayConfig);
 	// TODO check if successfully initialized
 
 	// show startup message

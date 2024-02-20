@@ -18,8 +18,22 @@ extern "C" {
 #include "control.hpp"
 #include "speedsensor.hpp"
 
+// configuration for initializing display (passed to task as well)
+typedef struct display_config_t {
+    gpio_num_t gpio_scl;
+    gpio_num_t gpio_sda;
+    gpio_num_t gpio_reset;
+    int width;
+    int height;
+    int offsetX;
+    bool flip;
+    int contrast;
+} display_config_t;
+
+
 // struct with variables passed to task from main()
 typedef struct display_task_parameters_t {
+    display_config_t displayConfig;
     controlledArmchair * control;
     evaluatedJoystick * joystick;
     QueueHandle_t encoderQueue;
