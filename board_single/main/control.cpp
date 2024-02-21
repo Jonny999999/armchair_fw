@@ -419,7 +419,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             break;
 
 		case controlMode_t::IDLE:
-			buzzer->beep(1, 1500, 0);
+			buzzer->beep(1, 1000, 0);
 #ifdef JOYSTICK_LOG_IN_IDLE
 			esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
 #endif

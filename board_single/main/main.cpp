@@ -159,8 +159,8 @@ void createObjects()
     httpJoystickMain = new httpJoystick(configHttpJoystickMain);
     http_init_server(on_joystick_url);
 
-    // create buzzer object on pin 12 with gap between queued events of 100ms
-    buzzer = new buzzer_t(GPIO_NUM_12, 100);
+    // create buzzer object on pin 12 with gap between queued events of 1ms
+    buzzer = new buzzer_t(GPIO_NUM_12, 1);
 
     // create objects for controlling the chair position
     //                       gpio_up, gpio_down, name

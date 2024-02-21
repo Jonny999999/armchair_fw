@@ -222,6 +222,7 @@ void item_debugJoystick_action(display_task_parameters_t * objects, SSD1306_t * 
             case RE_ET_BTN_CLICKED:
             case RE_ET_BTN_LONG_PRESSED:
                 running = false;
+                objects->buzzer->beep(1, 100, 10);
                 break;
             case RE_ET_CHANGED:
             case RE_ET_BTN_PRESSED:
@@ -586,19 +587,24 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
             {
             case RE_ET_CHANGED:
                 //--- scroll in list ---
-                objects->buzzer->beep(1, 10, 5);
                 if (event.diff < 0)
                 {
                     if (selectedItem != itemCount - 1)
+                    {
+                        objects->buzzer->beep(1, 20, 0);
                         selectedItem++;
-                    ESP_LOGD(TAG, "showing next item: %d '%s'", selectedItem, menuItems[selectedItem].title);
+                        ESP_LOGD(TAG, "showing next item: %d '%s'", selectedItem, menuItems[selectedItem].title);
+                    }
                     //note: display will update at start of next run
                 }
                 else
                 {
                     if (selectedItem != 0)
+                    {
+                        objects->buzzer->beep(1, 20, 0);
                         selectedItem--;
-                    ESP_LOGD(TAG, "showing previous item: %d '%s'", selectedItem, menuItems[selectedItem].title);
+                        ESP_LOGD(TAG, "showing previous item: %d '%s'", selectedItem, menuItems[selectedItem].title);
+                    }
                     //note: display will update at start of next run
                 }
                 break;
@@ -623,7 +629,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
             case RE_ET_BTN_LONG_PRESSED:
                 //--- exit menu mode ---
                 // change to previous mode (e.g. JOYSTICK)
-                objects->buzzer->beep(4, 15, 5);
+                objects->buzzer->beep(12, 15, 8);
                 objects->control->toggleMode(controlMode_t::MENU); //currently already in MENU -> changes to previous mode
                 ssd1306_clear_screen(display, false);
                 break;
