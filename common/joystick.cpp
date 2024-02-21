@@ -19,8 +19,9 @@ static const char * TAG_CMD = "joystickCommands";
 //-------- constructor --------
 //-----------------------------
 //copy provided struct with all configuration and run init function
-evaluatedJoystick::evaluatedJoystick(joystick_config_t config_f){
+evaluatedJoystick::evaluatedJoystick(joystick_config_t config_f, nvs_handle_t * nvsHandle_f){
     config = config_f;
+    nvsHandle = nvsHandle_f;
     init();
 }
 
@@ -30,7 +31,7 @@ evaluatedJoystick::evaluatedJoystick(joystick_config_t config_f){
 //---------- init ------------
 //----------------------------
 void evaluatedJoystick::init(){
-    ESP_LOGI(TAG, "initializing joystick");
+    ESP_LOGW(TAG, "initializing ADC's and loading calibration...");
     //initialize adc
     adc1_config_width(ADC_WIDTH_BIT_12); //=> max resolution 4096
                                          
@@ -40,6 +41,12 @@ void evaluatedJoystick::init(){
     //when run in main function that does not happen -> move init from constructor to be called in main
     adc1_config_channel_atten(config.adc_x, ADC_ATTEN_DB_11); //max voltage
     adc1_config_channel_atten(config.adc_y, ADC_ATTEN_DB_11); //max voltage
+
+    //load stored calibration values (if not found loads defaults from config)
+    loadCalibration(X_MIN);
+    loadCalibration(X_MAX);
+    loadCalibration(Y_MIN);
+    loadCalibration(Y_MAX);
 
     //define joystick center from current position
     defineCenter(); //define joystick center from current position
@@ -81,17 +88,17 @@ joystickData_t evaluatedJoystick::getData() {
     ESP_LOGV(TAG, "getting X coodrdinate...");
 	uint32_t adcRead;
 	adcRead = readAdc(config.adc_x, config.x_inverted);
-    float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), config.x_min, config.x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
+    float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), x_min, x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
     data.x = x;
 	ESP_LOGD(TAG, "X: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => x=%.3f",
-        adc1_get_raw(config.adc_x), adcRead,  config.x_min, config.x_max, x_center, config.x_inverted, x);
+        adc1_get_raw(config.adc_x), adcRead,  x_min, x_max, x_center, config.x_inverted, x);
 
     ESP_LOGV(TAG, "getting Y coodrinate...");
 	adcRead = readAdc(config.adc_y, config.y_inverted);
-    float y = scaleCoordinate(adcRead, config.y_min, config.y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
+    float y = scaleCoordinate(adcRead, y_min, y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
     data.y = y;
 	ESP_LOGD(TAG, "Y: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => y=%.3lf",
-        adc1_get_raw(config.adc_y), adcRead,  config.y_min, config.y_max, y_center, config.y_inverted, y);
+        adc1_get_raw(config.adc_y), adcRead,  y_min, y_max, y_center, config.y_inverted, y);
 
     //calculate radius
     data.radius = sqrt(pow(data.x,2) + pow(data.y,2));
@@ -569,4 +576,124 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
     ESP_LOGI(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
 
     return commands;
+}
+
+
+
+
+// corresponding storage key strings to each joystickCalibratenMode variable
+const char *calibrationStorageKeys[] = {"stick_x-min", "stick_x-max", "stick_y-min", "stick_y-max", "", ""};
+
+//-------------------------------
+//------- loadCalibration -------
+//-------------------------------
+// loads selected calibration value from nvs or default values from config if no data stored
+void evaluatedJoystick::loadCalibration(joystickCalibrationMode_t mode)
+{
+    // determine desired variables
+    int *configValue, *usedValue;
+    switch (mode)
+    {
+    case X_MIN:
+        configValue = &(config.x_min);
+        usedValue = &x_min;
+        break;
+    case X_MAX:
+        configValue = &(config.x_max);
+        usedValue = &x_max;
+        break;
+    case Y_MIN:
+        configValue = &(config.y_min);
+        usedValue = &y_min;
+        break;
+    case Y_MAX:
+        configValue = &(config.y_max);
+        usedValue = &y_max;
+        break;
+    case X_CENTER:
+    case Y_CENTER:
+    default:
+        // center position is not stored in nvs, it gets defined at startup or during calibration
+        ESP_LOGE(TAG, "loadCalibration: 'center_x' and 'center_y' are not stored in nvs -> not assigning anything");
+        // defineCenter();
+        return; 
+    }
+
+    // read from nvs
+    int16_t valueRead;
+    esp_err_t err = nvs_get_i16(*nvsHandle, calibrationStorageKeys[(int)mode], &valueRead);
+    switch (err)
+    {
+    case ESP_OK:
+        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %d with %d", calibrationStorageKeys[(int)mode], *configValue, valueRead);
+        *usedValue = (int)valueRead;
+        break;
+    case ESP_ERR_NVS_NOT_FOUND:
+        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, loading default value %d", calibrationStorageKeys[(int)mode], *configValue);
+        *usedValue = *configValue;
+        break;
+    default:
+        ESP_LOGE(TAG, "Error (%s) reading nvs!", esp_err_to_name(err));
+        *usedValue = *configValue;
+    }
+}
+
+
+
+//-------------------------------
+//------- loadCalibration -------
+//-------------------------------
+// loads selected calibration value from nvs or default values from config if no data stored
+void evaluatedJoystick::writeCalibration(joystickCalibrationMode_t mode, int newValue)
+{
+    // determine desired variables
+    int *configValue, *usedValue;
+    switch (mode)
+    {
+    case X_MIN:
+        configValue = &(config.x_min);
+        usedValue = &x_min;
+        break;
+    case X_MAX:
+        configValue = &(config.x_max);
+        usedValue = &x_max;
+        break;
+    case Y_MIN:
+        configValue = &(config.y_min);
+        usedValue = &y_min;
+        break;
+    case Y_MAX:
+        configValue = &(config.y_max);
+        usedValue = &y_max;
+        break;
+    case X_CENTER:
+        x_center = newValue;
+        ESP_LOGW(TAG, "writeCalibration: 'center_x' or 'center_y' are not stored in nvs -> loading only");
+        return;
+    case Y_CENTER:
+        y_center = newValue;
+        ESP_LOGW(TAG, "writeCalibration: 'center_x' or 'center_y' are not stored in nvs -> loading only");
+    default:
+        return;
+    }
+
+    // check if unchanged
+    if (*usedValue == newValue)
+    {
+        ESP_LOGW(TAG, "writeCalibration: value '%s' unchanged at %d, not writing to nvs", calibrationStorageKeys[(int)mode], newValue);
+        return;
+    }
+
+    // update nvs value
+    ESP_LOGW(TAG, "writeCalibration: updating nvs value '%s' from %d to %d", calibrationStorageKeys[(int)mode], *usedValue, newValue);
+    esp_err_t err = nvs_set_i16(*nvsHandle, calibrationStorageKeys[(int)mode], newValue);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed writing");
+    err = nvs_commit(*nvsHandle);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed committing updates");
+    else
+        ESP_LOGI(TAG, "nvs: successfully committed updates");
+    // update variable
+    *usedValue = newValue;
 }

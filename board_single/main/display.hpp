@@ -8,6 +8,8 @@ extern "C" {
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 
 #include "ssd1306.h"
 #include "font8x8_basic.h"
@@ -42,6 +44,7 @@ typedef struct display_task_parameters_t {
     speedSensor * speedLeft;
     speedSensor * speedRight;
     buzzer_t *buzzer;
+    nvs_handle_t * nvsHandle;
 } display_task_parameters_t;
 
 

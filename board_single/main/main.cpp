@@ -152,8 +152,8 @@ void createObjects()
     speedLeft = new speedSensor(speedLeft_config);
     speedRight = new speedSensor(speedRight_config);
 
-    // create joystic instance (joystick.hpp)
-    joystick = new evaluatedJoystick(configJoystick);
+    // create joystick instance (joystick.hpp)
+    joystick = new evaluatedJoystick(configJoystick, &nvsHandle);
 
     // create httpJoystick object (http.hpp)
     httpJoystickMain = new httpJoystick(configHttpJoystickMain);
@@ -286,8 +286,8 @@ extern "C" void app_main(void) {
 	//-----------------------------------
 	//----- create task for display -----
 	//-----------------------------------
-	////task that handles the display (show stats, handle menu in 'MENU' mode)
-	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer};
+	//task that handles the display (show stats, handle menu in 'MENU' mode)
+	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer, &nvsHandle};
 	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 3, NULL);
 
 	vTaskDelay(200 / portTICK_PERIOD_MS); //wait for all tasks to finish initializing

@@ -8,6 +8,8 @@ extern "C"
 #include "driver/adc.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 }
 
 #include <cmath>
@@ -55,6 +57,7 @@ typedef struct joystick_config_t {
 enum class joystickPos_t {CENTER, Y_AXIS, X_AXIS, TOP_RIGHT, TOP_LEFT, BOTTOM_LEFT, BOTTOM_RIGHT};
 extern const char* joystickPosStr[7];
 
+typedef enum joystickCalibrationMode_t { X_MIN = 0, X_MAX, Y_MIN, Y_MAX, X_CENTER, Y_CENTER } joystickCalibrationMode_t;
 
 //struct with current data of the joystick
 typedef struct joystickData_t {
@@ -70,31 +73,45 @@ typedef struct joystickData_t {
 //------------------------------------
 //----- evaluatedJoystick class  -----
 //------------------------------------
-class evaluatedJoystick {
-    public:
-        //--- constructor ---
-        evaluatedJoystick(joystick_config_t config_f);
+class evaluatedJoystick
+{
+public:
+    //--- constructor ---
+    evaluatedJoystick(joystick_config_t config_f, nvs_handle_t * nvsHandle);
 
-        //--- functions ---
-        joystickData_t getData(); //read joystick, calculate values and return the data in a struct
-        void defineCenter(); //define joystick center from current position
+    //--- functions ---
+    joystickData_t getData(); // read joystick, calculate values and return the data in a struct
+    // get raw adc value (inversion applied)
+    int getRawX() { return readAdc(config.adc_x, config.x_inverted); }
+    int getRawY() { return readAdc(config.adc_y, config.y_inverted); }
+    void defineCenter(); // define joystick center from current position
+    void writeCalibration(joystickCalibrationMode_t mode, int newValue); // load certain new calibration value and store it in nvs
 
-    private:
-        //--- functions ---
-        //initialize adc inputs, define center
-        void init();
-        //read adc while making multiple samples with option to invert the result
-        int readAdc(adc1_channel_t adc_channel, bool inverted = false); 
+private:
+    //--- functions ---
+    // initialize adc inputs, define center
+    void init();
+    // loads selected calibration value from nvs or default values from config if no data stored
+    void loadCalibration(joystickCalibrationMode_t mode);
+        // read adc while making multiple samples with option to invert the result
+        int readAdc(adc1_channel_t adc_channel, bool inverted = false);
 
         //--- variables ---
+        // handle for using the nvs flash (persistent config variables)
+        nvs_handle_t *nvsHandle;
         joystick_config_t config;
+
+        int x_min;
+        int x_max;
+        int y_min;
+        int y_max;
         int x_center;
         int y_center;
 
         joystickData_t data;
         float x;
         float y;
-};
+    };
 
 
 
