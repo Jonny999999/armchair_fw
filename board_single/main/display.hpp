@@ -41,6 +41,8 @@ typedef struct display_task_parameters_t {
     QueueHandle_t encoderQueue;
     controlledMotor * motorLeft;
     controlledMotor * motorRight;
+    cControlledRest * legRest;
+    cControlledRest * backRest;
     speedSensor * speedLeft;
     speedSensor * speedRight;
     buzzer_t *buzzer;
