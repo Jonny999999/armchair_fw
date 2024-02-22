@@ -255,27 +255,25 @@ menuItem_t item_debugJoystick = {
 //########################
 void maxDuty_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
-    //TODO actually store the value
-    ESP_LOGW(TAG, "set max duty to %d", value);
+    objects->control->setMaxDuty(value);
 }
 int maxDuty_currentValue(display_task_parameters_t * objects)
 {
-    //TODO get real current value
-    return 84;
+    return (int)objects->control->getMaxDuty();
 }
 menuItem_t item_maxDuty = {
     maxDuty_action,       // function action
     maxDuty_currentValue, // function get initial value or NULL(show in line 2)
     NULL,                 // function get default value or NULL(dont set value, show msg)
     1,                    // valueMin
-    99,                   // valueMax
+    100,                  // valueMax
     1,                    // valueIncrement
-    "max duty        ",   // title
+    "Set max Duty    ",   // title
     "",                   // line1 (above value)
     "  set max-duty: ",   // line2 (above value)
     "",                   // line4 * (below value)
     "",                   // line5 *
-    "      1-99      ",   // line6
+    "      1-100     ",   // line6
     "     percent    ",   // line7
 };
 
@@ -433,8 +431,8 @@ menuItem_t item_last = {
 //####################################################
 //### store all configured menu items in one array ###
 //####################################################
-const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_accelLimit, item_decelLimit, item_reset, item_example, item_last};
-const int itemCount = 8;
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_reset, item_example, item_last};
+const int itemCount = 9;
 
 
 

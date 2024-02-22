@@ -10,6 +10,7 @@ extern "C"
 #include "esp_err.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include <stdbool.h>
 }
 
 #include <cmath>
@@ -69,6 +70,13 @@ typedef struct joystickData_t {
 } joystickData_t;
 
 
+// struct with parameters provided to joystick_GenerateCommandsDriving()
+typedef struct joystickGenerateCommands_config_t {
+    float maxDuty;
+    float dutyOffset;
+    bool altStickMapping;
+} joystickGenerateCommands_config_t;
+
 
 //------------------------------------
 //----- evaluatedJoystick class  -----
@@ -120,7 +128,7 @@ private:
 //============================================
 //function that generates commands for both motors from the joystick data
 //motorCommands_t joystick_generateCommandsDriving(evaluatedJoystick joystick);
-motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altStickMapping = false);
+motorCommands_t joystick_generateCommandsDriving(joystickData_t data, joystickGenerateCommands_config_t * config);
 
 
 

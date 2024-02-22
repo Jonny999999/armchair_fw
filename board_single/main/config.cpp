@@ -221,3 +221,14 @@ rotary_encoder_t encoder_config = {
 	.btn_pressed_time_us = 20000,
 	.btn_state = RE_BTN_RELEASED //default state
 };
+
+
+//-----------------------------------
+//--- joystick command generation ---
+//-----------------------------------
+//configure parameters for motor command generation from joystick data
+joystickGenerateCommands_config_t joystickGenerateCommands_config{
+    .maxDuty = 100,
+    .dutyOffset = 5, // duty at which motors start immediately
+    .altStickMapping = false,
+};

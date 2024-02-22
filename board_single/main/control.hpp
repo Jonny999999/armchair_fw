@@ -1,5 +1,10 @@
 #pragma once
 
+extern "C"
+{
+#include "nvs_flash.h"
+#include "nvs.h"
+}
 #include "motordrivers.hpp"
 #include "motorctl.hpp"
 #include "buzzer.hpp"
@@ -50,10 +55,12 @@ class controlledArmchair {
                 controlledMotor* motorLeft_f,
                 controlledMotor* motorRight_f,
                 evaluatedJoystick* joystick_f,
+                joystickGenerateCommands_config_t* joystickGenerateCommands_config_f,
                 httpJoystick* httpJoystick_f,
                 automatedArmchair_c* automatedArmchair,
                 cControlledRest * legRest,
-                cControlledRest * backRest
+                cControlledRest * backRest,
+                nvs_handle_t * nvsHandle_f
                 );
 
         //--- functions ---
@@ -79,11 +86,15 @@ class controlledArmchair {
         controlMode_t getCurrentMode() const {return mode;};
         const char *getCurrentModeStr() const { return controlModeStr[(int)mode]; };
 
+        //--- mode specific ---
         // releases or locks joystick in place when in massage mode, returns true when input is frozen
         bool toggleFreezeInputMassage();
-
         // toggle between normal and alternative stick mapping (joystick reverse position inverted), returns true when alt mapping is active
         bool toggleAltStickMapping();
+
+        // configure max dutycycle (in joystick or http mode)
+        void setMaxDuty(float maxDutyNew) { writeMaxDuty(maxDutyNew); };
+        float getMaxDuty() const {return joystickGenerateCommands_config.maxDuty; };
 
     private:
 
@@ -91,15 +102,21 @@ class controlledArmchair {
         //function that evaluates whether there is no activity/change on the motor duty for a certain time, if so a switch to IDLE is issued. - has to be run repeatedly in a slow interval
         void handleTimeout();
 
+        void loadMaxDuty(); //load stored value for maxDuty from nvs
+        void writeMaxDuty(float newMaxDuty); //write new value for maxDuty to nvs
+
         //--- objects ---
         buzzer_t* buzzer;
         controlledMotor* motorLeft;
         controlledMotor* motorRight;
         httpJoystick* httpJoystickMain_l;
         evaluatedJoystick* joystick_l;
+        joystickGenerateCommands_config_t joystickGenerateCommands_config;
         automatedArmchair_c *automatedArmchair;
         cControlledRest * legRest;
         cControlledRest * backRest;
+        //handle for using the nvs flash (persistent config variables)
+        nvs_handle_t * nvsHandle;
 
         //---variables ---
         //struct for motor commands returned by generate functions of each mode
@@ -109,7 +126,6 @@ class controlledArmchair {
 
         //store joystick data
         joystickData_t stickData;
-        bool altStickMapping; //alternative joystick mapping (reverse mapped differently)
 
         //variables for http mode
         uint32_t http_timestamp_lastData = 0;

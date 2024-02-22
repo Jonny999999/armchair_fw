@@ -32,14 +32,17 @@ controlledArmchair::controlledArmchair(
     controlledMotor *motorLeft_f,
     controlledMotor *motorRight_f,
     evaluatedJoystick *joystick_f,
+    joystickGenerateCommands_config_t *joystickGenerateCommands_config_f,
     httpJoystick *httpJoystick_f,
     automatedArmchair_c *automatedArmchair_f,
     cControlledRest *legRest_f,
-    cControlledRest *backRest_f)
+    cControlledRest *backRest_f,
+    nvs_handle_t * nvsHandle_f)
 {
 
     //copy configuration
     config = config_f;
+    joystickGenerateCommands_config = *joystickGenerateCommands_config_f;
     //copy object pointers
     buzzer = buzzer_f;
     motorLeft = motorLeft_f;
@@ -49,9 +52,13 @@ controlledArmchair::controlledArmchair(
     automatedArmchair = automatedArmchair_f;
     legRest = legRest_f;
     backRest = backRest_f;
+    nvsHandle = nvsHandle_f;
     //set default mode from config
     modePrevious = config.defaultMode;
     
+    // override default config value if maxDuty is found in nvs
+    loadMaxDuty();
+
     //TODO declare / configure controlled motors here instead of config (unnecessary that button object is globally available - only used here)?
 }
 
@@ -104,7 +111,7 @@ void controlledArmchair::startHandleLoop() {
                 //additionaly scale coordinates (more detail in slower area)
                 joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.35); //TODO: add scaling parameters to config
                 //generate motor commands
-                commands = joystick_generateCommandsDriving(stickData, altStickMapping);
+                commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
                 //apply motor commands
                 motorRight->setTarget(commands.right.state, commands.right.duty); 
                 motorLeft->setTarget(commands.left.state, commands.left.duty); 
@@ -138,7 +145,7 @@ void controlledArmchair::startHandleLoop() {
                 ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
                 //--- generate motor commands ---
                 //Note: timeout (no data received) is handled in getData method
-                commands = joystick_generateCommandsDriving(stickData, altStickMapping);
+                commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
 
                 //--- apply commands to motors ---
                 //TODO make motorctl.setTarget also accept motorcommand struct directly
@@ -268,8 +275,8 @@ bool controlledArmchair::toggleFreezeInputMassage()
 // toggle between normal and alternative stick mapping (joystick reverse position inverted)
 bool controlledArmchair::toggleAltStickMapping()
 {
-    altStickMapping = !altStickMapping;
-    if (altStickMapping)
+    joystickGenerateCommands_config.altStickMapping = !joystickGenerateCommands_config.altStickMapping;
+    if (joystickGenerateCommands_config.altStickMapping)
     {
         buzzer->beep(6, 70, 50);
         ESP_LOGW(TAG, "changed to alternative stick mapping");
@@ -279,7 +286,7 @@ bool controlledArmchair::toggleAltStickMapping()
         buzzer->beep(1, 500, 100);
         ESP_LOGW(TAG, "changed to default stick mapping");
     }
-    return altStickMapping;
+    return joystickGenerateCommands_config.altStickMapping;
 }
 
 
@@ -502,4 +509,57 @@ void controlledArmchair::toggleMode(controlMode_t modePrimary){
         //buzzer->beep(4,200,100);
         changeMode(modePrimary);
     }
+}
+
+
+
+
+//-------------------------------
+//------ loadDecelDuration ------
+//-------------------------------
+// update local config value when maxDuty is stored in nvs
+void controlledArmchair::loadMaxDuty(void)
+{
+    // default value is already loaded (constructor)
+    // read from nvs
+    uint16_t valueRead;
+    esp_err_t err = nvs_get_u16(*nvsHandle, "c-maxDuty", &valueRead);
+    switch (err)
+    {
+    case ESP_OK:
+        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %.2f with %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDuty, valueRead/100.0);
+        joystickGenerateCommands_config.maxDuty = (float)(valueRead/100.0);
+        break;
+    case ESP_ERR_NVS_NOT_FOUND:
+        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDuty);
+        break;
+    default:
+        ESP_LOGE(TAG, "Error (%s) reading nvs!", esp_err_to_name(err));
+    }
+}
+
+
+//-----------------------------------
+//---------- writeMaxDuty -----------
+//-----------------------------------
+// write provided value to nvs to be persistent and update local variable in joystickGenerateCommmands_config struct
+// note: duty percentage gets stored as uint with factor 100 (to get more precision)
+void controlledArmchair::writeMaxDuty(float newValue){
+    // check if unchanged
+    if(joystickGenerateCommands_config.maxDuty == newValue){
+        ESP_LOGW(TAG, "value unchanged at %.2f, not writing to nvs", newValue);
+        return;
+    }
+    // update nvs value
+    ESP_LOGW(TAG, "updating nvs value '%s' from %.2f to %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDuty, newValue) ;
+    esp_err_t err = nvs_set_u16(*nvsHandle, "c-maxDuty", (uint16_t)(newValue*100));
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed writing");
+    err = nvs_commit(*nvsHandle);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed committing updates");
+    else
+        ESP_LOGI(TAG, "nvs: successfully committed updates");
+    // update variable
+    joystickGenerateCommands_config.maxDuty = newValue;
 }

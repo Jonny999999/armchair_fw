@@ -169,7 +169,7 @@ void createObjects()
 
     // create control object (control.hpp)
     // with configuration from config.cpp
-    control = new controlledArmchair(configControl, buzzer, motorLeft, motorRight, joystick, httpJoystickMain, automatedArmchair, legRest, backRest);
+    control = new controlledArmchair(configControl, buzzer, motorLeft, motorRight, joystick, &joystickGenerateCommands_config, httpJoystickMain, automatedArmchair, legRest, backRest, &nvsHandle);
 
     // create automatedArmchair_c object (for auto-mode) (auto.hpp)
     automatedArmchair = new automatedArmchair_c(motorLeft, motorRight);
