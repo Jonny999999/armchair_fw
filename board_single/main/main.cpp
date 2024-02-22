@@ -287,7 +287,7 @@ extern "C" void app_main(void) {
 	//----- create task for display -----
 	//-----------------------------------
 	//task that handles the display (show stats, handle menu in 'MENU' mode)
-	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer, &nvsHandle};
+	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, legRest, backRest, speedLeft, speedRight, buzzer, &nvsHandle};
 	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 3, NULL);
 
 	vTaskDelay(200 / portTICK_PERIOD_MS); //wait for all tasks to finish initializing

@@ -345,6 +345,135 @@ menuItem_t item_decelLimit = {
     "from 100 to 0%  ",      // line7
 };
 
+// ########################
+// #### control legrest ####
+// ########################
+// continously show/update joystick data on display
+#define DEBUG_JOYSTICK_UPDATE_INTERVAL 50
+void item_controlLegRest_action(display_task_parameters_t *objects, SSD1306_t *display, int value)
+{
+    //--- variables ---
+    bool running = true;
+    rotary_encoder_event_t event;
+    int mode = 0;
+
+    //-- pre loop instructions --
+    ssd1306_clear_screen(display, false);
+    // show static lines
+    displayTextLine(display, 0, false, true, " - ctl legRest - ");
+    displayTextLineCentered(display, 6, false, false, "turn to change");
+    displayTextLineCentered(display, 7, false, true, "long to exit");
+
+    // repeatedly show current mode and switch mode on encoder event
+    while (running && objects->control->getCurrentMode() == controlMode_t::MENU)
+    {
+
+        displayTextLineCentered(display, 2, true, false, "> %d <", mode);
+        displayTextLineCentered(display, 1, false, false, "=> %s <=", restStateStr[mode]);
+
+        if (xQueueReceive(objects->encoderQueue, &event, DEBUG_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS))
+        {
+            objects->control->resetTimeout();
+            switch (event.type)
+            {
+            case RE_ET_BTN_CLICKED:
+            case RE_ET_CHANGED:
+                mode++;
+                if (mode > 2)
+                    mode = 0;
+                objects->legRest->setState((restState_t)mode);
+                break;
+            case RE_ET_BTN_LONG_PRESSED:
+                running = false;
+                objects->buzzer->beep(1, 100, 10);
+                break;
+            case RE_ET_BTN_PRESSED:
+            case RE_ET_BTN_RELEASED:
+                break;
+            }
+        }
+    }
+}
+
+menuItem_t item_controlLegRest = {
+    item_controlLegRest_action, // function action
+    NULL,                       // function get initial value or NULL(show in line 2)
+    NULL,                       // function get default value or NULL(dont set value, show msg)
+    0,                          // valueMin
+    0,                          // valueMax
+    0,                          // valueIncrement
+    "Ctl Leg-Rest",             // title
+    "Ctl Leg-Rest",             // line1 (above value)
+    "",                         // line2 (above value)
+    "",                         // line4 * (below value)
+    "control Rest",             // line5 *
+    "with encoder   ",          // line6
+    "=>long to cancel",         // line7
+};
+
+//########################
+//#### control backrest ####
+//########################
+//continously show/update joystick data on display
+#define DEBUG_JOYSTICK_UPDATE_INTERVAL 50
+void item_controlBackRest_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
+{
+    //--- variables ---
+    bool running = true;
+    rotary_encoder_event_t event;
+    int mode = 0;
+
+    //-- pre loop instructions --
+    ssd1306_clear_screen(display, false);
+    // show static lines
+    displayTextLine(display, 0, false, true, " - ctl backRest - ");
+    displayTextLineCentered(display, 6, false, false, "turn to change");
+    displayTextLineCentered(display, 7, false, true, "long to exit");
+
+    // repeatedly show current mode and switch mode on encoder event
+    while (running && objects->control->getCurrentMode() == controlMode_t::MENU)
+    {
+        displayTextLineCentered(display, 2, true, false, "> %d <", mode);
+        displayTextLineCentered(display, 1, false, false, "=> %s <=", restStateStr[mode]);
+
+        if (xQueueReceive(objects->encoderQueue, &event, DEBUG_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS))
+        {
+            objects->control->resetTimeout();
+            switch (event.type)
+            {
+            case RE_ET_BTN_CLICKED:
+            case RE_ET_CHANGED:
+                mode ++;
+                if (mode > 2) mode = 0;
+                objects->backRest->setState((restState_t)mode);
+                break;
+            case RE_ET_BTN_LONG_PRESSED:
+                running = false;
+                objects->buzzer->beep(1, 100, 10);
+                break;
+            case RE_ET_BTN_PRESSED:
+            case RE_ET_BTN_RELEASED:
+                break;
+            }
+        }
+    }
+}
+
+menuItem_t item_controlBackRest = {
+    item_controlBackRest_action, // function action
+    NULL,                        // function get initial value or NULL(show in line 2)
+    NULL,                        // function get default value or NULL(dont set value, show msg)
+    0,                           // valueMin
+    0,                           // valueMax
+    0,                           // valueIncrement
+    "Ctl Back-Rest",             // title
+    "Ctl Back-Rest",             // line1 (above value)
+    "",                          // line2 (above value)
+    "",                          // line4 * (below value)
+    "control Rest",              // line5 *
+    "with encoder   ",           // line6
+    "=>long to cancel",          // line7
+};
 
 //#####################
 //####### RESET #######
@@ -433,8 +562,8 @@ menuItem_t item_last = {
 //####################################################
 //### store all configured menu items in one array ###
 //####################################################
-const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_accelLimit, item_decelLimit, item_reset, item_example, item_last};
-const int itemCount = 8;
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_accelLimit, item_decelLimit, item_controlLegRest, item_controlBackRest, item_reset, item_example, item_last};
+const int itemCount = 10;
 
 
 
