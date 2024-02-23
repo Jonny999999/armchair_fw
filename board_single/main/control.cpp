@@ -58,32 +58,30 @@ controlledArmchair::controlledArmchair(
     
     // override default config value if maxDuty is found in nvs
     loadMaxDuty();
-
-    //TODO declare / configure controlled motors here instead of config (unnecessary that button object is globally available - only used here)?
 }
+
 
 //=======================================
 //============ control task =============
 //=======================================
-//task that controls the armchair modes and initiates commands generation and applies them to driver
-//parameter: pointer to controlledArmchair object 
+// task that controls the armchair modes
+// generates commands depending on current mode and sends those to corresponding task
+// parameter: pointer to controlledArmchair object
 void task_control( void * pvParameters ){
-    //control_task_parameters_t * objects = (control_task_parameters_t *)pvParameters;
     controlledArmchair * control = (controlledArmchair *)pvParameters;
-    ESP_LOGI(TAG, "Initializing controlledArmchair and starting handle loop");
+    ESP_LOGW(TAG, "Initializing controlledArmchair and starting handle loop");
     //start handle loop (control object declared in config.hpp)
-    //objects->control->startHandleLoop();
     control->startHandleLoop();
 }
+
 
 //----------------------------------
 //---------- Handle loop -----------
 //----------------------------------
 //function that repeatedly generates motor commands depending on the current mode
-//also handles fading and current-limit
 void controlledArmchair::startHandleLoop() {
     while (1){
-        ESP_LOGV(TAG, "control task executing... mode=%s", controlModeStr[(int)mode]);
+        ESP_LOGV(TAG, "control loop executing... mode=%s", controlModeStr[(int)mode]);
 
         switch(mode) {
             default:
@@ -91,31 +89,40 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
             case controlMode_t::IDLE:
-                //copy preset commands for idling both motors
-                commands = cmds_bothMotorsIdle;
-                motorRight->setTarget(commands.right.state, commands.right.duty); 
-                motorLeft->setTarget(commands.left.state, commands.left.duty); 
-                vTaskDelay(300 / portTICK_PERIOD_MS);
+                //copy preset commands for idling both motors - now done once at mode change
+                //commands = cmds_bothMotorsIdle;
+                //motorRight->setTarget(commands.right.state, commands.right.duty); 
+                //motorLeft->setTarget(commands.left.state, commands.left.duty); 
+                vTaskDelay(500 / portTICK_PERIOD_MS);
 #ifdef JOYSTICK_LOG_IN_IDLE
 				//get joystick data here (without using it)
-				//since loglevel is DEBUG, calculateion details is output
-                joystick_l->getData(); //get joystick data here
+				//since loglevel is DEBUG, calculation details are output
+                joystick_l->getData();
 #endif
                 break;
 
 
             case controlMode_t::JOYSTICK:
-                vTaskDelay(20 / portTICK_PERIOD_MS);
+                vTaskDelay(50 / portTICK_PERIOD_MS);
                 //get current joystick data with getData method of evaluatedJoystick
+                stickDataLast = stickData;
                 stickData = joystick_l->getData();
                 //additionaly scale coordinates (more detail in slower area)
                 joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.35); //TODO: add scaling parameters to config
-                //generate motor commands
-                commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
-                //apply motor commands
-                motorRight->setTarget(commands.right.state, commands.right.duty); 
-                motorLeft->setTarget(commands.left.state, commands.left.duty); 
-                //TODO make motorctl.setTarget also accept motorcommand struct directly
+                // generate motor commands
+                // only generate when the stick data actually changed (e.g. stick stayed in center)
+                if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
+                {
+                    commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
+                    // apply motor commands
+                    motorRight->setTarget(commands.right);
+                    motorLeft->setTarget(commands.left);
+                }
+                else
+                {
+                    vTaskDelay(20 / portTICK_PERIOD_MS);
+                    ESP_LOGD(TAG, "analog joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
+                }
                 break;
 
 
@@ -130,28 +137,33 @@ void controlledArmchair::startHandleLoop() {
                 //pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
                 commands = joystick_generateCommandsShaking(stickData);
                 //apply motor commands
-                motorRight->setTarget(commands.right.state, commands.right.duty); 
-                motorLeft->setTarget(commands.left.state, commands.left.duty); 
+                motorRight->setTarget(commands.right); 
+                motorLeft->setTarget(commands.left); 
                 break;
 
 
             case controlMode_t::HTTP:
                 //--- get joystick data from queue ---
-                //Note this function waits several seconds (httpconfig.timeoutMs) for data to arrive, otherwise Center data or NULL is returned
-                //TODO: as described above, when changing modes it might delay a few seconds for the change to apply
-                stickData = httpJoystickMain_l->getData();
+                stickDataLast = stickData;
+                stickData = httpJoystickMain_l->getData(); //get last stored data from receive queue (waits up to 500ms for new event to arrive)
                 //scale coordinates additionally (more detail in slower area)
                 joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.4); //TODO: add scaling parameters to config
                 ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
                 //--- generate motor commands ---
-                //Note: timeout (no data received) is handled in getData method
-                commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
+                //only generate when the stick data actually changed (e.g. no new data recevied via http)
+                if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y ){
+                    // Note: timeout (no data received) is handled in getData method
+                    commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
 
-                //--- apply commands to motors ---
-                //TODO make motorctl.setTarget also accept motorcommand struct directly
-                motorRight->setTarget(commands.right.state, commands.right.duty); 
-                motorLeft->setTarget(commands.left.state, commands.left.duty); 
-               break;
+                    //--- apply commands to motors ---
+                    motorRight->setTarget(commands.right);
+                    motorLeft->setTarget(commands.left);
+                }
+                else
+                {
+                    ESP_LOGD(TAG, "http joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
+                }
+                break;
 
 
             case controlMode_t::AUTO:
@@ -159,9 +171,8 @@ void controlledArmchair::startHandleLoop() {
                //generate commands
                commands = automatedArmchair->generateCommands(&instruction);
                 //--- apply commands to motors ---
-                //TODO make motorctl.setTarget also accept motorcommand struct directly
-               motorRight->setTarget(commands.right.state, commands.right.duty); 
-               motorLeft->setTarget(commands.left.state, commands.left.duty); 
+               motorRight->setTarget(commands.right); 
+               motorLeft->setTarget(commands.left); 
 
                //process received instruction
                switch (instruction) {
@@ -200,9 +211,9 @@ void controlledArmchair::startHandleLoop() {
                 //--- read joystick ---
                 stickData = joystick_l->getData();
                 //--- idle motors ---
-                commands = cmds_bothMotorsIdle;
-                motorRight->setTarget(commands.right.state, commands.right.duty); 
-                motorLeft->setTarget(commands.left.state, commands.left.duty); 
+                //commands = cmds_bothMotorsIdle; - now done once at mode change
+                //motorRight->setTarget(commands.right.state, commands.right.duty); 
+                //motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 //--- control armchair position with joystick input ---
                 controlChairAdjustment(joystick_l->getData(), legRest, backRest);
                 break;
@@ -212,9 +223,9 @@ void controlledArmchair::startHandleLoop() {
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
                 //nothing to do here, display task handles the menu
                 //--- idle motors ---
-                commands = cmds_bothMotorsIdle;
-                motorRight->setTarget(commands.right.state, commands.right.duty); 
-                motorLeft->setTarget(commands.left.state, commands.left.duty); 
+                //commands = cmds_bothMotorsIdle; - now done once at mode change
+                //motorRight->setTarget(commands.right.state, commands.right.duty); 
+                //motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 break;
 
               //TODO: add other modes here
@@ -228,7 +239,7 @@ void controlledArmchair::startHandleLoop() {
             ESP_LOGV(TAG, "running slow loop... time since last run: %.1fs", (float)(esp_log_timestamp() - timestamp_SlowLoopLastRun)/1000);
             timestamp_SlowLoopLastRun = esp_log_timestamp();
 
-            //run function which detects timeout (switch to idle)
+            //run function that detects timeout (switch to idle)
             handleTimeout();
         }
 
@@ -290,6 +301,14 @@ bool controlledArmchair::toggleAltStickMapping()
 }
 
 
+//-----------------------------------
+//--------- idleBothMotors ----------
+//-----------------------------------
+// turn both motors off
+void controlledArmchair::idleBothMotors(){
+    motorRight->setTarget(cmd_motorIdle);
+    motorLeft->setTarget(cmd_motorIdle);
+}
 
 //-----------------------------------
 //---------- resetTimeout -----------
@@ -425,16 +444,23 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             ESP_LOGI(TAG, "noting to execute when changing TO this mode");
             break;
 
-		case controlMode_t::IDLE:
-			buzzer->beep(1, 1000, 0);
+        case controlMode_t::IDLE:
+            ESP_LOGW(TAG, "switching to IDLE mode: turning both motors off, beep");
+            idleBothMotors();
+            buzzer->beep(1, 1000, 0);
 #ifdef JOYSTICK_LOG_IN_IDLE
-			esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
+            esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
 #endif
-			break;
+            break;
 
         case controlMode_t::ADJUST_CHAIR:
-            ESP_LOGW(TAG, "switching to ADJUST_CHAIR mode -> beep");
-            buzzer->beep(4,200,100);
+            ESP_LOGW(TAG, "switching to ADJUST_CHAIR mode: turning both motors off, beep");
+            idleBothMotors();
+            buzzer->beep(4, 200, 100);
+            break;
+
+        case controlMode_t::MENU:
+            idleBothMotors();
             break;
 
         case controlMode_t::MASSAGE:

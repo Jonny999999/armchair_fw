@@ -33,6 +33,7 @@ class controlledMotor {
         controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle); //constructor with structs for configuring motordriver and parameters for control TODO: add configuration for currentsensor
         void handle(); //controls motor duty with fade and current limiting feature (has to be run frequently by another task)
         void setTarget(motorstate_t state_f, float duty_f = 0); //adds target command to queue for handle function
+        void setTarget(motorCommand_t command); 
         motorCommand_t getStatus(); //get current status of the motor (returns struct with state and duty)
 
         uint32_t getFade(fadeType_t fadeType); //get currently set acceleration or deceleration fading time
@@ -42,6 +43,7 @@ class controlledMotor {
         bool toggleFade(fadeType_t fadeType); //toggle acceleration or deceleration on/off
 
         float getCurrentA() {return cSensor.read();}; //read current-sensor of this motor (Ampere)
+        char * getName() const {return config.name;};
 											  
 		//TODO set current limit method
 
@@ -78,6 +80,7 @@ class controlledMotor {
         float dutyIncrementAccel;
         float dutyIncrementDecel;
         float dutyDelta;
+        uint32_t timeoutWaitForCommand = 0;
 
         uint32_t msFadeAccel;
         uint32_t msFadeDecel;
@@ -96,20 +99,10 @@ class controlledMotor {
 		bool receiveTimeout = false;
 };
 
-
-
-// struct with variables passed to task from main
-typedef struct task_motorctl_parameters_t {
-    controlledMotor * motorLeft;
-    controlledMotor * motorRight;
-} task_motorctl_parameters_t;
-
-
 //====================================
 //========== motorctl task ===========
 //====================================
-//task that inititialized the display, displays welcome message 
-//and releatedly updates the display with certain content
-//note: pointer to required objects have to be provided as task-parameter
-void task_motorctl( void * task_motorctl_parameters );
-
+// note: pointer to a 'controlledMotor' object has to be provided as task-parameter
+// runs handle method of certain motor repeatedly: 
+// receives commands from control via queue, handle ramp and current, apply new duty by passing it to method of motordriver (ptr)
+void task_motorctl( void * controlledMotor );

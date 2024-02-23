@@ -178,23 +178,22 @@ esp_err_t httpJoystick::receiveHttpData(httpd_req_t *req){
 //-------------------
 //----- getData -----
 //-------------------
-//wait for and return joystick data from queue, if timeout return NULL
+//wait for and return joystick data from queue, return last data if nothing received within 500ms, return center data when timeout exceeded
 joystickData_t httpJoystick::getData(){
 
     //--- get joystick data from queue ---
-    if( xQueueReceive( joystickDataQueue, &dataRead, pdMS_TO_TICKS(config.timeoutMs) ) ) {
-
+    if( xQueueReceive( joystickDataQueue, &dataRead, pdMS_TO_TICKS(500) ) ) { //dont wait longer than 500ms to not block the control loop for too long
         ESP_LOGD(TAG, "getData: received data (from queue): x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
                 dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
+        timeLastData = esp_log_timestamp();
     }
     //--- timeout ---
-    //no new data received within configured timeout
+    // send error message when last received data did NOT result in CENTER position and timeout exceeded
     else { 
-        //send error message when last received data did NOT result in CENTER position
-        if (dataRead.position != joystickPos_t::CENTER) {
+        if (dataRead.position != joystickPos_t::CENTER && (esp_log_timestamp() - timeLastData) > config.timeoutMs) {
             //change data to "joystick center" data to stop the motors
             dataRead = dataCenter;
-            ESP_LOGE(TAG, "TIMEOUT - no data received for 3s -> set to center");
+            ESP_LOGE(TAG, "TIMEOUT - no data received for %dms -> set to center", config.timeoutMs);
         }
     }
     return dataRead;

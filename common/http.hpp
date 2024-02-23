@@ -70,7 +70,7 @@ class httpJoystick{
         httpJoystick_config_t config;
         QueueHandle_t joystickDataQueue = xQueueCreate( 1, sizeof( struct joystickData_t ) );
         //struct for receiving data from http function, and storing data of last update
-        joystickData_t dataRead;
+        uint32_t timeLastData = 0;
         const joystickData_t dataCenter = {
             .position = joystickPos_t::CENTER,
             .x = 0,
@@ -78,4 +78,5 @@ class httpJoystick{
             .radius = 0,
             .angle = 0
         };
+        joystickData_t dataRead = dataCenter;
 };

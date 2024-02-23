@@ -251,9 +251,10 @@ extern "C" void app_main(void) {
 	//----------------------------------------------
 	//--- create task for controlling the motors ---
 	//----------------------------------------------
-	//task that receives commands, handles ramp and current limit and executes commands using the motordriver function
-	task_motorctl_parameters_t motorctl_param = {motorLeft, motorRight};
-	xTaskCreate(&task_motorctl, "task_motor-control", 2*4096, &motorctl_param, 6, NULL);
+	//task for each motor that handles to following:
+	//receives commands from control via queue, handle ramp and current, apply new duty by passing it to method of motordriver (ptr)
+	xTaskCreate(&task_motorctl, "task_ctl-left-motor", 2*4096, motorLeft, 6, NULL);
+	xTaskCreate(&task_motorctl, "task_ctl-right-motor", 2*4096, motorRight, 6, NULL);
 
 	//------------------------------
 	//--- create task for buzzer ---

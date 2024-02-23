@@ -5,21 +5,20 @@
 //tag for logging
 static const char * TAG = "motor-control";
 
-#define TIMEOUT_IDLE_WHEN_NO_COMMAND 8000
-
-
+#define TIMEOUT_IDLE_WHEN_NO_COMMAND 15000 // turn motor off when still on and no new command received within that time
+#define TIMEOUT_QUEUE_WHEN_AT_TARGET 5000  // time waited for new command when motors at target duty (e.g. IDLE) (no need to handle fading in fast loop)
 
 //====================================
 //========== motorctl task ===========
 //====================================
 //task for handling the motors (ramp, current limit, driver)
-void task_motorctl( void * task_motorctl_parameters ){
-	task_motorctl_parameters_t *objects = (task_motorctl_parameters_t *)task_motorctl_parameters;
-    ESP_LOGW(TAG, "Task-motorctl: starting handle loops for left and right motor...");
+void task_motorctl( void * ptrControlledMotor ){
+    //get pointer to controlledMotor instance from task parameter
+    controlledMotor * motor = (controlledMotor *)ptrControlledMotor;
+    ESP_LOGW(TAG, "Task-motorctl [%s]: starting handle loop...", motor->getName());
     while(1){
-    	objects->motorRight->handle();
-    	objects->motorLeft->handle();
-        vTaskDelay(15 / portTICK_PERIOD_MS);
+        motor->handle();
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 }
 
@@ -58,7 +57,10 @@ void controlledMotor::init(){
     loadAccelDuration();
     loadDecelDuration();
 
-	//cSensor.calibrateZeroAmpere(); //currently done in currentsensor constructor TODO do this regularly e.g. in idle?
+    // turn motor off initially
+    motorSetCommand({motorstate_t::IDLE, 0.00});
+
+    //cSensor.calibrateZeroAmpere(); //currently done in currentsensor constructor TODO do this regularly e.g. in idle?
 }
 
 
@@ -104,7 +106,7 @@ void controlledMotor::handle(){
     //TODO: History: skip fading when motor was running fast recently / alternatively add rot-speed sensor
 
     //--- receive commands from queue ---
-    if( xQueueReceive( commandQueue, &commandReceive, ( TickType_t ) 0 ) )
+    if( xQueueReceive( commandQueue, &commandReceive, timeoutWaitForCommand / portTICK_PERIOD_MS ) ) //wait time is always 0 except when at target duty already
     {
         ESP_LOGD(TAG, "[%s] Read command from queue: state=%s, duty=%.2f", config.name, motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
@@ -134,15 +136,44 @@ void controlledMotor::handle(){
         }
     }
 
-	//--- timeout, no data ---
-	//turn motors off if no data received for long time (e.g. no uart data / control offline)
-	//TODO no timeout when braking?
-	if ((esp_log_timestamp() - timestamp_commandReceived) > TIMEOUT_IDLE_WHEN_NO_COMMAND && !receiveTimeout){
-		receiveTimeout = true;
-		state = motorstate_t::IDLE;
-		dutyTarget = 0;
-		ESP_LOGE(TAG, "[%s] TIMEOUT, no target data received for more than %ds -> switch to IDLE", config.name, TIMEOUT_IDLE_WHEN_NO_COMMAND/1000);
-	}
+    //--- timeout, no data ---
+    // turn motors off if no data received for a long time (e.g. no uart data or control task offline)
+    if (dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_IDLE_WHEN_NO_COMMAND && !receiveTimeout)
+    {
+        ESP_LOGE(TAG, "[%s] TIMEOUT, motor active, but no target data received for more than %ds -> switch from duty=%.2f to IDLE", config.name, TIMEOUT_IDLE_WHEN_NO_COMMAND / 1000, dutyTarget);
+        receiveTimeout = true;
+        state = motorstate_t::IDLE;
+        dutyTarget = 0;
+    }
+
+    //--- calculate difference ---
+    dutyDelta = dutyTarget - dutyNow;
+    //positive: need to increase by that value
+    //negative: need to decrease
+
+    //--- already at target ---
+    // when already at exact target duty there is no need to run very fast to handle fading
+    //-> slow down loop by waiting significantly longer for new commands to arrive
+    if ((dutyDelta == 0 && !config.currentLimitEnabled) || (dutyTarget == 0 && dutyNow == 0)) //when current limit enabled only slow down when duty is 0
+    {
+        //increase timeout once when duty is the same (once)
+        if (timeoutWaitForCommand == 0)
+        { // TODO verify if state matches too?
+            ESP_LOGW(TAG, "[%s] already at target duty %.2f, slowing down...", config.name, dutyTarget);
+            timeoutWaitForCommand = TIMEOUT_QUEUE_WHEN_AT_TARGET; // wait in queue very long, for new command to arrive
+        }
+        vTaskDelay(20 / portTICK_PERIOD_MS); // add small additional delay overall, in case the same commands get spammed
+    }
+    //reset timeout when duty differs again (once)
+    else if (timeoutWaitForCommand != 0)
+    {
+        timeoutWaitForCommand = 0; // dont wait additional time for new commands, handle fading fast
+        ESP_LOGW(TAG, "[%s] duty changed to %.2f, resuming at full speed", config.name, dutyTarget);
+        // adjust lastRun timestamp to not mess up fading, due to much time passed but with no actual duty change
+        timestampLastRunUs = esp_timer_get_time() - 20*1000; //subtract approx 1 cycle delay
+    }
+    //TODO skip rest of the handle function below using return? Some regular driver updates sound useful though
+
 
     //--- calculate increment ---
     //calculate increment for fading UP with passed time since last run and configured fade time
@@ -172,10 +203,6 @@ void controlledMotor::handle(){
 	}
 
 
-    //--- calculate difference ---
-    dutyDelta = dutyTarget - dutyNow;
-    //positive: need to increase by that value
-    //negative: need to decrease
 
 
 	//----- FADING -----
@@ -272,17 +299,18 @@ void controlledMotor::handle(){
 //===============================
 //function to set the target mode and duty of a motor
 //puts the provided command in a queue for the handle function running in another task
-void controlledMotor::setTarget(motorstate_t state_f, float duty_f){
-    commandSend = {
-        .state = state_f,
-        .duty = duty_f
-    };
+void controlledMotor::setTarget(motorCommand_t commandSend){
     ESP_LOGI(TAG, "[%s] setTarget: Inserting command to queue: state='%s'(%d), duty=%.2f", config.name, motorstateStr[(int)commandSend.state], (int)commandSend.state, commandSend.duty);
     //send command to queue (overwrite if an old command is still in the queue and not processed)
     xQueueOverwrite( commandQueue, ( void * )&commandSend);
     //xQueueSend( commandQueue, ( void * )&commandSend, ( TickType_t ) 0 );
     ESP_LOGD(TAG, "finished inserting new command");
+}
 
+// accept target state and duty as separate agrguments:
+void controlledMotor::setTarget(motorstate_t state_f, float duty_f){
+    // create motorCommand struct from the separate parameters, and run the method to insert that new command
+    setTarget({state_f, duty_f});
 }
 
 

@@ -105,6 +105,8 @@ class controlledArmchair {
         void loadMaxDuty(); //load stored value for maxDuty from nvs
         void writeMaxDuty(float newMaxDuty); //write new value for maxDuty to nvs
 
+        void idleBothMotors(); //turn both motors off
+
         //--- objects ---
         buzzer_t* buzzer;
         controlledMotor* motorLeft;
@@ -118,14 +120,33 @@ class controlledArmchair {
         //handle for using the nvs flash (persistent config variables)
         nvs_handle_t * nvsHandle;
 
+        //--- constants ---
+        //command preset for idling motors
+        const motorCommand_t cmd_motorIdle = {
+            .state = motorstate_t::IDLE,
+            .duty = 0
+        };
+        const motorCommands_t cmds_bothMotorsIdle = {
+            .left = cmd_motorIdle,
+            .right = cmd_motorIdle
+        };
+        const joystickData_t joystickData_center = {
+            .position = joystickPos_t::CENTER,
+            .x = 0,
+            .y = 0,
+            .radius = 0,
+            .angle = 0
+        };
+
         //---variables ---
         //struct for motor commands returned by generate functions of each mode
-        motorCommands_t commands;
+        motorCommands_t commands = cmds_bothMotorsIdle;
         //struct with config parameters
         control_config_t config;
 
         //store joystick data
-        joystickData_t stickData;
+        joystickData_t stickData = joystickData_center;
+        joystickData_t stickDataLast = joystickData_center;
 
         //variables for http mode
         uint32_t http_timestamp_lastData = 0;
@@ -144,16 +165,6 @@ class controlledArmchair {
 
         //variable to store mode when toggling IDLE mode 
         controlMode_t modePrevious; //default mode
-
-        //command preset for idling motors
-        const motorCommand_t cmd_motorIdle = {
-            .state = motorstate_t::IDLE,
-            .duty = 0
-        };
-        const motorCommands_t cmds_bothMotorsIdle = {
-            .left = cmd_motorIdle,
-            .right = cmd_motorIdle
-        };
 
         //variable for slow loop
         uint32_t timestamp_SlowLoopLastRun = 0;
