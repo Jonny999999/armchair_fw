@@ -67,7 +67,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
     // ## no command ##
     default:
         ESP_LOGE(TAG, "no command for count=%d and long=%d defined", count, lastPressLong);
-        buzzer->beep(3, 400, 100);
+        buzzer->beep(3, 200, 100);
         break;
 
     case 1:
@@ -76,7 +76,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         {
             control->changeMode(controlMode_t::MENU);
             ESP_LOGW(TAG, "1x long press -> change to menu mode");
-            buzzer->beep(1, 1000, 1);
+            buzzer->beep(20, 20, 10);
             vTaskDelay(500 / portTICK_PERIOD_MS);
         }
         // ## toggle joystick freeze ##

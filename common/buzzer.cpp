@@ -82,7 +82,7 @@ void buzzer_t::processQueue(){
             // otherwise waits for at least 7 weeks
             if( xQueueReceive( beepQueue, &entryRead, portMAX_DELAY ) )
             {
-                ESP_LOGW(TAG_BUZZER, "Read entry from queue: count=%d, msOn=%d, msOff=%d", entryRead.count, entryRead.msOn, entryRead.msOff);
+                ESP_LOGI(TAG_BUZZER, "Read entry from queue: count=%d, msOn=%d, msOff=%d", entryRead.count, entryRead.msOn, entryRead.msOff);
 
                 //beep requested count with requested delays
                 for (int i = entryRead.count; i--;){

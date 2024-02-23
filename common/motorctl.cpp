@@ -15,7 +15,7 @@ static const char * TAG = "motor-control";
 //task for handling the motors (ramp, current limit, driver)
 void task_motorctl( void * task_motorctl_parameters ){
 	task_motorctl_parameters_t *objects = (task_motorctl_parameters_t *)task_motorctl_parameters;
-    ESP_LOGW(TAG, "Task-motorctl: starting handle loop...");
+    ESP_LOGW(TAG, "Task-motorctl: starting handle loops for left and right motor...");
     while(1){
     	objects->motorRight->handle();
     	objects->motorLeft->handle();
@@ -29,19 +29,17 @@ void task_motorctl( void * task_motorctl_parameters ){
 //======== constructor ========
 //=============================
 //constructor, simultaniously initialize instance of motor driver 'motor' and current sensor 'cSensor' with provided config (see below lines after ':')
-controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control): 
+controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle_f): 
 	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent) {
 		//copy parameters for controlling the motor
 		config = config_control;
 		//pointer to update motot dury method
 		motorSetCommand = setCommandFunc;
-		//copy configured default fading durations to actually used variables
-		msFadeAccel = config.msFadeAccel;
-		msFadeDecel = config.msFadeDecel;
+        //pointer to nvs handle
+        nvsHandle = nvsHandle_f;
 
+        //create queue, initialize config values
 		init();
-		//TODO: add currentsensor object here
-		//currentSensor cSensor(config.currentSensor_adc, config.currentSensor_ratedCurrent);
 	}
 
 
@@ -54,7 +52,11 @@ void controlledMotor::init(){
     if (commandQueue == NULL)
     ESP_LOGE(TAG, "Failed to create command-queue");
     else
-    ESP_LOGW(TAG, "Initialized command-queue");
+    ESP_LOGI(TAG, "[%s] Initialized command-queue", config.name);
+
+    // load config values from nvs, otherwise use default from config object
+    loadAccelDuration();
+    loadDecelDuration();
 
 	//cSensor.calibrateZeroAmpere(); //currently done in currentsensor constructor TODO do this regularly e.g. in idle?
 }
@@ -104,7 +106,7 @@ void controlledMotor::handle(){
     //--- receive commands from queue ---
     if( xQueueReceive( commandQueue, &commandReceive, ( TickType_t ) 0 ) )
     {
-        ESP_LOGD(TAG, "Read command from queue: state=%s, duty=%.2f", motorstateStr[(int)commandReceive.state], commandReceive.duty);
+        ESP_LOGD(TAG, "[%s] Read command from queue: state=%s, duty=%.2f", config.name, motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
         dutyTarget = commandReceive.duty;
 		receiveTimeout = false;
@@ -139,7 +141,7 @@ void controlledMotor::handle(){
 		receiveTimeout = true;
 		state = motorstate_t::IDLE;
 		dutyTarget = 0;
-		ESP_LOGE(TAG, "TIMEOUT, no target data received for more than %ds -> switch to IDLE", TIMEOUT_IDLE_WHEN_NO_COMMAND/1000);
+		ESP_LOGE(TAG, "[%s] TIMEOUT, no target data received for more than %ds -> switch to IDLE", config.name, TIMEOUT_IDLE_WHEN_NO_COMMAND/1000);
 	}
 
     //--- calculate increment ---
@@ -164,7 +166,7 @@ void controlledMotor::handle(){
 	if (state == motorstate_t::BRAKE){
 		ESP_LOGD(TAG, "braking - skip fading");
 		motorSetCommand({motorstate_t::BRAKE, dutyTarget});
-		ESP_LOGI(TAG, "Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", motorstateStr[(int)state], dutyNow, currentNow);
+		ESP_LOGI(TAG, "[%s] Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", config.name, motorstateStr[(int)state], dutyNow, currentNow);
 		//dutyNow = 0;
 		return; //no need to run the fade algorithm
 	}
@@ -211,7 +213,7 @@ void controlledMotor::handle(){
 			} else if (dutyNow > currentLimitDecrement) {
 				dutyNow -= currentLimitDecrement;
 			}
-			ESP_LOGW(TAG, "current limit exceeded! now=%.3fA max=%.1fA => decreased duty from %.3f to %.3f", currentNow, config.currentMax, dutyOld, dutyNow);
+			ESP_LOGW(TAG, "[%s] current limit exceeded! now=%.3fA max=%.1fA => decreased duty from %.3f to %.3f", config.name, currentNow, config.currentMax, dutyOld, dutyNow);
 		}
 	}
 
@@ -255,7 +257,7 @@ void controlledMotor::handle(){
 
     //--- apply new target to motor ---
     motorSetCommand({state, (float)fabs(dutyNow)});
-	ESP_LOGI(TAG, "Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", motorstateStr[(int)state], dutyNow, currentNow);
+	ESP_LOGI(TAG, "[%s] Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", config.name, motorstateStr[(int)state], dutyNow, currentNow);
     //note: BRAKE state is handled earlier
     
 
@@ -275,7 +277,7 @@ void controlledMotor::setTarget(motorstate_t state_f, float duty_f){
         .state = state_f,
         .duty = duty_f
     };
-    ESP_LOGI(TAG, "setTarget: Inserting command to queue: state='%s'(%d), duty=%.2f", motorstateStr[(int)commandSend.state], (int)commandSend.state, commandSend.duty);
+    ESP_LOGI(TAG, "[%s] setTarget: Inserting command to queue: state='%s'(%d), duty=%.2f", config.name, motorstateStr[(int)commandSend.state], (int)commandSend.state, commandSend.duty);
     //send command to queue (overwrite if an old command is still in the queue and not processed)
     xQueueOverwrite( commandQueue, ( void * )&commandSend);
     //xQueueSend( commandQueue, ( void * )&commandSend, ( TickType_t ) 0 );
@@ -316,6 +318,22 @@ uint32_t controlledMotor::getFade(fadeType_t fadeType){
     return 0;
 }
 
+//==============================
+//======= getFadeDefault =======
+//==============================
+//return default accel / decel time (from config)
+uint32_t controlledMotor::getFadeDefault(fadeType_t fadeType){
+    switch(fadeType){
+        case fadeType_t::ACCEL:
+            return config.msFadeAccel;
+            break;
+        case fadeType_t::DECEL:
+            return config.msFadeDecel;
+            break;
+    }
+    return 0;
+}
+
 
 
 //===============================
@@ -328,12 +346,13 @@ void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew){
     //TODO: mutex for msFade variable also used in handle function
     switch(fadeType){
         case fadeType_t::ACCEL:
-            ESP_LOGW(TAG, "changed fade-up time from %d to %d", msFadeAccel, msFadeNew);
-            msFadeAccel = msFadeNew; 
+            ESP_LOGW(TAG, "[%s] changed fade-up time from %d to %d", config.name, msFadeAccel, msFadeNew);
+            writeAccelDuration(msFadeNew);
             break;
         case fadeType_t::DECEL:
-            ESP_LOGW(TAG, "changed fade-down time from %d to %d", msFadeDecel, msFadeNew);
-            msFadeDecel = msFadeNew;
+            ESP_LOGW(TAG, "[%s] changed fade-down time from %d to %d",config.name, msFadeDecel, msFadeNew);
+            // write new value to nvs and update the variable
+            writeDecelDuration(msFadeNew);
             break;
     }
 }
@@ -390,3 +409,118 @@ bool controlledMotor::toggleFade(fadeType_t fadeType){
     return enabled;
 }
 
+
+
+
+//-----------------------------
+//----- loadAccelDuration -----
+//-----------------------------
+// load stored value from nvs if not successfull uses config default value
+void controlledMotor::loadAccelDuration(void)
+{
+    // load default value
+    msFadeAccel = config.msFadeAccel;
+    // read from nvs
+    uint32_t valueNew;
+    char key[15];
+    snprintf(key, 15, "m-%s-accel", config.name);
+    esp_err_t err = nvs_get_u32(*nvsHandle, key, &valueNew);
+    switch (err)
+    {
+    case ESP_OK:
+        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %d with %d", key, config.msFadeAccel, valueNew);
+        msFadeAccel = valueNew;
+        break;
+    case ESP_ERR_NVS_NOT_FOUND:
+        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %d", key, msFadeAccel);
+        break;
+    default:
+        ESP_LOGE(TAG, "Error (%s) reading nvs!", esp_err_to_name(err));
+    }
+}
+
+//-----------------------------
+//----- loadDecelDuration -----
+//-----------------------------
+void controlledMotor::loadDecelDuration(void)
+{
+    // load default value
+    msFadeDecel = config.msFadeDecel;
+    // read from nvs
+    uint32_t valueNew;
+    char key[15];
+    snprintf(key, 15, "m-%s-decel", config.name);
+    esp_err_t err = nvs_get_u32(*nvsHandle, key, &valueNew);
+    switch (err)
+    {
+    case ESP_OK:
+        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %d with %d", key, config.msFadeDecel, valueNew);
+        msFadeDecel = valueNew;
+        break;
+    case ESP_ERR_NVS_NOT_FOUND:
+        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %d", key, msFadeDecel);
+        break;
+    default:
+        ESP_LOGE(TAG, "Error (%s) reading nvs!", esp_err_to_name(err));
+    }
+}
+
+
+
+
+//------------------------------
+//----- writeAccelDuration -----
+//------------------------------
+// write provided value to nvs to be persistent and update the local variable msFadeAccel
+void controlledMotor::writeAccelDuration(uint32_t newValue)
+{
+    // check if unchanged
+    if(msFadeAccel == newValue){
+        ESP_LOGW(TAG, "value unchanged at %d, not writing to nvs", newValue);
+        return;
+    }
+    // generate nvs storage key
+    char key[15];
+    snprintf(key, 15, "m-%s-accel", config.name);
+    // update nvs value
+    ESP_LOGW(TAG, "[%s] updating nvs value '%s' from %d to %d", config.name, key, msFadeAccel, newValue);
+    esp_err_t err = nvs_set_u32(*nvsHandle, key, newValue);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed writing");
+    err = nvs_commit(*nvsHandle);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed committing updates");
+    else
+        ESP_LOGI(TAG, "nvs: successfully committed updates");
+    // update variable
+    msFadeAccel = newValue;
+}
+
+//------------------------------
+//----- writeDecelDuration -----
+//------------------------------
+// write provided value to nvs to be persistent and update the local variable msFadeDecel
+// TODO: reduce duplicate code
+void controlledMotor::writeDecelDuration(uint32_t newValue)
+{
+    // check if unchanged
+    if(msFadeDecel == newValue){
+        ESP_LOGW(TAG, "value unchanged at %d, not writing to nvs", newValue);
+        return;
+    }
+    // generate nvs storage key
+    char key[15];
+    snprintf(key, 15, "m-%s-decel", config.name);
+    // update nvs value
+    ESP_LOGW(TAG, "[%s] updating nvs value '%s' from %d to %d", config.name, key, msFadeDecel, newValue);
+    esp_err_t err = nvs_set_u32(*nvsHandle, key, newValue);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed writing");
+    err = nvs_commit(*nvsHandle);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed committing updates");
+    else
+        ESP_LOGI(TAG, "nvs: successfully committed updates");
+    // update variable
+    msFadeDecel = newValue;
+}

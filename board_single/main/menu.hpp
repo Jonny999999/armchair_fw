@@ -17,6 +17,7 @@ typedef struct
 {
     void (*action)(display_task_parameters_t * objects, SSD1306_t * display, int value);   // pointer to function run when confirmed
     int (*currentValue)(display_task_parameters_t * objects); // pointer to function to get currently configured value
+    int (*defaultValue)(display_task_parameters_t * objects); // pointer to function to get currently configured value
     int valueMin;          // min allowed value
     int valueMax;          // max allowed value
     int valueIncrement;    // amount changed at one encoder tick (+/-)

@@ -25,7 +25,10 @@ static int value = 0;
 //================================
 //===== CONFIGURE MENU ITEMS =====
 //================================
-// note: when line4 * and line5 * are empty the value is printed large
+// Instructions / Behavior:
+// - when line4 * and line5 * are empty the value is printed large
+// - when 3rd element is not NULL (pointer to defaultValue function) return int value of that function is shown in line 2
+// - when 2nd element is NULL (pointer to currentValue function): instead of current value "click to confirm is shown" in line 3
 
 //#########################
 //#### center Joystick ####
@@ -33,27 +36,149 @@ static int value = 0;
 void item_centerJoystick_action(display_task_parameters_t * objects, SSD1306_t * display, int value){
     if (!value) return;
     ESP_LOGW(TAG, "defining joystick center");
-    (*objects).joystick->defineCenter();
-    //objects->joystick->defineCenter();
-    //joystick->defineCenter();
+    objects->joystick->defineCenter();
+    objects->buzzer->beep(3, 60, 40);
 }
-int item_centerJoystick_value(display_task_parameters_t * objects){
-    return 1;
-}
-
 menuItem_t item_centerJoystick = {
     item_centerJoystick_action, // function action
-    item_centerJoystick_value,
-    0,                      // valueMin
-    1,                      // valueMAx
-    1,                      // valueIncrement
-    "Center Joystick",      // title
-    "Center Joystick", // line1 (above value)
-    "click to confirm",   // line2 (above value)
-    "defines current",                     // line4 * (below value)
-    "pos as center",                     // line5 *
-    "click to confirm",     // line6
-    "set 0 to cancel",  // line7
+    NULL,                       // function get initial value or NULL(show in line 2)
+    NULL,                       // function get default value or NULL(dont set value, show msg)
+    0,                          // valueMin
+    0,                          // valueMax
+    0,                          // valueIncrement
+    "Center Joystick ",          // title
+    "Center Joystick ",          // line1 (above value)
+    "",                         // line2 (above value)
+    "defines current ",          // line4 * (below value)
+    "pos as center   ",            // line5 *
+    "",                         // line6
+    "=>long to cancel",           // line7
+};
+
+// ############################
+// #### calibrate Joystick ####
+// ############################
+// continously show/update joystick data on display
+#define CALIBRATE_JOYSTICK_UPDATE_INTERVAL 50
+void item_calibrateJoystick_action(display_task_parameters_t *objects, SSD1306_t *display, int value)
+{
+    //--- variables ---
+    bool running = true;
+    joystickCalibrationMode_t mode = X_MIN;
+    rotary_encoder_event_t event;
+    int valueNow = 0;
+
+    //-- pre loop instructions --
+    ESP_LOGW(TAG, "starting joystick calibration sequence");
+    ssd1306_clear_screen(display, false);
+
+    //-- show static lines --
+    // show first line (title)
+    displayTextLine(display, 0, false, true, "calibrate stick");
+    // show last line (info)
+    displayTextLineCentered(display, 7, false, true, " click: confirm ");
+    // show initital state
+    displayTextLineCentered(display, 1, true, false, "%s", "X-min");
+
+    //-- loop until all positions are defined --
+    while (running && objects->control->getCurrentMode() == controlMode_t::MENU)
+    {
+        // repeatedly print adc value depending on currently selected axis
+        switch (mode)
+        {
+        case X_MIN:
+        case X_MAX:
+            displayTextLineCentered(display, 4, true, false, "%d", valueNow = objects->joystick->getRawX()); // large
+            break;
+        case Y_MIN:
+        case Y_MAX:
+            displayTextLineCentered(display, 4, true, false, "%d", valueNow = objects->joystick->getRawY()); // large
+            break;
+        case X_CENTER:
+        case Y_CENTER:
+            displayTextLine(display, 4, false, false, "    x = %d", objects->joystick->getRawX());
+            displayTextLine(display, 5, false, false, "    y = %d", objects->joystick->getRawY());
+            displayTextLine(display, 6, false, false, "release & click!");
+            break;
+        }
+
+        // handle encoder event
+        // save and next when button clicked, exit when long pressed
+        if (xQueueReceive(objects->encoderQueue, &event, CALIBRATE_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS))
+        {
+            objects->control->resetTimeout();
+            switch (event.type)
+            {
+            case RE_ET_BTN_CLICKED:
+                objects->buzzer->beep(2, 120, 50);
+                switch (mode)
+                {
+                case X_MIN:
+                    // save x min position
+                    ESP_LOGW(TAG, "calibrate-stick: saving  X_MIN");
+                    objects->joystick->writeCalibration(mode, valueNow);
+                    displayTextLineCentered(display, 1, true, false, "%s", "X-max");
+                    mode = X_MAX;
+                    break;
+                case X_MAX:
+                    // save x max position
+                    ESP_LOGW(TAG, "calibrate-stick: saving  X_MAX");
+                    objects->joystick->writeCalibration(mode, valueNow);
+                    displayTextLineCentered(display, 1, true, false, "%s", "Y-min");
+                    mode = Y_MIN;
+                    break;
+                case Y_MIN:
+                    // save y min position
+                    ESP_LOGW(TAG, "calibrate-stick: saving  Y_MIN");
+                    objects->joystick->writeCalibration(mode, valueNow);
+                    displayTextLineCentered(display, 1, true, false, "%s", "Y-max");
+                    mode = Y_MAX;
+                    break;
+                case Y_MAX:
+                    // save y max position
+                    ESP_LOGW(TAG, "calibrate-stick: saving  Y_MAX");
+                    objects->joystick->writeCalibration(mode, valueNow);
+                    displayTextLineCentered(display, 1, true, false, "%s", "CENTR");
+                    mode = X_CENTER;
+                    break;
+                case X_CENTER:
+                case Y_CENTER:
+                    // save center position
+                    ESP_LOGW(TAG, "calibrate-stick: saving  CENTER -> finished");
+                    objects->joystick->defineCenter();
+                    // finished
+                    running = false;
+                    break;
+                }
+                break;
+            case RE_ET_BTN_LONG_PRESSED:
+                //exit to main-menu
+                objects->buzzer->beep(1, 1000, 10);
+                ESP_LOGW(TAG, "aborting calibration sqeuence");
+                running = false;
+            case RE_ET_CHANGED:
+            case RE_ET_BTN_PRESSED:
+            case RE_ET_BTN_RELEASED:
+                break;
+            }
+        }
+    }
+}
+
+menuItem_t item_calibrateJoystick = {
+    item_calibrateJoystick_action, // function action
+    NULL,                          // function get initial value or NULL(show in line 2)
+    NULL,                          // function get default value or NULL(dont set value, show msg)
+    0,                             // valueMin
+    0,                             // valueMax
+    0,                             // valueIncrement
+    "Calibrate Stick ",            // title
+    "   Calibrate    ",            // line1 (above value)
+    "   Joystick     ",            // line2 (above value)
+    " click to start ",            // line4 * (below value)
+    "   sequence     ",            // line5 *
+    "                ",            // line6
+    "=>long to cancel",            // line7
 };
 
 
@@ -61,6 +186,7 @@ menuItem_t item_centerJoystick = {
 //#### debug Joystick ####
 //########################
 //continously show/update joystick data on display
+#define DEBUG_JOYSTICK_UPDATE_INTERVAL 50
 void item_debugJoystick_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
     //--- variables ---
@@ -68,8 +194,6 @@ void item_debugJoystick_action(display_task_parameters_t * objects, SSD1306_t * 
     rotary_encoder_event_t event;
 
     //-- pre loop instructions --
-    if (!value) // dont open menu when value was set to 0
-        return;
     ESP_LOGW(TAG, "showing joystick debug page");
     ssd1306_clear_screen(display, false);
     // show title
@@ -90,40 +214,39 @@ void item_debugJoystick_action(display_task_parameters_t * objects, SSD1306_t * 
         displayTextLine(display, 5, false, false, "pos=%-12s ", joystickPosStr[(int)data.position]);
 
         // exit when button pressed
-        if (xQueueReceive(objects->encoderQueue, &event, 20 / portTICK_PERIOD_MS))
+        if (xQueueReceive(objects->encoderQueue, &event, DEBUG_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS))
         {
+            objects->control->resetTimeout();
             switch (event.type)
             {
             case RE_ET_BTN_CLICKED:
+            case RE_ET_BTN_LONG_PRESSED:
                 running = false;
+                objects->buzzer->beep(1, 100, 10);
                 break;
             case RE_ET_CHANGED:
             case RE_ET_BTN_PRESSED:
             case RE_ET_BTN_RELEASED:
-            case RE_ET_BTN_LONG_PRESSED:
                 break;
             }
         }
     }
 }
 
-int item_debugJoystick_value(display_task_parameters_t * objects){
-    return 1;
-}
-
 menuItem_t item_debugJoystick = {
     item_debugJoystick_action, // function action
-    item_debugJoystick_value,
-    0,                      // valueMin
-    1,                      // valueMAx
-    1,                      // valueIncrement
-    "Debug joystick",      // title
-    "Debug joystick", // line1 (above value)
-    "",   // line2 (above value)
-    "click to enter",                     // line4 * (below value)
-    "debug screen",                     // line5 *
-    "prints values",     // line6
-    "set 0 to cancel",  // line7
+    NULL,                      // function get initial value or NULL(show in line 2)
+    NULL,                      // function get default value or NULL(dont set value, show msg)
+    0,                         // valueMin
+    0,                         // valueMax
+    0,                         // valueIncrement
+    "Debug joystick  ",        // title
+    "Debug joystick  ",        // line1 (above value)
+    "",                        // line2 (above value)
+    "",                        // line4 * (below value)
+    "debug screen    ",        // line5 *
+    "prints values   ",        // line6
+    "=>long to cancel",        // line7
 };
 
 
@@ -132,28 +255,28 @@ menuItem_t item_debugJoystick = {
 //########################
 void maxDuty_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
-    //TODO actually store the value
-    ESP_LOGW(TAG, "set max duty to %d", value);
+    objects->control->setMaxDuty(value);
 }
 int maxDuty_currentValue(display_task_parameters_t * objects)
 {
-    //TODO get real current value
-    return 84;
+    return (int)objects->control->getMaxDuty();
 }
 menuItem_t item_maxDuty = {
-    maxDuty_action, // function action
-    maxDuty_currentValue,
-    1,                  // valueMin
-    99,                 // valueMAx
-    1,                  // valueIncrement
-    "max duty",     // title
-    "",                 // line1 (above value)
-    "  set max-duty: ", // line2 (above value)
-    "",                 // line4 * (below value)
-    "",                 // line5 *
-    "      1-99      ", // line6
-    "     percent    ", // line7
+    maxDuty_action,       // function action
+    maxDuty_currentValue, // function get initial value or NULL(show in line 2)
+    NULL,                 // function get default value or NULL(dont set value, show msg)
+    1,                    // valueMin
+    100,                  // valueMax
+    1,                    // valueIncrement
+    "Set max Duty    ",   // title
+    "",                   // line1 (above value)
+    "  set max-duty: ",   // line2 (above value)
+    "",                   // line4 * (below value)
+    "",                   // line5 *
+    "      1-100     ",   // line6
+    "     percent    ",   // line7
 };
+
 
 //######################
 //##### accelLimit #####
@@ -167,20 +290,26 @@ int item_accelLimit_value(display_task_parameters_t * objects)
 {
     return objects->motorLeft->getFade(fadeType_t::ACCEL);
 }
+int item_accelLimit_default(display_task_parameters_t * objects)
+{
+    return objects->motorLeft->getFadeDefault(fadeType_t::ACCEL);
+}
 menuItem_t item_accelLimit = {
-    item_accelLimit_action, // function action
-    item_accelLimit_value,
-    0,                // valueMin
-    10000,            // valueMAx
-    100,              // valueIncrement
-    "Accel limit",    // title
-    "Accel limit /",  // line1 (above value)
-    "Fade up time",   // line2 (above value)
-    "",               // line4 * (below value)
-    "",               // line5 *
-    "milliseconds",   // line6
-    "from 0 to 100%", // line7
+    item_accelLimit_action,  // function action
+    item_accelLimit_value,   // function get initial value or NULL(show in line 2)
+    item_accelLimit_default, // function get default value or NULL(dont set value, show msg)
+    0,                       // valueMin
+    10000,                   // valueMax
+    100,                     // valueIncrement
+    "Accel limit     ",      // title
+    " Fade up time   ",      // line1 (above value)
+    "",                      // line2 <= showing "default = %d"
+    "",                      // line4 * (below value)
+    "",                      // line5 *
+    "milliseconds    ",      // line6
+    "from 0 to 100%  ",      // line7
 };
+
 
 // ######################
 // ##### decelLimit #####
@@ -194,20 +323,64 @@ int item_decelLimit_value(display_task_parameters_t * objects)
 {
     return objects->motorLeft->getFade(fadeType_t::DECEL);
 }
+int item_decelLimit_default(display_task_parameters_t * objects)
+{
+    return objects->motorLeft->getFadeDefault(fadeType_t::DECEL);
+}
 menuItem_t item_decelLimit = {
-    item_decelLimit_action, // function action
-    item_decelLimit_value,
-    0,                // valueMin
-    10000,            // valueMAx
-    100,              // valueIncrement
-    "Decel limit",    // title
-    "Decel limit /",  // line1 (above value)
-    "Fade down time", // line2 (above value)
-    "",               // line4 * (below value)
-    "",               // line5 *
-    "milliseconds",   // line6
-    "from 100 to 0%", // line7
+    item_decelLimit_action,  // function action
+    item_decelLimit_value,   // function get initial value or NULL(show in line 2)
+    item_decelLimit_default, // function get default value or NULL(dont set value, show msg)
+    0,                       // valueMin
+    10000,                   // valueMax
+    100,                     // valueIncrement
+    "Decel limit     ",      // title
+    " Fade down time ",      // line1 (above value)
+    "",                      // line2 <= showing "default = %d"
+    "",                      // line4 * (below value)
+    "",                      // line5 *
+    "milliseconds    ",      // line6
+    "from 100 to 0%  ",      // line7
 };
+
+
+//#####################
+//####### RESET #######
+//#####################
+void item_reset_action(display_task_parameters_t *objects, SSD1306_t *display, int value)
+{
+    objects->buzzer->beep(1, 2000, 0);
+    // close and erase NVS
+    ESP_LOGW(TAG, "closing and ERASING non-volatile-storage...");
+    nvs_close(*(objects->nvsHandle));
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    // show message restarting
+    ssd1306_clear_screen(display, false);
+    displayTextLineCentered(display, 0, false, true, "");
+    displayTextLineCentered(display, 1, true, true, "RE-");
+    displayTextLineCentered(display, 4, true, true, "START");
+    displayTextLineCentered(display, 7, false, true, "");
+    vTaskDelay(1000 / portTICK_PERIOD_MS); // wait for buzzer to beep
+    // restart
+    ESP_LOGW(TAG, "RESTARTING");
+    esp_restart();
+}
+menuItem_t item_reset = {
+    item_reset_action,  // function action
+    NULL,               // function get initial value or NULL(show in line 2)
+    NULL,               // function get default value or NULL(dont set value, show msg)
+    0,                  // valueMin
+    0,                  // valueMax
+    0,                  // valueIncrement
+    "RESET defaults  ", // title
+    "   reset nvs    ", // line1 (above value)
+    "  and restart   ", // line2 <= showing "default = %d"
+    "reset all stored", // line4 * (below value)
+    "   parameters   ", // line5 *
+    "",                 // line6
+    "=>long to cancel", // line7
+};
+
 
 //#####################
 //###### example ######
@@ -217,42 +390,49 @@ void item_example_action(display_task_parameters_t * objects, SSD1306_t * displa
     return;
 }
 int item_example_value(display_task_parameters_t * objects){
-    return 53;
+    return 53; //initial value shown / changed from
+}
+int item_example_valueDefault(display_task_parameters_t * objects){
+    return 931; // optionally shown in line 2 as "default = %d"
 }
 menuItem_t item_example = {
     item_example_action, // function action
-    item_example_value,
-    -255,             // valueMin
-    255,              // valueMAx
-    2,                // valueIncrement
-    "example-item-max",     // title
-    "line 1 - above", // line1 (above value)
-    "line 2 - above", // line2 (above value)
-    "line 4 - below", // line4 * (below value)
-    "line 5 - below", // line5 *
-    "line 6 - below", // line6
-    "line 7 - last",  // line7
+    item_example_value,  // function get initial value or NULL(show in line 2)
+    NULL,                // function get default value or NULL(dont set value, show msg)
+    -255,                // valueMin
+    255,                 // valueMax
+    2,                   // valueIncrement
+    "example-item-max",  // title
+    "line 1 - above  ",  // line1 (above value)
+    "line 2 - above  ",  // line2 (above value)
+    "line 4 - below  ",  // line4 * (below value)
+    "line 5 - below  ",  // line5 *
+    "line 6 - below  ",  // line6
+    "line 7 - last   ",  // line7
 };
 
 menuItem_t item_last = {
     item_example_action, // function action
-    item_example_value,
-    -500,               // valueMin
-    4500,               // valueMAx
-    50,                 // valueIncrement
-    "set large number", // title
-    "line 1 - above",   // line1 (above value)
-    "line 2 - above",   // line2 (above value)
-    "",                 // line4 * (below value)
-    "",                 // line5 *
-    "line 6 - below",   // line6
-    "line 7 - last",    // line7
-
+    item_example_value,  // function get initial value or NULL(show in line 2)
+    item_example_valueDefault, // function get default value or NULL(dont set value, show msg)
+    -500,                // valueMin
+    4500,                // valueMax
+    50,                  // valueIncrement
+    "set large number",  // title
+    "line 1 - above  ",  // line1 (above value)
+    "line 2 - above  ",  // line2 (above value)
+    "",                  // line4 * (below value)
+    "",                  // line5 *
+    "line 6 - below  ",  // line6
+    "line 7 - last   ",  // line7
 };
 
-//store all configured menu items in one array
-menuItem_t menuItems[] = {item_centerJoystick, item_debugJoystick, item_accelLimit, item_decelLimit, item_example, item_last};
-int itemCount = 6;
+
+//####################################################
+//### store all configured menu items in one array ###
+//####################################################
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_reset, item_example, item_last};
+const int itemCount = 9;
 
 
 
@@ -298,42 +478,78 @@ void showItemList(SSD1306_t *display, int selectedItem)
     }
 }
 
-//---------------------------
-//----- showValueSelect -----
-//---------------------------
-// function that renders value-select screen to display (one update)
-// shows configured text of selected item and currently selected value
-// TODO show previous value in one line?
-// TODO update changed line only (value)
-void showValueSelect(SSD1306_t *display, int selectedItem)
+
+//-----------------------------
+//--- showValueSelectStatic ---
+//-----------------------------
+// function that renders lines that do not update of value-select screen to display (initial update)
+// shows configured text of currently selected item
+void showValueSelectStatic(display_task_parameters_t * objects, SSD1306_t *display, int selectedItem)
 {
     //-- show title line --
     displayTextLine(display, 0, false, true, " -- set value -- "); // inverted
 
     //-- show text above value --
     displayTextLine(display, 1, false, false, "%-16s", menuItems[selectedItem].line1);
-    displayTextLine(display, 2, false, false, "%-16s", menuItems[selectedItem].line2);
+
+    //-- show line 2 or default value ---
+    if (menuItems[selectedItem].defaultValue != NULL){
+        displayTextLineCentered(display, 2, false, false, "default = %d", menuItems[selectedItem].defaultValue(objects));
+    }
+    else
+    {
+        // displayTextLine(display, 2, false, false, "previous=%d", menuItems[selectedItem].currentValue(objects)); // <= show previous value
+        displayTextLine(display, 2, false, false, "%-16s", menuItems[selectedItem].line2);
+    }
 
     //-- show value and other configured lines --
-    // print value large, if 2 description lines are empty
+    // print value large, if two description lines are empty
     if (strlen(menuItems[selectedItem].line4) == 0 && strlen(menuItems[selectedItem].line5) == 0)
     {
-        // print large value + line5 and line6
-        displayTextLineCentered(display, 3, true, false, "%d", value); //large centered
+        // print less lines: line5 and line6 only (due to large value)
+        //displayTextLineCentered(display, 3, true, false, "%d", value); //large centered (value shown in separate function)
         displayTextLine(display, 6, false, false, "%-16s", menuItems[selectedItem].line6);
         displayTextLine(display, 7, false, false, "%-16s", menuItems[selectedItem].line7);
     }
     else
     {
-        displayTextLineCentered(display, 3, false, false, "%d", value); //centered
+        //displayTextLineCentered(display, 3, false, false, "%d", value); //centered (value shown in separate function)
         // print description lines 4 to 7
         displayTextLine(display, 4, false, false, "%-16s", menuItems[selectedItem].line4);
         displayTextLine(display, 5, false, false, "%-16s", menuItems[selectedItem].line5);
         displayTextLine(display, 6, false, false, "%-16s", menuItems[selectedItem].line6);
         displayTextLine(display, 7, false, false, "%-16s", menuItems[selectedItem].line7);
     }
+
+    //-- show info msg instead of value --
+    //when pointer to default value func not defined (set value not used, action only)
+    if (menuItems[selectedItem].currentValue == NULL)
+    {
+        //show static text
+        displayTextLineCentered(display, 3, false, true, "%s", "click to confirm");
+    }
+    // otherwise value gets updated in next iteration of menu-handle function
 }
 
+
+//-----------------------------
+//----- updateValueSelect -----
+//-----------------------------
+// update line with currently set value only (increses performance significantly)
+void updateValueSelect(SSD1306_t *display, int selectedItem)
+{
+    // print value large, if 2 description lines are empty
+    if (strlen(menuItems[selectedItem].line4) == 0 && strlen(menuItems[selectedItem].line5) == 0)
+    {
+        // print large and centered value in line 3-5
+        displayTextLineCentered(display, 3, true, false, "%d", value); // large centered
+    }
+    else
+    {
+        //print value centered in line 3
+        displayTextLineCentered(display, 3, false, false, "%d", value); // centered
+    }
+}
 
 
 
@@ -342,8 +558,8 @@ void showValueSelect(SSD1306_t *display, int selectedItem)
 //========================
 //controls menu with encoder input and displays the text on oled display
 //function is repeatedly called by display task when in menu state
-#define QUEUE_TIMEOUT 3000 //timeout no encoder event - to handle timeout and not block the display loop
-#define MENU_TIMEOUT 60000 //inactivity timeout (switch to IDLE mode)
+#define QUEUE_TIMEOUT 3000 //timeout no encoder event - to not block the display loop and actually handle menu-timeout
+#define MENU_TIMEOUT 60000 //inactivity timeout (switch to IDLE mode) note: should be smaller than IDLE timeout in control task
 void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
 {
     static uint32_t lastActivity = 0;
@@ -362,7 +578,9 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
         // wait for encoder event
         if (xQueueReceive(objects->encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
         {
+            // reset menu- and control-timeout on any encoder event
             lastActivity = esp_log_timestamp();
+            objects->control->resetTimeout();
             switch (event.type)
             {
             case RE_ET_CHANGED:
@@ -370,33 +588,46 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
                 if (event.diff < 0)
                 {
                     if (selectedItem != itemCount - 1)
+                    {
+                        objects->buzzer->beep(1, 20, 0);
                         selectedItem++;
-                    ESP_LOGD(TAG, "showing next item: %d '%s'", selectedItem, menuItems[selectedItem].title);
+                        ESP_LOGD(TAG, "showing next item: %d '%s'", selectedItem, menuItems[selectedItem].title);
+                    }
                     //note: display will update at start of next run
                 }
                 else
                 {
                     if (selectedItem != 0)
+                    {
+                        objects->buzzer->beep(1, 20, 0);
                         selectedItem--;
-                    ESP_LOGD(TAG, "showing previous item: %d '%s'", selectedItem, menuItems[selectedItem].title);
+                        ESP_LOGD(TAG, "showing previous item: %d '%s'", selectedItem, menuItems[selectedItem].title);
+                    }
                     //note: display will update at start of next run
                 }
                 break;
 
             case RE_ET_BTN_CLICKED:
                 //--- switch to edit value page ---
+                objects->buzzer->beep(1, 50, 10);
                 ESP_LOGI(TAG, "Button pressed - switching to state SET_VALUE");
                 // change state (menu to set value)
                 menuState = SET_VALUE;
-                // get currently configured value
-                value = menuItems[selectedItem].currentValue(objects);
                 // clear display
                 ssd1306_clear_screen(display, false);
+                //update static content of set-value screen once at change only
+                showValueSelectStatic(objects, display, selectedItem);
+                // get currently configured value, when value-select feature is actually used in this item
+                if (menuItems[selectedItem].currentValue != NULL)
+                    value = menuItems[selectedItem].currentValue(objects);
+                else
+                    value = 0;
                 break;
 
-            //exit menu mode
             case RE_ET_BTN_LONG_PRESSED:
-                //change to previous mode (e.g. JOYSTICK)
+                //--- exit menu mode ---
+                // change to previous mode (e.g. JOYSTICK)
+                objects->buzzer->beep(12, 15, 8);
                 objects->control->toggleMode(controlMode_t::MENU); //currently already in MENU -> changes to previous mode
                 ssd1306_clear_screen(display, false);
                 break;
@@ -412,38 +643,55 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
         //---- State SET VALUE ----
         //-------------------------
     case SET_VALUE:
-        // wait for encoder event
-        showValueSelect(display, selectedItem);
+        // update currently selected value
+        // note: static lines are updated at mode change
+        if (menuItems[selectedItem].currentValue != NULL) // dont update when set-value not used for this item
+            updateValueSelect(display, selectedItem);
 
+        // wait for encoder event
         if (xQueueReceive(objects->encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
         {
-            lastActivity = esp_log_timestamp();
+            objects->control->resetTimeout();
             switch (event.type)
             {
             case RE_ET_CHANGED:
                 //-- change value --
-                // increment value
-                if (event.diff < 0)
-                    value += menuItems[selectedItem].valueIncrement;
-                else
-                    value -= menuItems[selectedItem].valueIncrement;
-                // limit to min/max range
-                if (value > menuItems[selectedItem].valueMax)
-                    value = menuItems[selectedItem].valueMax;
-                if (value < menuItems[selectedItem].valueMin)
-                    value = menuItems[selectedItem].valueMin;
+                // no need to increment value when item configured to not show value
+                if (menuItems[selectedItem].currentValue != NULL)
+                {
+                    objects->buzzer->beep(1, 25, 10);
+                    // increment value
+                    if (event.diff < 0)
+                        value += menuItems[selectedItem].valueIncrement;
+                    else
+                        value -= menuItems[selectedItem].valueIncrement;
+                    // limit to min/max range
+                    if (value > menuItems[selectedItem].valueMax)
+                        value = menuItems[selectedItem].valueMax;
+                    if (value < menuItems[selectedItem].valueMin)
+                        value = menuItems[selectedItem].valueMin;
+                }
                 break;
             case RE_ET_BTN_CLICKED:
                 //-- apply value --
                 ESP_LOGI(TAG, "Button pressed - running action function with value=%d for item '%s'", value, menuItems[selectedItem].title);
+                objects->buzzer->beep(2, 50, 50);
                 menuItems[selectedItem].action(objects, display, value);
+                menuState = MAIN_MENU;
+                break;
+            case RE_ET_BTN_LONG_PRESSED:
+                //-- exit value select to main menu --
+                objects->buzzer->beep(2, 100, 50);
+                ssd1306_clear_screen(display, false);
                 menuState = MAIN_MENU;
                 break;
             case RE_ET_BTN_PRESSED:
             case RE_ET_BTN_RELEASED:
-            case RE_ET_BTN_LONG_PRESSED:
                 break;
             }
+            // reset menu- and control-timeout on any encoder event
+            lastActivity = esp_log_timestamp();
+            objects->control->resetTimeout();
         }
         break;
     }
@@ -452,7 +700,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
     //--------------------
     //--- menu timeout ---
     //--------------------
-    //close menu and switch to IDLE mode when no encoder event within MENU_TIMEOUT
+    //close menu and switch to IDLE mode when no encoder event occured within MENU_TIMEOUT
     if (esp_log_timestamp() - lastActivity > MENU_TIMEOUT)
     {
         ESP_LOGW(TAG, "TIMEOUT - no activity for more than %ds -> closing menu, switching to IDLE", MENU_TIMEOUT/1000);

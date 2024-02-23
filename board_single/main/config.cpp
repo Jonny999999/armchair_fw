@@ -90,6 +90,7 @@ sabertooth2x60_config_t sabertoothConfig = {
 // TODO add motor name string -> then use as log tag?
 //--- configure left motor (contol) ---
 motorctl_config_t configMotorControlLeft = {
+    .name = "left",
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
@@ -101,6 +102,7 @@ motorctl_config_t configMotorControlLeft = {
 
 //--- configure right motor (contol) ---
 motorctl_config_t configMotorControlRight = {
+    .name = "right",
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
@@ -218,4 +220,15 @@ rotary_encoder_t encoder_config = {
 	.index = 0,
 	.btn_pressed_time_us = 20000,
 	.btn_state = RE_BTN_RELEASED //default state
+};
+
+
+//-----------------------------------
+//--- joystick command generation ---
+//-----------------------------------
+//configure parameters for motor command generation from joystick data
+joystickGenerateCommands_config_t joystickGenerateCommands_config{
+    .maxDuty = 100,
+    .dutyOffset = 5, // duty at which motors start immediately
+    .altStickMapping = false,
 };
