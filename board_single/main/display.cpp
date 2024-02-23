@@ -52,7 +52,7 @@ void display_init(display_config_t config){
 	ESP_LOGI(TAG, "config: sda=%d, sdl=%d, reset=%d,  offset=%d, flip=%d, size: %dx%d", 
 	config.gpio_sda, config.gpio_scl, config.gpio_reset, config.offsetX, config.flip, config.width, config.height);
 
-	i2c_master_init(&dev, config.gpio_sda, config.gpio_scl, config.gpio_reset);
+	i2c_master_init(&dev, config.gpio_sda, config.gpio_scl, -1); //-1: dont use reset pin
 	if (config.flip) {
 		dev._flip = true;
 		ESP_LOGW(TAG, "Flip upside down");

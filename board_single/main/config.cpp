@@ -197,10 +197,10 @@ speedSensor_config_t speedRight_config{
 display_config_t display_config {
     .gpio_scl = GPIO_NUM_22,
     .gpio_sda = GPIO_NUM_23,
-    .gpio_reset = GPIO_NUM_15,
+    .gpio_reset = GPIO_NUM_18, //note: this value is currently not used (set to -1 at display init)
     .width = 128,
     .height = 64,
-    .offsetX = 2,
+    .offsetX = 0,
     .flip = false,
     .contrast = 0xff, //max: 255
 };
@@ -212,9 +212,9 @@ display_config_t display_config {
 //-------------------------
 //configure rotary encoder (next to joystick)
 rotary_encoder_t encoder_config = {
-	.pin_a = GPIO_NUM_25,
+	.pin_a = GPIO_NUM_27,
 	.pin_b = GPIO_NUM_26,
-	.pin_btn = GPIO_NUM_27,
+	.pin_btn = GPIO_NUM_21,
 	.code = 1,
 	.store = 0, //encoder count
 	.index = 0,
