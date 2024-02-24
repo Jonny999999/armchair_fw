@@ -24,7 +24,7 @@ extern "C" {
 typedef struct display_config_t {
     gpio_num_t gpio_scl;
     gpio_num_t gpio_sda;
-    gpio_num_t gpio_reset;
+    int gpio_reset; // negative number means reset pin is not connected or not used
     int width;
     int height;
     int offsetX;
@@ -47,6 +47,12 @@ typedef struct display_task_parameters_t {
     nvs_handle_t * nvsHandle;
 } display_task_parameters_t;
 
+
+// enum for selecting the currently shown status page (display content when not in MENU mode)
+typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED, STATUS_SCREEN_JOYSTICK} displayStatusPage_t;
+
+// function to select one of the defined status screens which are shown on display when not in MENU mode
+void display_selectStatusPage(displayStatusPage_t newStatusPage);
 
 //task that inititialized the display, displays welcome message 
 //and releatedly updates the display with certain content

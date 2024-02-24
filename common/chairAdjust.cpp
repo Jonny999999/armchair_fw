@@ -79,7 +79,7 @@ void cControlledRest::setState(restState_t targetState)
         gpio_set_level(gpio_up, 0);
         break;
     case REST_OFF:
-        gpio_set_level(gpio_down, 1);
+        gpio_set_level(gpio_down, 0);
         gpio_set_level(gpio_up, 0);
         break;
     }

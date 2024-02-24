@@ -197,7 +197,7 @@ speedSensor_config_t speedRight_config{
 display_config_t display_config {
     .gpio_scl = GPIO_NUM_22,
     .gpio_sda = GPIO_NUM_23,
-    .gpio_reset = GPIO_NUM_15,
+    .gpio_reset = -1, //negative number disables reset feature
     .width = 128,
     .height = 64,
     .offsetX = 2,

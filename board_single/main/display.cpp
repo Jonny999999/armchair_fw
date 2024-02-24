@@ -39,6 +39,8 @@ float getVoltage1(adc1_channel_t adc, uint32_t samples){
 SSD1306_t dev;
 //tag for logging
 static const char * TAG = "display";
+//define currently shown status page (continously displayed content when not in MENU mode)
+static displayStatusPage_t selectedStatusPage = STATUS_SCREEN_OVERVIEW;
 
 
 
@@ -48,8 +50,7 @@ static const char * TAG = "display";
 //note CONFIG_OFFSETX is used (from menuconfig)
 void display_init(display_config_t config){
 	adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
-	ESP_LOGW(TAG, "Initializing Display...");
-	ESP_LOGI(TAG, "config: sda=%d, sdl=%d, reset=%d,  offset=%d, flip=%d, size: %dx%d", 
+	ESP_LOGI(TAG, "Initializing Display with config: sda=%d, sdl=%d, reset=%d,  offset=%d, flip=%d, size: %dx%d", 
 	config.gpio_sda, config.gpio_scl, config.gpio_reset, config.offsetX, config.flip, config.width, config.height);
 
 	i2c_master_init(&dev, config.gpio_sda, config.gpio_scl, config.gpio_reset);
@@ -189,16 +190,17 @@ float getBatteryPercent(){
 
 
 
-//-----------------------
-//----- showScreen1 -----
-//-----------------------
+//-----------------------------
+//---- showScreen Overview ----
+//-----------------------------
 //shows overview on entire display:
-//percentage, voltage, current, mode, rpm, speed
-void showScreen1(display_task_parameters_t * objects)
+//Battery percentage, voltage, current, mode, rpm, speed
+#define STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL 500
+void showStatusScreenOverview(display_task_parameters_t * objects)
 {
 	//-- battery percentage --
 	// TODO update when no load (currentsensors = ~0A) only
-	//large
+	//-- large batt percent --
 	displayTextLine(&dev, 0, true, false, "B:%02.0f%%", getBatteryPercent());
 
 	//-- voltage and current --
@@ -222,8 +224,28 @@ void showScreen1(display_task_parameters_t * objects)
 				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
 				   objects->speedLeft->getRpm(),
 				   objects->speedRight->getRpm());
+	vTaskDelay(STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL / portTICK_PERIOD_MS);
 }
 
+
+//----------------------------
+//----- showScreen Speed -----
+//----------------------------
+// shows speed of each motor in km/h large in two lines and RPM in last line
+#define STATUS_SCREEN_SPEED_UPDATE_INTERVAL 300
+void showStatusScreenSpeed(display_task_parameters_t * objects)
+{
+	// title
+	displayTextLine(&dev, 0, false, false, "Speed L,R - km/h");
+	// show km/h large in two lines
+	displayTextLine(&dev, 1, true, false, "%+.2f", objects->speedLeft->getKmph());
+	displayTextLine(&dev, 4, true, false, "%+.2f", objects->speedRight->getKmph());
+	// show both rotational speeds in one line
+	displayTextLineCentered(&dev, 7, false, false, "%+04.0f:%+04.0f RPM",
+				   objects->speedLeft->getRpm(),
+				   objects->speedRight->getRpm());
+	vTaskDelay(STATUS_SCREEN_SPEED_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+}
 
 
 //------------------------
@@ -245,13 +267,19 @@ void showStartupMsg(){
 
 
 
+//============================
+//===== selectStatusPage =====
+//============================
+void display_selectStatusPage(displayStatusPage_t newStatusPage){
+	ESP_LOGW(TAG, "switching statusPage from %d to %d", (int)selectedStatusPage, (int)newStatusPage);
+	selectedStatusPage = newStatusPage;
+}
+
 
 //============================
 //======= display task =======
 //============================
-#define STATUS_SCREEN_UPDATE_INTERVAL 500
 // TODO: separate task for each loop?
-
 void display_task(void *pvParameters)
 {
 	ESP_LOGW(TAG, "Initializing display and starting handle loop");
@@ -275,10 +303,18 @@ void display_task(void *pvParameters)
 			//uses encoder events to control menu and updates display
 			handleMenu(objects, &dev);
 		}
-		else //show status screen in any other mode
+		else //show selected status screen in any other mode
 		{
-			showScreen1(objects);
-			vTaskDelay(STATUS_SCREEN_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+			switch (selectedStatusPage)
+			{
+			default:
+			case STATUS_SCREEN_OVERVIEW:
+				showStatusScreenOverview(objects);
+				break;
+			case STATUS_SCREEN_SPEED:
+				showStatusScreenSpeed(objects);
+				break;
+			}
 		}
 		// TODO add pages and menus
 	}

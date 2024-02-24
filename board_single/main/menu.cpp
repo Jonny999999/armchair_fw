@@ -34,7 +34,6 @@ static int value = 0;
 //#### center Joystick ####
 //#########################
 void item_centerJoystick_action(display_task_parameters_t * objects, SSD1306_t * display, int value){
-    if (!value) return;
     ESP_LOGW(TAG, "defining joystick center");
     objects->joystick->defineCenter();
     objects->buzzer->beep(3, 60, 40);
@@ -385,6 +384,45 @@ menuItem_t item_reset = {
 //#####################
 //###### example ######
 //#####################
+void item_statusScreen_action(display_task_parameters_t *objects, SSD1306_t *display, int value)
+{
+    switch (value)
+    {
+    case 1:
+    default:
+        display_selectStatusPage(STATUS_SCREEN_OVERVIEW);
+        break;
+    case 2:
+        display_selectStatusPage(STATUS_SCREEN_SPEED);
+        break;
+    case 3:
+        display_selectStatusPage(STATUS_SCREEN_JOYSTICK);
+        break;
+    }
+}
+int item_statusScreen_value(display_task_parameters_t *objects)
+{
+    return 1; // initial value shown / changed from
+}
+menuItem_t item_statusScreen = {
+    item_statusScreen_action, // function action
+    item_statusScreen_value,  // function get initial value or NULL(show in line 2)
+    NULL,                     // function get default value or NULL(dont set value, show msg)
+    1,                        // valueMin
+    3,                        // valueMax
+    1,                        // valueIncrement
+    "Status Screen   ",       // title
+    "     Select     ",       // line1 (above value)
+    "  Status Screen ",       // line2 (above value)
+    "1: Overview",            // line4 * (below value)
+    "2: Speeds",              // line5 *
+    "3: Joystick",            // line6
+    "                ",       // line7
+};
+
+//#####################
+//###### example ######
+//#####################
 void item_example_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
 {
     return;
@@ -431,8 +469,8 @@ menuItem_t item_last = {
 //####################################################
 //### store all configured menu items in one array ###
 //####################################################
-const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_reset, item_example, item_last};
-const int itemCount = 9;
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_statusScreen, item_reset, item_example, item_last};
+const int itemCount = 10;
 
 
 
