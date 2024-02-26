@@ -47,6 +47,11 @@ void IRAM_ATTR onEncoderRising(void *arg)
 		uint32_t pulse2 = sensor->pulseDurations[1];
 		uint32_t pulse3 = sensor->pulseDurations[2];
 
+		// save all recored pulses of this sequence (for logging only)
+		sensor->pulse1 = pulse1;
+		sensor->pulse2 = pulse2;
+		sensor->pulse3 = pulse3;
+
 		// find shortest pulse
 		sensor->shortestPulse = min(pulse1, min(pulse2, pulse3));
 
@@ -57,46 +62,37 @@ void IRAM_ATTR onEncoderRising(void *arg)
 			return;
 		}
 
-		//-- Determine direction based on pulse order ---
-		int directionNew = 0;
+		//--- Determine direction based on pulse order ---
+		int direction = 0;
 		if (sensor->shortestPulse == pulse1) // short...
 		{
-			if (pulse2 < pulse3) // short-medium-long
-				directionNew = 1;
-			else // short-long-medium (invaild)
-			{
-				sensor->debug_countIgnoredSequencesInvalidOrder++;
-				return;
-			};
+			if (pulse2 < pulse3) // short-medium-long -->
+				direction = 1;
+			else // short-long-medium <--
+				direction = -1;
 		}
 		else if (sensor->shortestPulse == pulse3) //...short
 		{
-			if (pulse1 > pulse2) // long-medium-short
-				directionNew = -1;
-			else // medium-long-short (invaild)
-			{
-				sensor->debug_countIgnoredSequencesInvalidOrder++;
-				return;
-			};
+			if (pulse1 > pulse2) // long-medium-short <--
+				direction = -1;
+			else // medium-long-short -->
+				direction = 1;
 		}
 		else if (sensor->shortestPulse == pulse2) //...short...
 		{
-			// medium-short-long (invalid)
-			// long-short-medium (invalid)
-			sensor->debug_countIgnoredSequencesInvalidOrder++;
-			return;
+			if (pulse1 < pulse3) // medium-short-long
+				direction = -1;
+			else // long-short-medium
+				direction = 1;
 		}
 
 		// save and invert direction if necessay
-		// TODO mutex?
 		if (sensor->config.directionInverted)
-			sensor->direction = -directionNew;
-		else
-			sensor->direction = directionNew;
+			direction = -direction;
 
 		// calculate rotational speed
 		uint64_t pulseSum = pulse1 + pulse2 + pulse3;
-		sensor->currentRpm = directionNew * (sensor->config.degreePerGroup / 360.0 * 60.0 / ((double)pulseSum / 1000000.0));
+		sensor->currentRpm = direction * (sensor->config.degreePerGroup / 360.0 * 60.0 / ((double)pulseSum / 1000000.0));
 	}
 }
 
@@ -148,24 +144,21 @@ float speedSensor::getRpm(){
 	//timeout (standstill)
 	//TODO variable timeout considering config.degreePerGroup
 	if ((currentRpm != 0) && (esp_timer_get_time() - lastEdgeTime) > TIMEOUT_NO_ROTATION*1000){
-		ESP_LOGW(TAG, "%s - timeout: no pulse within %dms... last pulse was %dms ago => set RPM to 0",
+		ESP_LOGI(TAG, "%s - timeout: no pulse within %dms... last pulse was %dms ago => set RPM to 0",
 				config.logName, TIMEOUT_NO_ROTATION, timeElapsed/1000);
 		currentRpm = 0;
 	}
 	//debug output (also log variables when this function is called)
-	ESP_LOGI(TAG, "[%s] getRpm: returning stored rpm=%.3f", config.logName, currentRpm);
-	ESP_LOGV(TAG, "[%s] rpm=%f, dir=%d, pulseCount=%d, p1=%d, p2=%d, p3=%d, shortest=%d, tooShortCount=%d, invalidOrderCount=%d",
-			config.logName,
-			currentRpm, 
-			direction, 
-			pulseCounter, 
-			(int)pulseDurations[0]/1000,  
-			(int)pulseDurations[1]/1000, 
-			(int)pulseDurations[2]/1000,
-			shortestPulse,
-			debug_countIgnoredSequencesTooShort,
-			debug_countIgnoredSequencesInvalidOrder);
-
+	ESP_LOGD(TAG, "[%s] getRpm: returning stored rpm=%.3f", config.logName, currentRpm);
+	ESP_LOGV(TAG, "[%s] rpm=%f, pulseCount=%d, p1=%d, p2=%d, p3=%d, shortest=%d, totalTooShortCount=%d",
+			 config.logName,
+			 currentRpm,
+			 pulseCounter,
+			 pulse1 / 1000,
+			 pulse2 / 1000,
+			 pulse3 / 1000,
+			 shortestPulse / 1000,
+			 debug_countIgnoredSequencesTooShort);
 	//return currently stored rpm
 	return currentRpm;
 }
@@ -178,7 +171,7 @@ float speedSensor::getRpm(){
 //get speed in kilometers per hour
 float speedSensor::getKmph(){
 	float currentSpeed = getRpm() * config.tireCircumferenceMeter * 60/1000;
-	ESP_LOGI(TAG, "%s - getKmph: returning speed=%.3fkm/h", config.logName, currentSpeed);
+	ESP_LOGD(TAG, "%s - getKmph: returning speed=%.3fkm/h", config.logName, currentSpeed);
 	return currentSpeed;
 }
 
@@ -189,6 +182,6 @@ float speedSensor::getKmph(){
 //get speed in meters per second
 float speedSensor::getMps(){
 	float currentSpeed = getRpm() * config.tireCircumferenceMeter / 60;
-	ESP_LOGI(TAG, "%s - getMps: returning speed=%.3fm/s", config.logName, currentSpeed);
+	ESP_LOGD(TAG, "%s - getMps: returning speed=%.3fm/s", config.logName, currentSpeed);
 	return currentSpeed;
 }

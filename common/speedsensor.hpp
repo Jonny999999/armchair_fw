@@ -34,18 +34,16 @@ public:
 	float getMps(); //meters per second
 	float getRpm();  //rotations per minute
 
-	//1=forward, -1=reverse
-    int direction;
 	//variables for handling the encoder (public because ISR needs access)
 	speedSensor_config_t config;
 	uint32_t pulseDurations[3] = {};
+	uint32_t pulse1, pulse2, pulse3;
 	uint32_t shortestPulse = 0;
 	uint32_t shortestPulsePrev = 0;
 	uint32_t lastEdgeTime = 0;
 	uint8_t pulseCounter = 0;
 	int debugCount = 0;
 	uint32_t debug_countIgnoredSequencesTooShort = 0;
-	uint32_t debug_countIgnoredSequencesInvalidOrder = 0;
 	double currentRpm = 0;
 
 private:
