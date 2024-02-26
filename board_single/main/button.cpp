@@ -205,7 +205,7 @@ void buttonCommands::startHandleLoop()
             {
                 //-- run action with count of presses --
                 ESP_LOGI(TAG, "timeout: count=%d, lastPressLong=%d -> running action", count, isPressed);
-                buzzer->beep(count, 50, 50);
+                buzzer->beep(count, 50, 50, 200); //beep count, with 200ms gap before next queued beeps can start
                 action(count, isPressed); // run action - if currently still on the last press is considered long
                 count = 0;                // reset count
             }

@@ -27,24 +27,27 @@ class buzzer_t {
 
         //--- functions ---
         void processQueue(); //has to be run once in a separate task, waits for and processes queued events
+        //add entry to queue processing beeps, last parameter is optional to delay the next entry
+        void beep(uint8_t count, uint16_t msOn, uint16_t msOff, uint16_t msDelayFinished);
         void beep(uint8_t count, uint16_t msOn, uint16_t msOff);
         //void clear(); (TODO - not implemented yet)
         //void createTask(); (TODO - not implemented yet)
 
         //--- variables ---
-        uint16_t msGap; //gap between beep entries (when multiple queued)
         
     private:
         //--- functions ---
         void init();
 
         //--- variables ---
+        uint16_t msGap; //gap between beep entries (when multiple queued)
         gpio_num_t gpio_pin;
 
         struct beepEntry {
             uint8_t count;
             uint16_t msOn;
             uint16_t msOff;
+            uint16_t msDelay;
         };
 
         //queue for queueing up multiple events while one is still processing

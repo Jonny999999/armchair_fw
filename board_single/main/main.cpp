@@ -164,8 +164,8 @@ void createObjects()
 
     // create objects for controlling the chair position
     //                       gpio_up, gpio_down, name
-    legRest = new cControlledRest(GPIO_NUM_4, GPIO_NUM_16, "legRest");
-    backRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, "backRest");
+    legRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, "legRest");
+    backRest = new cControlledRest(GPIO_NUM_16, GPIO_NUM_4, "backRest");
 
     // create control object (control.hpp)
     // with configuration from config.cpp

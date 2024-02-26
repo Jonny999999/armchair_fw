@@ -7,12 +7,13 @@
 
 class currentSensor{
 	public:
-		currentSensor (adc1_channel_t adcChannel_f, float ratedCurrent);
+		currentSensor (adc1_channel_t adcChannel_f, float ratedCurrent, bool inverted = false);
 		void calibrateZeroAmpere(void); //set current voltage to voltage representing 0A
 		float read(void); //get current ampere
 	private:
 		adc1_channel_t adcChannel;
 		float ratedCurrent;
+		bool isInverted;
 		uint32_t measure;
 		float voltage;
 		float current;

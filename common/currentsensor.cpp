@@ -29,10 +29,11 @@ float getVoltage(adc1_channel_t adc, uint32_t samples){
 //=============================
 //======== constructor ========
 //=============================
-currentSensor::currentSensor (adc1_channel_t adcChannel_f, float ratedCurrent_f){
+currentSensor::currentSensor (adc1_channel_t adcChannel_f, float ratedCurrent_f, bool isInverted_f){
 	//copy config
 	adcChannel = adcChannel_f;
 	ratedCurrent = ratedCurrent_f;
+	isInverted = isInverted_f;
 	//init adc
 	adc1_config_width(ADC_WIDTH_BIT_12); //max resolution 4096
 	adc1_config_channel_atten(adcChannel, ADC_ATTEN_DB_11); //max voltage
@@ -57,6 +58,9 @@ float currentSensor::read(void){
 	}else {
 		current = 0;
 	}
+
+	//invert calculated current if necessary
+	if (isInverted) current = -current;
 
 	ESP_LOGI(TAG, "read sensor adc=%d: voltage=%.3fV, centerVoltage=%.3fV => current=%.3fA", (int)adcChannel, voltage, centerVoltage, current);
 	return current;

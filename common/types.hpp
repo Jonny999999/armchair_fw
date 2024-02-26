@@ -48,6 +48,7 @@ typedef struct motorctl_config_t {
 	adc1_channel_t currentSensor_adc;
 	float currentSensor_ratedCurrent;
     float currentMax;
+    bool currentInverted;
 	uint32_t deadTimeMs; //time motor stays in IDLE before direction change
 } motorctl_config_t;
 

@@ -29,7 +29,7 @@ void task_motorctl( void * ptrControlledMotor ){
 //=============================
 //constructor, simultaniously initialize instance of motor driver 'motor' and current sensor 'cSensor' with provided config (see below lines after ':')
 controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle_f): 
-	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent) {
+	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent, config_control.currentInverted) {
 		//copy parameters for controlling the motor
 		config = config_control;
 		//pointer to update motot dury method
@@ -108,7 +108,7 @@ void controlledMotor::handle(){
     //--- receive commands from queue ---
     if( xQueueReceive( commandQueue, &commandReceive, timeoutWaitForCommand / portTICK_PERIOD_MS ) ) //wait time is always 0 except when at target duty already
     {
-        ESP_LOGD(TAG, "[%s] Read command from queue: state=%s, duty=%.2f", config.name, motorstateStr[(int)commandReceive.state], commandReceive.duty);
+        ESP_LOGV(TAG, "[%s] Read command from queue: state=%s, duty=%.2f", config.name, motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
         dutyTarget = commandReceive.duty;
 		receiveTimeout = false;
@@ -159,7 +159,7 @@ void controlledMotor::handle(){
         //increase timeout once when duty is the same (once)
         if (timeoutWaitForCommand == 0)
         { // TODO verify if state matches too?
-            ESP_LOGW(TAG, "[%s] already at target duty %.2f, slowing down...", config.name, dutyTarget);
+            ESP_LOGI(TAG, "[%s] already at target duty %.2f, slowing down...", config.name, dutyTarget);
             timeoutWaitForCommand = TIMEOUT_QUEUE_WHEN_AT_TARGET; // wait in queue very long, for new command to arrive
         }
         vTaskDelay(20 / portTICK_PERIOD_MS); // add small additional delay overall, in case the same commands get spammed
@@ -168,7 +168,7 @@ void controlledMotor::handle(){
     else if (timeoutWaitForCommand != 0)
     {
         timeoutWaitForCommand = 0; // dont wait additional time for new commands, handle fading fast
-        ESP_LOGW(TAG, "[%s] duty changed to %.2f, resuming at full speed", config.name, dutyTarget);
+        ESP_LOGI(TAG, "[%s] duty changed to %.2f, resuming at full speed", config.name, dutyTarget);
         // adjust lastRun timestamp to not mess up fading, due to much time passed but with no actual duty change
         timestampLastRunUs = esp_timer_get_time() - 20*1000; //subtract approx 1 cycle delay
     }
@@ -197,7 +197,7 @@ void controlledMotor::handle(){
 	if (state == motorstate_t::BRAKE){
 		ESP_LOGD(TAG, "braking - skip fading");
 		motorSetCommand({motorstate_t::BRAKE, dutyTarget});
-		ESP_LOGI(TAG, "[%s] Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", config.name, motorstateStr[(int)state], dutyNow, currentNow);
+		ESP_LOGD(TAG, "[%s] Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", config.name, motorstateStr[(int)state], dutyNow, currentNow);
 		//dutyNow = 0;
 		return; //no need to run the fade algorithm
 	}
@@ -261,7 +261,7 @@ void controlledMotor::handle(){
 		ESP_LOGD(TAG, "waiting dead-time... dir change %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
 		if (!deadTimeWaiting){ //log start
 			deadTimeWaiting = true;
-			ESP_LOGW(TAG, "starting dead-time... %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
+			ESP_LOGI(TAG, "starting dead-time... %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
 		}
 		//force IDLE state during wait
 		state = motorstate_t::IDLE;
@@ -269,7 +269,7 @@ void controlledMotor::handle(){
 	} else {
 		if (deadTimeWaiting){ //log end
 			deadTimeWaiting = false;
-			ESP_LOGW(TAG, "dead-time ended - continue with %s", motorstateStr[(int)state]);
+			ESP_LOGI(TAG, "dead-time ended - continue with %s", motorstateStr[(int)state]);
 		}
 		ESP_LOGV(TAG, "deadtime: no change below deadtime detected... dir=%s, duty=%.1f", motorstateStr[(int)state], dutyNow);
 	}

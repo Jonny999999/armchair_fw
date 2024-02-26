@@ -41,7 +41,7 @@ void setLoglevels(void)
     // esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
     esp_log_level_set("display", ESP_LOG_INFO);
     // esp_log_level_set("current-sensors", ESP_LOG_INFO);
-    // esp_log_level_set("speedSensor", ESP_LOG_INFO);
+    esp_log_level_set("speedSensor", ESP_LOG_WARN);
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
     esp_log_level_set("menu", ESP_LOG_INFO);
     esp_log_level_set("encoder", ESP_LOG_INFO);
@@ -84,7 +84,7 @@ single100a_config_t configDriverRight = {
 
 //--- configure sabertooth driver --- (controls both motors in one instance)
 sabertooth2x60_config_t sabertoothConfig = {
-    .gpio_TX = GPIO_NUM_25,
+    .gpio_TX = GPIO_NUM_27,
     .uart_num = UART_NUM_2};
 
 // TODO add motor name string -> then use as log tag?
@@ -97,6 +97,7 @@ motorctl_config_t configMotorControlLeft = {
     .currentSensor_adc = ADC1_CHANNEL_4, // GPIO32
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
+    .currentInverted = true,
     .deadTimeMs = 0 // minimum time motor is off between direction change
 };
 
@@ -109,6 +110,7 @@ motorctl_config_t configMotorControlRight = {
     .currentSensor_adc = ADC1_CHANNEL_5, // GPIO33
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
+    .currentInverted = false,
     .deadTimeMs = 0 // minimum time motor is off between direction change
 };
 
@@ -154,7 +156,7 @@ joystick_config_t configJoystick = {
     .y_min = 1700, //=> y=-1
     .y_max = 2940, //=> y=1
     // invert adc measurement
-    .x_inverted = true,
+    .x_inverted = false,
     .y_inverted = true};
 
 //----------------------------
@@ -175,20 +177,23 @@ fan_config_t configFans = {
 //--------------------------------------------
 speedSensor_config_t speedLeft_config{
     .gpioPin = GPIO_NUM_5,
-    .degreePerGroup = 360 / 5,
-	.minPulseDurationUs = 10000, //smallest possible pulse duration (< time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
+    .degreePerGroup = 360 / 16,
+	.minPulseDurationUs = 3000, //smallest possible pulse duration (< time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
+    //measured wihth scope while tires in the air:
+    // 5-groups: 12ms
+    // 16-groups: 3.7ms
     .tireCircumferenceMeter = 0.81,
-    .directionInverted = false,
-    .logName = "speedLeft",
+    .directionInverted = true,
+    .logName = "speedLeft"
 };
 
 speedSensor_config_t speedRight_config{
     .gpioPin = GPIO_NUM_14,
     .degreePerGroup = 360 / 12,
-	.minPulseDurationUs = 10000, //smallest possible pulse duration (< time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
+	.minPulseDurationUs = 4000, //smallest possible pulse duration (< time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
     .tireCircumferenceMeter = 0.81,
-    .directionInverted = true,
-    .logName = "speedRight",
+    .directionInverted = false,
+    .logName = "speedRight"
 };
 
 
@@ -216,7 +221,7 @@ display_config_t display_config {
 rotary_encoder_t encoder_config = {
 	.pin_a = GPIO_NUM_25,
 	.pin_b = GPIO_NUM_26,
-	.pin_btn = GPIO_NUM_27,
+	.pin_btn = GPIO_NUM_21,
 	.code = 1,
 	.store = 0, //encoder count
 	.index = 0,
