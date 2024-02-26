@@ -381,9 +381,9 @@ menuItem_t item_reset = {
 };
 
 
-//#####################
-//###### example ######
-//#####################
+//###############################
+//##### select statusScreen #####
+//###############################
 void item_statusScreen_action(display_task_parameters_t *objects, SSD1306_t *display, int value)
 {
     switch (value)
@@ -398,6 +398,9 @@ void item_statusScreen_action(display_task_parameters_t *objects, SSD1306_t *dis
     case 3:
         display_selectStatusPage(STATUS_SCREEN_JOYSTICK);
         break;
+    case 4:
+        display_selectStatusPage(STATUS_SCREEN_MOTORS);
+        break;
     }
 }
 int item_statusScreen_value(display_task_parameters_t *objects)
@@ -409,7 +412,7 @@ menuItem_t item_statusScreen = {
     item_statusScreen_value,  // function get initial value or NULL(show in line 2)
     NULL,                     // function get default value or NULL(dont set value, show msg)
     1,                        // valueMin
-    3,                        // valueMax
+    4,                        // valueMax
     1,                        // valueIncrement
     "Status Screen   ",       // title
     "     Select     ",       // line1 (above value)
@@ -417,7 +420,7 @@ menuItem_t item_statusScreen = {
     "1: Overview",            // line4 * (below value)
     "2: Speeds",              // line5 *
     "3: Joystick",            // line6
-    "                ",       // line7
+    "4: Motors",              // line7
 };
 
 //#####################
@@ -470,7 +473,7 @@ menuItem_t item_last = {
 //### store all configured menu items in one array ###
 //####################################################
 const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_statusScreen, item_reset, item_example, item_last};
-const int itemCount = 10;
+const int itemCount = 8;
 
 
 
@@ -496,7 +499,7 @@ void showItemList(SSD1306_t *display, int selectedItem)
         if (printItemIndex < 0 || printItemIndex >= itemCount) // out of range of available items
         {
             // no item in this line
-            displayTextLine(display, line, false, false, "  -- empty --   ");
+            displayTextLineCentered(display, line, false, false, "---");
         }
         else
         {

@@ -190,9 +190,9 @@ float getBatteryPercent(){
 
 
 
-//-----------------------------
-//---- showScreen Overview ----
-//-----------------------------
+//#############################
+//#### showScreen Overview ####
+//#############################
 //shows overview on entire display:
 //Battery percentage, voltage, current, mode, rpm, speed
 #define STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL 500
@@ -228,9 +228,9 @@ void showStatusScreenOverview(display_task_parameters_t * objects)
 }
 
 
-//----------------------------
-//----- showScreen Speed -----
-//----------------------------
+//############################
+//##### showScreen Speed #####
+//############################
 // shows speed of each motor in km/h large in two lines and RPM in last line
 #define STATUS_SCREEN_SPEED_UPDATE_INTERVAL 300
 void showStatusScreenSpeed(display_task_parameters_t * objects)
@@ -248,9 +248,54 @@ void showStatusScreenSpeed(display_task_parameters_t * objects)
 }
 
 
-//------------------------
-//---- showStartupMsg ----
-//------------------------
+
+//#############################
+//#### showScreen Joystick ####
+//#############################
+// shows speed of each motor in km/h large in two lines and RPM in last line
+#define STATUS_SCREEN_JOYSTICK_UPDATE_INTERVAL 100
+void showStatusScreenJoystick(display_task_parameters_t * objects)
+{
+        // print all joystick data
+        joystickData_t data = objects->joystick->getData();
+        displayTextLine(&dev, 0, false, false, "joystick status:");
+        displayTextLine(&dev, 1, false, false, "x = %.3f     ", data.x);
+        displayTextLine(&dev, 2, false, false, "y = %.3f     ", data.y);
+        displayTextLine(&dev, 3, false, false, "radius = %.3f", data.radius);
+        displayTextLine(&dev, 4, false, false, "angle = %-06.3f   ", data.angle);
+        displayTextLine(&dev, 5, false, false, "pos=%-12s ", joystickPosStr[(int)data.position]);
+        displayTextLine(&dev, 6, false, false, "adc: %d:%d ", objects->joystick->getRawX(), objects->joystick->getRawY());
+		displayTextLine(&dev, 7, false, false, "mode=%s        ", objects->control->getCurrentModeStr());
+		vTaskDelay(STATUS_SCREEN_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+}
+
+
+//#############################
+//##### showScreen motors #####
+//#############################
+// shows speed of each motor in km/h large in two lines and RPM in last line
+#define STATUS_SCREEN_MOTORS_UPDATE_INTERVAL 150
+void showStatusScreenMotors(display_task_parameters_t *objects)
+{
+		// print all joystick data
+		joystickData_t data = objects->joystick->getData();
+		displayTextLine(&dev, 0, true, false, "%-4.0fW ", fabs(objects->motorLeft->getCurrentA()) * getBatteryVoltage());
+		displayTextLine(&dev, 3, true, false, "%-4.0fW ", fabs(objects->motorRight->getCurrentA()) * getBatteryVoltage());
+		//displayTextLine(&dev, 0, true, false, "L:%02.0f%%", objects->motorLeft->getStatus().duty);
+		//displayTextLine(&dev, 3, true, false, "R:%02.0f%%", objects->motorRight->getStatus().duty);
+		displayTextLineCentered(&dev, 6, false, false, "%+03.0f%% | %+03.0f%% DTY",
+						objects->motorLeft->getStatus().duty,
+						objects->motorRight->getStatus().duty);
+		displayTextLineCentered(&dev, 7, false, false, "%+04.0f | %+04.0f RPM",
+								objects->speedLeft->getRpm(),
+								objects->speedRight->getRpm());
+		vTaskDelay(STATUS_SCREEN_MOTORS_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+}
+
+
+//########################
+//#### showStartupMsg ####
+//########################
 //shows welcome message and information about current version
 void showStartupMsg(){
 	const esp_app_desc_t * desc = esp_ota_get_app_description();
@@ -313,6 +358,12 @@ void display_task(void *pvParameters)
 				break;
 			case STATUS_SCREEN_SPEED:
 				showStatusScreenSpeed(objects);
+				break;
+			case STATUS_SCREEN_JOYSTICK:
+				showStatusScreenJoystick(objects);
+				break;
+			case STATUS_SCREEN_MOTORS:
+				showStatusScreenMotors(objects);
 				break;
 			}
 		}

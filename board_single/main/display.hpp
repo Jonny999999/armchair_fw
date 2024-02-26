@@ -49,7 +49,7 @@ typedef struct display_task_parameters_t {
 
 
 // enum for selecting the currently shown status page (display content when not in MENU mode)
-typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED, STATUS_SCREEN_JOYSTICK} displayStatusPage_t;
+typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED, STATUS_SCREEN_JOYSTICK, STATUS_SCREEN_MOTORS} displayStatusPage_t;
 
 // function to select one of the defined status screens which are shown on display when not in MENU mode
 void display_selectStatusPage(displayStatusPage_t newStatusPage);
