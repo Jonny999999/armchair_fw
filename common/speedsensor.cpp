@@ -19,63 +19,85 @@ uint32_t min(uint32_t a, uint32_t b){
 
 
 //=========================================
-//========== ISR onEncoderChange ==========
+//========== ISR onEncoderRising ==========
 //=========================================
-//handle gpio edge event
+//handle gpio rising edge event
 //determines direction and rotational speed with a speedSensor object
-void IRAM_ATTR onEncoderChange(void* arg) {
-	speedSensor* sensor = (speedSensor*)arg;
+void IRAM_ATTR onEncoderRising(void *arg)
+{
+	speedSensor *sensor = (speedSensor *)arg;
 	int currentState = gpio_get_level(sensor->config.gpioPin);
 
-	//detect rising edge LOW->HIGH (reached end of gap in encoder disk)
-	if (currentState == 1 && sensor->prevState == 0) {
-		//time since last edge in us
-		uint32_t currentTime = esp_timer_get_time();
-		uint32_t timeElapsed = currentTime - sensor->lastEdgeTime;
-		sensor->lastEdgeTime = currentTime; //update last edge time
+	// time since last edge in us
+	uint32_t currentTime = esp_timer_get_time();
+	uint32_t timeElapsed = currentTime - sensor->lastEdgeTime;
+	sensor->lastEdgeTime = currentTime; // update last edge time
 
-		//store duration of last pulse
-		sensor->pulseDurations[sensor->pulseCounter] = timeElapsed;
-		sensor->pulseCounter++;
+	// store duration of last pulse
+	sensor->pulseDurations[sensor->pulseCounter] = timeElapsed;
+	sensor->pulseCounter++;
 
-		//check if 3rd pulse has occoured
-		if (sensor->pulseCounter >= 3) {
-			sensor->pulseCounter = 0; //reset counter
+	// check if 3rd pulse has occoured (one sequence recorded)
+	if (sensor->pulseCounter >= 3)
+	{
+		sensor->pulseCounter = 0; // reset count
 
-			//simplify variable names
-			uint32_t pulse1 = sensor->pulseDurations[0];
-			uint32_t pulse2 = sensor->pulseDurations[1];
-			uint32_t pulse3 = sensor->pulseDurations[2];
+		// simplify variable names
+		uint32_t pulse1 = sensor->pulseDurations[0];
+		uint32_t pulse2 = sensor->pulseDurations[1];
+		uint32_t pulse3 = sensor->pulseDurations[2];
 
-			//find shortest pulse
-			uint32_t shortestPulse = min(pulse1, min(pulse2, pulse3));
+		// find shortest pulse
+		sensor->shortestPulse = min(pulse1, min(pulse2, pulse3));
 
-			//Determine direction based on pulse order
-			int directionNew = 0;
-			if (shortestPulse == pulse1) { //short-medium-long...
-				directionNew = 1; //fwd
-			} else if (shortestPulse == pulse3) { //long-medium-short...
-				directionNew = -1; //rev
-			} else if (shortestPulse == pulse2) {
-				if (pulse1 < pulse3){ //medium short long-medium-short long...
-					directionNew = -1; //rev
-				} else { //long short-medium-long short-medium-long...
-					directionNew = 1; //fwd
-				}
-			}
-
-			//save and invert direction if necessay
-			//TODO mutex?
-			if (sensor->config.directionInverted) sensor->direction = -directionNew;
-			else sensor->direction = directionNew;
-
-			//calculate rotational speed
-			uint64_t pulseSum = pulse1 + pulse2 + pulse3;
-			sensor->currentRpm = directionNew * (sensor->config.degreePerGroup / 360.0 * 60.0 / ((double)pulseSum / 1000000.0));
+		// ignore this pulse sequence if one pulse is too short (possible noise)
+		if (sensor->shortestPulse < sensor->config.minPulseDurationUs)
+		{
+			sensor->debug_countIgnoredSequencesTooShort++;
+			return;
 		}
+
+		//-- Determine direction based on pulse order ---
+		int directionNew = 0;
+		if (sensor->shortestPulse == pulse1) // short...
+		{
+			if (pulse2 < pulse3) // short-medium-long
+				directionNew = 1;
+			else // short-long-medium (invaild)
+			{
+				sensor->debug_countIgnoredSequencesInvalidOrder++;
+				return;
+			};
+		}
+		else if (sensor->shortestPulse == pulse3) //...short
+		{
+			if (pulse1 > pulse2) // long-medium-short
+				directionNew = -1;
+			else // medium-long-short (invaild)
+			{
+				sensor->debug_countIgnoredSequencesInvalidOrder++;
+				return;
+			};
+		}
+		else if (sensor->shortestPulse == pulse2) //...short...
+		{
+			// medium-short-long (invalid)
+			// long-short-medium (invalid)
+			sensor->debug_countIgnoredSequencesInvalidOrder++;
+			return;
+		}
+
+		// save and invert direction if necessay
+		// TODO mutex?
+		if (sensor->config.directionInverted)
+			sensor->direction = -directionNew;
+		else
+			sensor->direction = directionNew;
+
+		// calculate rotational speed
+		uint64_t pulseSum = pulse1 + pulse2 + pulse3;
+		sensor->currentRpm = directionNew * (sensor->config.degreePerGroup / 360.0 * 60.0 / ((double)pulseSum / 1000000.0));
 	}
-	//store current pin state for next edge detection
-	sensor->prevState = currentState;
 }
 
 
@@ -104,13 +126,13 @@ void speedSensor::init() {
 	gpio_set_pull_mode(config.gpioPin, GPIO_PULLUP_ONLY);
 
 	//configure interrupt
-	gpio_set_intr_type(config.gpioPin, GPIO_INTR_ANYEDGE);
+	gpio_set_intr_type(config.gpioPin, GPIO_INTR_POSEDGE);
 	if (!isrIsInitialized) {
 		gpio_install_isr_service(0);
 		isrIsInitialized = true;
 		ESP_LOGW(TAG, "Initialized ISR service");
 	}
-	gpio_isr_handler_add(config.gpioPin, onEncoderChange, this);
+	gpio_isr_handler_add(config.gpioPin, onEncoderRising, this);
 	ESP_LOGW(TAG, "[%s], configured gpio-pin %d and interrupt routine", config.logName, (int)config.gpioPin);
 }
 
@@ -131,8 +153,8 @@ float speedSensor::getRpm(){
 		currentRpm = 0;
 	}
 	//debug output (also log variables when this function is called)
-	ESP_LOGI(TAG, "%s - getRpm: returning stored rpm=%.3f", config.logName, currentRpm);
-	ESP_LOGV(TAG, "%s - rpm=%f, dir=%d, pulseCount=%d, p1=%d, p2=%d, p3=%d lastEdgetime=%d",
+	ESP_LOGI(TAG, "[%s] getRpm: returning stored rpm=%.3f", config.logName, currentRpm);
+	ESP_LOGV(TAG, "[%s] rpm=%f, dir=%d, pulseCount=%d, p1=%d, p2=%d, p3=%d, shortest=%d, tooShortCount=%d, invalidOrderCount=%d",
 			config.logName,
 			currentRpm, 
 			direction, 
@@ -140,7 +162,9 @@ float speedSensor::getRpm(){
 			(int)pulseDurations[0]/1000,  
 			(int)pulseDurations[1]/1000, 
 			(int)pulseDurations[2]/1000,
-			(int)lastEdgeTime);
+			shortestPulse,
+			debug_countIgnoredSequencesTooShort,
+			debug_countIgnoredSequencesInvalidOrder);
 
 	//return currently stored rpm
 	return currentRpm;
@@ -148,9 +172,9 @@ float speedSensor::getRpm(){
 
 
 
-//==========================
+//===========================
 //========= getKmph =========
-//==========================
+//===========================
 //get speed in kilometers per hour
 float speedSensor::getKmph(){
 	float currentSpeed = getRpm() * config.tireCircumferenceMeter * 60/1000;
@@ -164,7 +188,7 @@ float speedSensor::getKmph(){
 //==========================
 //get speed in meters per second
 float speedSensor::getMps(){
-	float currentSpeed = getRpm() * config.tireCircumferenceMeter;
+	float currentSpeed = getRpm() * config.tireCircumferenceMeter / 60;
 	ESP_LOGI(TAG, "%s - getMps: returning speed=%.3fm/s", config.logName, currentSpeed);
 	return currentSpeed;
 }

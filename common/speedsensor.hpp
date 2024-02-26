@@ -12,8 +12,9 @@ extern "C" {
 typedef struct {
     gpio_num_t gpioPin;
 	float degreePerGroup;	//360 / [count of short,medium,long groups on encoder disk]
+	uint32_t minPulseDurationUs; //smallest possible pulse duration (time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
 	float tireCircumferenceMeter;
-	//positive direction is pulse order "short, medium, long"
+	//default positive direction is pulse order "short, medium, long"
 	bool directionInverted;
 	char* logName;
 } speedSensor_config_t;
@@ -37,11 +38,14 @@ public:
     int direction;
 	//variables for handling the encoder (public because ISR needs access)
 	speedSensor_config_t config;
-    int prevState = 0;
-	uint64_t pulseDurations[3] = {};
-	uint64_t lastEdgeTime = 0;
+	uint32_t pulseDurations[3] = {};
+	uint32_t shortestPulse = 0;
+	uint32_t shortestPulsePrev = 0;
+	uint32_t lastEdgeTime = 0;
 	uint8_t pulseCounter = 0;
 	int debugCount = 0;
+	uint32_t debug_countIgnoredSequencesTooShort = 0;
+	uint32_t debug_countIgnoredSequencesInvalidOrder = 0;
 	double currentRpm = 0;
 
 private:

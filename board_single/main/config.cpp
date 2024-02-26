@@ -176,7 +176,8 @@ fan_config_t configFans = {
 speedSensor_config_t speedLeft_config{
     .gpioPin = GPIO_NUM_5,
     .degreePerGroup = 360 / 5,
-    .tireCircumferenceMeter = 210.0 * 3.141 / 1000.0,
+	.minPulseDurationUs = 10000, //smallest possible pulse duration (< time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
+    .tireCircumferenceMeter = 0.81,
     .directionInverted = false,
     .logName = "speedLeft",
 };
@@ -184,7 +185,8 @@ speedSensor_config_t speedLeft_config{
 speedSensor_config_t speedRight_config{
     .gpioPin = GPIO_NUM_14,
     .degreePerGroup = 360 / 12,
-    .tireCircumferenceMeter = 210.0 * 3.141 / 1000.0,
+	.minPulseDurationUs = 10000, //smallest possible pulse duration (< time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
+    .tireCircumferenceMeter = 0.81,
     .directionInverted = true,
     .logName = "speedRight",
 };
