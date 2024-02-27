@@ -10,9 +10,15 @@ dependencies.lock
 **/.cache
 
 
+# VS-code
+settings.json
+
+
 # drawio
 *.dtmp
 *.bkp
+# diagrams are mostly temporary (pdf files are tracked)
+*.drawio
 
 
 # React
