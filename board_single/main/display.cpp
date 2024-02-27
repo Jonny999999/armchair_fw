@@ -20,14 +20,15 @@ extern "C"{
 //--------------------------
 //TODO duplicate code: getVoltage also defined in currentsensor.cpp -> outsource this
 //local function to get average voltage from adc
-float getVoltage1(adc1_channel_t adc, uint32_t samples){
+int readAdc(adc1_channel_t adc, uint32_t samples){
 	//measure voltage
-	int measure = 0;
+	uint32_t measure = 0;
 	for (int j=0; j<samples; j++){
 		measure += adc1_get_raw(adc);
 		ets_delay_us(50);
 	}
-	return (float)measure / samples / 4096 * 3.3;
+	//return (float)measure / samples / 4096 * 3.3;
+	return measure / samples;
 }
 
 
@@ -47,7 +48,6 @@ static displayStatusPage_t selectedStatusPage = STATUS_SCREEN_OVERVIEW;
 //======================
 //==== display_init ====
 //======================
-//note CONFIG_OFFSETX is used (from menuconfig)
 void display_init(display_config_t config){
 	adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
 	ESP_LOGI(TAG, "Initializing Display with config: sda=%d, sdl=%d, reset=%d,  offset=%d, flip=%d, size: %dx%d", 
@@ -123,7 +123,7 @@ void displayTextLineCentered(SSD1306_t *display, int line, bool isLarge, bool in
 
 	// add certain spaces around string (-> buf)
 	snprintf(buf, MAX_LEN_NORMAL*2, "%*s%s%*s", numSpaces, "", tmp, maxLen - numSpaces - len, "");
-	ESP_LOGD(TAG, "print center - isLarge=%d, value='%s', needed-spaces=%d, resulted-string='%s'", isLarge, tmp, numSpaces, buf);
+	ESP_LOGV(TAG, "print center - isLarge=%d, value='%s', needed-spaces=%d, resulted-string='%s'", isLarge, tmp, numSpaces, buf);
 
 	// show line on display
 	if (isLarge)
@@ -134,60 +134,98 @@ void displayTextLineCentered(SSD1306_t *display, int line, bool isLarge, bool in
 
 
 
-//----------------------------------
-//------- getBatteryVoltage --------
-//----------------------------------
-float getBatteryVoltage(){
-#define BAT_VOLTAGE_CONVERSION_FACTOR 11.9
-	float voltageRead = getVoltage1(ADC_BATT_VOLTAGE, 1000);
-	float battVoltage = voltageRead * 11.9; //note: factor comes from simple test with voltmeter
-	ESP_LOGD(TAG, "batteryVoltage - voltageAdc=%f, voltageConv=%f, factor=%.2f", voltageRead, battVoltage,  BAT_VOLTAGE_CONVERSION_FACTOR);
-	return battVoltage;
+//=================================
+//===== scaleUsingLookupTable =====
+//=================================
+//scale/inpolate an input value to output value between several known points (two arrays)
+//notes: the lookup values must be in ascending order. If the input value is lower/larger than smalles/largest value, output is set to first/last element of output elements
+float scaleUsingLookupTable(const float lookupInput[], const float lookupOutput[], int count, float input){
+	// check limit case (set to min/max)
+	if (input <= lookupInput[0]) {
+		ESP_LOGV(TAG, "lookup: %.2f is lower than lowest value -> returning min", input);
+		return lookupOutput[0];
+	} else if (input >= lookupInput[count -1]) {
+		ESP_LOGV(TAG, "lookup: %.2f is larger than largest value -> returning max", input);
+		return lookupOutput[count -1];
+	}
+
+	// find best matching range and
+	// scale input linear to output in matched range
+	for (int i = 1; i < count; ++i)
+	{
+		if (input <= lookupInput[i]) //best match
+		{
+			float voltageRange = lookupInput[i] - lookupInput[i - 1];
+			float voltageOffset = input - lookupInput[i - 1];
+			float percentageRange = lookupOutput[i] - lookupOutput[i - 1];
+			float percentageOffset = lookupOutput[i - 1];
+			float output = percentageOffset + (voltageOffset / voltageRange) * percentageRange;
+			ESP_LOGV(TAG, "lookup: - input=%.3f => output=%.3f", input, output);
+			ESP_LOGV(TAG, "lookup - matched range: %.2fV-%.2fV  => %.1f-%.1f", lookupInput[i - 1], lookupInput[i], lookupOutput[i - 1], lookupOutput[i]);
+			return output;
+		}
+	}
+	ESP_LOGE(TAG, "lookup - unknown range");
+	return 0.0; //unknown range
 }
 
+
+//==================================
+//======= getBatteryVoltage ========
+//==================================
+// apparently the ADC in combination with the added filter and voltage 
+// divider is slightly non-linear -> using lookup table
+const float batteryAdcValues[] = {1732, 2418, 2509, 2600, 2753, 2853, 2889, 2909, 2936, 2951, 3005, 3068, 3090, 3122};
+const float batteryVoltages[] = {14.01, 20, 21, 22, 24, 25.47, 26, 26.4, 26.84, 27, 28, 29.05, 29.4, 30};
+
+float getBatteryVoltage(){
+	// check if lookup table is configured correctly
+	int countAdc = sizeof(batteryAdcValues) / sizeof(float);
+	int countVoltages = sizeof(batteryVoltages) / sizeof(float);
+	if (countAdc != countVoltages)
+	{
+		ESP_LOGE(TAG, "getBatteryVoltage - count of configured adc-values do not match count of voltages");
+		return 0;
+	}
+
+	//read adc 
+	int adcRead = readAdc(ADC_BATT_VOLTAGE, 1000);
+
+	//convert adc to voltage using lookup table
+	float battVoltage = scaleUsingLookupTable(batteryAdcValues, batteryVoltages, countAdc, adcRead);
+	ESP_LOGD(TAG, "batteryVoltage - adcRaw=%d => voltage=%.3f, scaled using lookuptable with %d elements", adcRead, battVoltage, countAdc);
+	return battVoltage;
+}
 
 
 //----------------------------------
 //------- getBatteryPercent --------
 //----------------------------------
-//TODO find better/more accurate table?
-//configure discharge curve of one cell with corresponding known voltage->chargePercent values
-const float voltageLevels[] = {3.00, 3.45, 3.68, 3.74, 3.77, 3.79, 3.82, 3.87, 3.92, 3.98, 4.06, 4.20};
-const float percentageLevels[] = {0.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
+// TODO find better/more accurate table?
+// configure discharge curve of one cell with corresponding known voltage->chargePercent values
+const float cellVoltageLevels[] = {3.00, 3.45, 3.68, 3.74, 3.77, 3.79, 3.82, 3.87, 3.92, 3.98, 4.06, 4.20};
+const float cellPercentageLevels[] = {0.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
 
-float getBatteryPercent(){
-	float voltage = getBatteryVoltage();
-	float cellVoltage = voltage/BAT_CELL_COUNT;
-	int size = sizeof(voltageLevels) / sizeof(voltageLevels[0]);
-	int sizePer = sizeof(percentageLevels) / sizeof(percentageLevels[0]);
-	//check if configured correctly
-	if (size != sizePer) {
+float getBatteryPercent()
+{
+	// check if lookup table is configured correctly
+	int sizeVoltage = sizeof(cellVoltageLevels) / sizeof(cellVoltageLevels[0]);
+	int sizePer = sizeof(cellPercentageLevels) / sizeof(cellPercentageLevels[0]);
+	if (sizeVoltage != sizePer)
+	{
 		ESP_LOGE(TAG, "getBatteryPercent - count of configured percentages do not match count of voltages");
 		return 0;
 	}
-	if (cellVoltage <= voltageLevels[0]) {
-		return 0.0;
-	} else if (cellVoltage >= voltageLevels[size - 1]) {
-		return 100.0;
-	}
 
-	//scale voltage linear to percent in matched range
-	for (int i = 1; i < size; ++i) {
-		if (cellVoltage <= voltageLevels[i]) {
-			float voltageRange = voltageLevels[i] - voltageLevels[i - 1];
-			float voltageOffset = cellVoltage - voltageLevels[i - 1];
-			float percentageRange = percentageLevels[i] - percentageLevels[i - 1];
-			float percentageOffset = percentageLevels[i - 1];
-			float percent = percentageOffset + (voltageOffset / voltageRange) * percentageRange;
-			ESP_LOGD(TAG, "getBatPercent - cellVoltage=%.3f => percentage=%.3f", cellVoltage, percent);
-			ESP_LOGD(TAG, "getBatPercent - matched range: %.2fV-%.2fV  => %.1f%%-%.1f%%", voltageLevels[i-1], voltageLevels[i], percentageLevels[i-1], percentageLevels[i]);
-			return percent;
-		}
-	}
-	ESP_LOGE(TAG, "getBatteryPercent - unknown voltage range");
-	return 0.0; //unknown range
+	//get current battery voltage
+	float voltage = getBatteryVoltage();
+	float cellVoltage = voltage / BAT_CELL_COUNT;
+	
+	//convert voltage to battery percentage using lookup table
+	float percent = scaleUsingLookupTable(cellVoltageLevels, cellPercentageLevels, sizeVoltage, cellVoltage);
+	ESP_LOGD(TAG, "batteryPercentage - Battery=%.3fV, Cell=%.3fV => percentage=%.3f, scaled using lookuptable with %d elements", voltage, cellVoltage, percent, sizePer);
+	return percent;
 }
-
 
 
 //#############################

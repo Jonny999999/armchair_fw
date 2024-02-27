@@ -29,7 +29,7 @@ void task_motorctl( void * ptrControlledMotor ){
 //=============================
 //constructor, simultaniously initialize instance of motor driver 'motor' and current sensor 'cSensor' with provided config (see below lines after ':')
 controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle_f): 
-	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent, config_control.currentInverted) {
+	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent, config_control.currentSnapToZeroThreshold, config_control.currentInverted) {
 		//copy parameters for controlling the motor
 		config = config_control;
 		//pointer to update motot dury method

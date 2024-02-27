@@ -98,6 +98,7 @@ motorctl_config_t configMotorControlLeft = {
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
     .currentInverted = true,
+    .currentSnapToZeroThreshold = 0.15,
     .deadTimeMs = 0 // minimum time motor is off between direction change
 };
 
@@ -111,6 +112,7 @@ motorctl_config_t configMotorControlRight = {
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
     .currentInverted = false,
+    .currentSnapToZeroThreshold = 0.25,
     .deadTimeMs = 0 // minimum time motor is off between direction change
 };
 
