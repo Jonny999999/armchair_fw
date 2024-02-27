@@ -12,6 +12,7 @@ extern "C"
 //====== struct/type  declarations ======
 //=======================================
 //global structs and types that need to be available for all boards
+//this file is necessary to prevent dependency loop between motordrivers.hpp and motorctl.hpp since 
 
 
 //===============================
@@ -40,12 +41,15 @@ typedef struct motorCommands_t {
 
 //struct with all config parameters for a motor regarding ramp and current limit
 typedef struct motorctl_config_t {
+    char * name;    //name for unique nvs storage-key prefix and logging
     uint32_t msFadeAccel; //acceleration of the motor (ms it takes from 0% to 100%)
     uint32_t msFadeDecel; //deceleration of the motor (ms it takes from 100% to 0%)
 	bool currentLimitEnabled;
 	adc1_channel_t currentSensor_adc;
 	float currentSensor_ratedCurrent;
     float currentMax;
+    bool currentInverted;
+    float currentSnapToZeroThreshold;
 	uint32_t deadTimeMs; //time motor stays in IDLE before direction change
 } motorctl_config_t;
 

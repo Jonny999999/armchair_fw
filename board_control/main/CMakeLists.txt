@@ -6,6 +6,7 @@ idf_component_register(
         "button.cpp"
         "auto.cpp"
 		"uart.cpp"
+		"encoder.cpp"
     INCLUDE_DIRS 
         "."
     )

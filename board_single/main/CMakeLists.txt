@@ -7,6 +7,8 @@ idf_component_register(
         "fan.cpp"
         "auto.cpp"
 		"display.cpp"
+        "menu.cpp"
+        "encoder.cpp"
     INCLUDE_DIRS 
         "."
     )

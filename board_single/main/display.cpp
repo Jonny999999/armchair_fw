@@ -1,29 +1,17 @@
 #include "display.hpp"
 extern "C"{
 #include <driver/adc.h>
+#include "esp_ota_ops.h"
 }
 
+#include "menu.hpp"
 
-//#
-//# SSD1306 Configuration
-//#
-#define GPIO_RANGE_MAX 33
-#define I2C_INTERFACE y
-//# SSD1306_128x32 is not set
-#define SSD1306_128x64 y
-#define OFFSETX 0
-//# FLIP is not set
-#define SCL_GPIO 22
-#define SDA_GPIO 23
-#define RESET_GPIO 15 //FIXME remove this
-#define I2C_PORT_0 y
-//# I2C_PORT_1 is not set
-//# end of SSD1306 Configuration
 
+
+//=== content config ===
+#define STARTUP_MSG_TIMEOUT 2000
 #define ADC_BATT_VOLTAGE ADC1_CHANNEL_6
 #define BAT_CELL_COUNT 7
-
-
 
 
 
@@ -32,180 +20,394 @@ extern "C"{
 //--------------------------
 //TODO duplicate code: getVoltage also defined in currentsensor.cpp -> outsource this
 //local function to get average voltage from adc
-float getVoltage1(adc1_channel_t adc, uint32_t samples){
+int readAdc(adc1_channel_t adc, uint32_t samples){
 	//measure voltage
-	int measure = 0;
+	uint32_t measure = 0;
 	for (int j=0; j<samples; j++){
 		measure += adc1_get_raw(adc);
 		ets_delay_us(50);
 	}
-	return (float)measure / samples / 4096 * 3.3;
+	//return (float)measure / samples / 4096 * 3.3;
+	return measure / samples;
 }
 
 
 
-//==========================
-//======= variables ========
-//==========================
+//======================
+//===== variables ======
+//======================
+//display
 SSD1306_t dev;
-//int center, top, bottom;
-char lineChar[20];
-//top = 2;
-//center = 3;
-//bottom = 8;
 //tag for logging
 static const char * TAG = "display";
+//define currently shown status page (continously displayed content when not in MENU mode)
+static displayStatusPage_t selectedStatusPage = STATUS_SCREEN_OVERVIEW;
 
 
 
-
-//=================
-//===== init ======
-//=================
-void display_init(){
+//======================
+//==== display_init ====
+//======================
+void display_init(display_config_t config){
 	adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //max voltage
-	ESP_LOGW("display", "INTERFACE is i2c");
-	ESP_LOGW("display", "SDA_GPIO=%d",SDA_GPIO);
-	ESP_LOGW("display", "SCL_GPIO=%d",SCL_GPIO);
-	ESP_LOGW("display", "RESET_GPIO=%d",RESET_GPIO);
-	i2c_master_init(&dev, SDA_GPIO, SCL_GPIO, RESET_GPIO);
-#if FLIP
-	dev._flip = true;
-	ESP_LOGW("display", "Flip upside down");
-#endif
-	ESP_LOGI("display", "Panel is 128x64");
-	ssd1306_init(&dev, 128, 64);
+	ESP_LOGI(TAG, "Initializing Display with config: sda=%d, sdl=%d, reset=%d,  offset=%d, flip=%d, size: %dx%d", 
+	config.gpio_sda, config.gpio_scl, config.gpio_reset, config.offsetX, config.flip, config.width, config.height);
+
+	i2c_master_init(&dev, config.gpio_sda, config.gpio_scl, config.gpio_reset);
+	if (config.flip) {
+		dev._flip = true;
+		ESP_LOGW(TAG, "Flip upside down");
+	}
+	ssd1306_init(&dev, config.width, config.height, config.offsetX);
 
 	ssd1306_clear_screen(&dev, false);
-	ssd1306_contrast(&dev, 0xff);
+	ssd1306_contrast(&dev, config.contrast);
 }
 
+
+
+//===============================
+//======= displayTextLine =======
+//===============================
+//abstracted function for printing one line on the display, using a format string directly
+//and options: Large-font (3 lines, max 5 digits), or inverted color
+void displayTextLine(SSD1306_t *display, int line, bool isLarge, bool inverted, const char *format, ...)
+{
+	char buf[17];
+	int len;
+
+	// format string + arguments to string
+	va_list args;
+	va_start(args, format);
+	len = vsnprintf(buf, sizeof(buf), format, args);
+	va_end(args);
+
+	// show line on display
+	if (isLarge)
+		ssd1306_display_text_x3(display, line, buf, len, inverted);
+	else
+		ssd1306_display_text(display, line, buf, len, inverted);
+}
+
+
+
+//===================================
+//===== displayTextLineCentered =====
+//===================================
+//abstracted function for printing a string CENTERED on the display, using a format string
+//adds spaces left and right to fill the line (if not too long already)
+#define MAX_LEN_NORMAL 16 //count of available digits on display (normal/large font)
+#define MAX_LEN_LARGE 5
+void displayTextLineCentered(SSD1306_t *display, int line, bool isLarge, bool inverted, const char *format, ...)
+{
+	// variables
+	char buf[MAX_LEN_NORMAL*2 + 2];
+	char tmp[MAX_LEN_NORMAL + 1];
+	int len;
+
+	// format string + arguments to string (-> tmp)
+	va_list args;
+	va_start(args, format);
+	len = vsnprintf(tmp, sizeof(tmp), format, args);
+	va_end(args);
+
+	// define max available digits
+	int maxLen = MAX_LEN_NORMAL;
+	if (isLarge)
+		maxLen = MAX_LEN_LARGE;
+
+	// determine required spaces
+	int numSpaces = (maxLen - len) / 2;
+	if (numSpaces < 0) // limit to 0 in case string is too long already
+		numSpaces = 0;
+
+	// add certain spaces around string (-> buf)
+	snprintf(buf, MAX_LEN_NORMAL*2, "%*s%s%*s", numSpaces, "", tmp, maxLen - numSpaces - len, "");
+	ESP_LOGV(TAG, "print center - isLarge=%d, value='%s', needed-spaces=%d, resulted-string='%s'", isLarge, tmp, numSpaces, buf);
+
+	// show line on display
+	if (isLarge)
+		ssd1306_display_text_x3(display, line, buf, maxLen, inverted);
+	else
+		ssd1306_display_text(display, line, buf, maxLen, inverted);
+}
+
+
+
+//=================================
+//===== scaleUsingLookupTable =====
+//=================================
+//scale/inpolate an input value to output value between several known points (two arrays)
+//notes: the lookup values must be in ascending order. If the input value is lower/larger than smalles/largest value, output is set to first/last element of output elements
+float scaleUsingLookupTable(const float lookupInput[], const float lookupOutput[], int count, float input){
+	// check limit case (set to min/max)
+	if (input <= lookupInput[0]) {
+		ESP_LOGV(TAG, "lookup: %.2f is lower than lowest value -> returning min", input);
+		return lookupOutput[0];
+	} else if (input >= lookupInput[count -1]) {
+		ESP_LOGV(TAG, "lookup: %.2f is larger than largest value -> returning max", input);
+		return lookupOutput[count -1];
+	}
+
+	// find best matching range and
+	// scale input linear to output in matched range
+	for (int i = 1; i < count; ++i)
+	{
+		if (input <= lookupInput[i]) //best match
+		{
+			float voltageRange = lookupInput[i] - lookupInput[i - 1];
+			float voltageOffset = input - lookupInput[i - 1];
+			float percentageRange = lookupOutput[i] - lookupOutput[i - 1];
+			float percentageOffset = lookupOutput[i - 1];
+			float output = percentageOffset + (voltageOffset / voltageRange) * percentageRange;
+			ESP_LOGV(TAG, "lookup: - input=%.3f => output=%.3f", input, output);
+			ESP_LOGV(TAG, "lookup - matched range: %.2fV-%.2fV  => %.1f-%.1f", lookupInput[i - 1], lookupInput[i], lookupOutput[i - 1], lookupOutput[i]);
+			return output;
+		}
+	}
+	ESP_LOGE(TAG, "lookup - unknown range");
+	return 0.0; //unknown range
+}
+
+
+//==================================
+//======= getBatteryVoltage ========
+//==================================
+// apparently the ADC in combination with the added filter and voltage 
+// divider is slightly non-linear -> using lookup table
+const float batteryAdcValues[] = {1732, 2418, 2509, 2600, 2753, 2853, 2889, 2909, 2936, 2951, 3005, 3068, 3090, 3122};
+const float batteryVoltages[] = {14.01, 20, 21, 22, 24, 25.47, 26, 26.4, 26.84, 27, 28, 29.05, 29.4, 30};
 
 float getBatteryVoltage(){
-#define BAT_VOLTAGE_CONVERSION_FACTOR 11.9
-	float voltageRead = getVoltage1(ADC_BATT_VOLTAGE, 1000);
-	float battVoltage = voltageRead * 11.9; //note: factor comes from simple test with voltmeter
-	ESP_LOGD(TAG, "batteryVoltage - voltageAdc=%f, voltageConv=%f, factor=%.2f", voltageRead, battVoltage,  BAT_VOLTAGE_CONVERSION_FACTOR);
+	// check if lookup table is configured correctly
+	int countAdc = sizeof(batteryAdcValues) / sizeof(float);
+	int countVoltages = sizeof(batteryVoltages) / sizeof(float);
+	if (countAdc != countVoltages)
+	{
+		ESP_LOGE(TAG, "getBatteryVoltage - count of configured adc-values do not match count of voltages");
+		return 0;
+	}
+
+	//read adc 
+	int adcRead = readAdc(ADC_BATT_VOLTAGE, 1000);
+
+	//convert adc to voltage using lookup table
+	float battVoltage = scaleUsingLookupTable(batteryAdcValues, batteryVoltages, countAdc, adcRead);
+	ESP_LOGD(TAG, "batteryVoltage - adcRaw=%d => voltage=%.3f, scaled using lookuptable with %d elements", adcRead, battVoltage, countAdc);
 	return battVoltage;
 }
-
 
 
 //----------------------------------
 //------- getBatteryPercent --------
 //----------------------------------
-//TODO find better/more accurate table?
-//configure discharge curve of one cell with corresponding known voltage->chargePercent values
-const float voltageLevels[] = {3.00, 3.45, 3.68, 3.74, 3.77, 3.79, 3.82, 3.87, 3.92, 3.98, 4.06, 4.20};
-const float percentageLevels[] = {0.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
+// TODO find better/more accurate table?
+// configure discharge curve of one cell with corresponding known voltage->chargePercent values
+const float cellVoltageLevels[] = {3.00, 3.45, 3.68, 3.74, 3.77, 3.79, 3.82, 3.87, 3.92, 3.98, 4.06, 4.20};
+const float cellPercentageLevels[] = {0.0, 5.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
 
-float getBatteryPercent(float voltage){
-	float cellVoltage = voltage/BAT_CELL_COUNT;
-	int size = sizeof(voltageLevels) / sizeof(voltageLevels[0]);
-	int sizePer = sizeof(percentageLevels) / sizeof(percentageLevels[0]);
-	//check if configured correctly
-	if (size != sizePer) {
+float getBatteryPercent()
+{
+	// check if lookup table is configured correctly
+	int sizeVoltage = sizeof(cellVoltageLevels) / sizeof(cellVoltageLevels[0]);
+	int sizePer = sizeof(cellPercentageLevels) / sizeof(cellPercentageLevels[0]);
+	if (sizeVoltage != sizePer)
+	{
 		ESP_LOGE(TAG, "getBatteryPercent - count of configured percentages do not match count of voltages");
 		return 0;
 	}
-	if (cellVoltage <= voltageLevels[0]) {
-		return 0.0;
-	} else if (cellVoltage >= voltageLevels[size - 1]) {
-		return 100.0;
-	}
 
-	//scale voltage linear to percent in matched range
-	for (int i = 1; i < size; ++i) {
-		if (cellVoltage <= voltageLevels[i]) {
-			float voltageRange = voltageLevels[i] - voltageLevels[i - 1];
-			float voltageOffset = cellVoltage - voltageLevels[i - 1];
-			float percentageRange = percentageLevels[i] - percentageLevels[i - 1];
-			float percentageOffset = percentageLevels[i - 1];
-			float percent = percentageOffset + (voltageOffset / voltageRange) * percentageRange;
-			ESP_LOGD(TAG, "getBatPercent - cellVoltage=%.3f => percentage=%.3f", cellVoltage, percent);
-			ESP_LOGD(TAG, "getBatPercent - matched range: %.2fV-%.2fV  => %.1f%%-%.1f%%", voltageLevels[i-1], voltageLevels[i], percentageLevels[i-1], percentageLevels[i]);
-			return percent;
-		}
-	}
-	ESP_LOGE(TAG, "getBatteryPercent - unknown voltage range");
-	return 0.0; //unknown range
-}
-
-float getBatteryPercent(){
+	//get current battery voltage
 	float voltage = getBatteryVoltage();
-	return getBatteryPercent(voltage);
+	float cellVoltage = voltage / BAT_CELL_COUNT;
+	
+	//convert voltage to battery percentage using lookup table
+	float percent = scaleUsingLookupTable(cellVoltageLevels, cellPercentageLevels, sizeVoltage, cellVoltage);
+	ESP_LOGD(TAG, "batteryPercentage - Battery=%.3fV, Cell=%.3fV => percentage=%.3f, scaled using lookuptable with %d elements", voltage, cellVoltage, percent, sizePer);
+	return percent;
 }
 
 
+//#############################
+//#### showScreen Overview ####
+//#############################
+//shows overview on entire display:
+//Battery percentage, voltage, current, mode, rpm, speed
+#define STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL 500
+void showStatusScreenOverview(display_task_parameters_t * objects)
+{
+	//-- battery percentage --
+	// TODO update when no load (currentsensors = ~0A) only
+	//-- large batt percent --
+	displayTextLine(&dev, 0, true, false, "B:%02.0f%%", getBatteryPercent());
+
+	//-- voltage and current --
+	displayTextLine(&dev, 3, false, false, "%04.1fV %04.1f:%04.1fA",
+				   getBatteryVoltage(),
+				   fabs(objects->motorLeft->getCurrentA()),
+				   fabs(objects->motorRight->getCurrentA()));
+
+	//-- control state --
+	//print large line
+	displayTextLine(&dev, 4, true, false, "%s ", objects->control->getCurrentModeStr());
+
+	//-- speed and RPM --
+	displayTextLine(&dev, 7, false, false, "%3.1fkm/h %03.0f:%03.0fR",
+				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
+				   objects->speedLeft->getRpm(),
+				   objects->speedRight->getRpm());
+
+	// debug speed sensors
+	ESP_LOGD(TAG, "%3.1fkm/h %03.0f:%03.0fR",
+				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
+				   objects->speedLeft->getRpm(),
+				   objects->speedRight->getRpm());
+	vTaskDelay(STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+}
+
+
+//############################
+//##### showScreen Speed #####
+//############################
+// shows speed of each motor in km/h large in two lines and RPM in last line
+#define STATUS_SCREEN_SPEED_UPDATE_INTERVAL 300
+void showStatusScreenSpeed(display_task_parameters_t * objects)
+{
+	// title
+	displayTextLine(&dev, 0, false, false, "Speed L,R - km/h");
+	// show km/h large in two lines
+	displayTextLine(&dev, 1, true, false, "%+.2f", objects->speedLeft->getKmph());
+	displayTextLine(&dev, 4, true, false, "%+.2f", objects->speedRight->getKmph());
+	// show both rotational speeds in one line
+	displayTextLineCentered(&dev, 7, false, false, "%+04.0f:%+04.0f RPM",
+				   objects->speedLeft->getRpm(),
+				   objects->speedRight->getRpm());
+	vTaskDelay(STATUS_SCREEN_SPEED_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+}
+
+
+
+//#############################
+//#### showScreen Joystick ####
+//#############################
+// shows speed of each motor in km/h large in two lines and RPM in last line
+#define STATUS_SCREEN_JOYSTICK_UPDATE_INTERVAL 100
+void showStatusScreenJoystick(display_task_parameters_t * objects)
+{
+        // print all joystick data
+        joystickData_t data = objects->joystick->getData();
+        displayTextLine(&dev, 0, false, false, "joystick status:");
+        displayTextLine(&dev, 1, false, false, "x = %.3f     ", data.x);
+        displayTextLine(&dev, 2, false, false, "y = %.3f     ", data.y);
+        displayTextLine(&dev, 3, false, false, "radius = %.3f", data.radius);
+        displayTextLine(&dev, 4, false, false, "angle = %-06.3f   ", data.angle);
+        displayTextLine(&dev, 5, false, false, "pos=%-12s ", joystickPosStr[(int)data.position]);
+        displayTextLine(&dev, 6, false, false, "adc: %d:%d ", objects->joystick->getRawX(), objects->joystick->getRawY());
+		displayTextLine(&dev, 7, false, false, "mode=%s        ", objects->control->getCurrentModeStr());
+		vTaskDelay(STATUS_SCREEN_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+}
+
+
+//#############################
+//##### showScreen motors #####
+//#############################
+// shows speed of each motor in km/h large in two lines and RPM in last line
+#define STATUS_SCREEN_MOTORS_UPDATE_INTERVAL 150
+void showStatusScreenMotors(display_task_parameters_t *objects)
+{
+		// print all joystick data
+		joystickData_t data = objects->joystick->getData();
+		displayTextLine(&dev, 0, true, false, "%-4.0fW ", fabs(objects->motorLeft->getCurrentA()) * getBatteryVoltage());
+		displayTextLine(&dev, 3, true, false, "%-4.0fW ", fabs(objects->motorRight->getCurrentA()) * getBatteryVoltage());
+		//displayTextLine(&dev, 0, true, false, "L:%02.0f%%", objects->motorLeft->getStatus().duty);
+		//displayTextLine(&dev, 3, true, false, "R:%02.0f%%", objects->motorRight->getStatus().duty);
+		displayTextLineCentered(&dev, 6, false, false, "%+03.0f%% | %+03.0f%% DTY",
+						objects->motorLeft->getStatus().duty,
+						objects->motorRight->getStatus().duty);
+		displayTextLineCentered(&dev, 7, false, false, "%+04.0f | %+04.0f RPM",
+								objects->speedLeft->getRpm(),
+								objects->speedRight->getRpm());
+		vTaskDelay(STATUS_SCREEN_MOTORS_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+}
+
+
+//########################
+//#### showStartupMsg ####
+//########################
+//shows welcome message and information about current version
+void showStartupMsg(){
+	const esp_app_desc_t * desc = esp_ota_get_app_description();
+
+	//show message
+	displayTextLine(&dev, 0, true, false, "START");
+	//show git-tag
+	displayTextLine(&dev, 4, false, false, "%s", desc->version);
+	//show build-date (note: date,time of last clean build)
+	displayTextLine(&dev, 6, false, false, "%s", desc->date);
+	//show build-time
+	displayTextLine(&dev, 7, false, false, "%s", desc->time);
+}
+
+
+
+//============================
+//===== selectStatusPage =====
+//============================
+void display_selectStatusPage(displayStatusPage_t newStatusPage){
+	ESP_LOGW(TAG, "switching statusPage from %d to %d", (int)selectedStatusPage, (int)newStatusPage);
+	selectedStatusPage = newStatusPage;
+}
 
 
 //============================
 //======= display task =======
 //============================
-#define VERY_SLOW_LOOP_INTERVAL 30000
-#define SLOW_LOOP_INTERVAL 1000
-#define FAST_LOOP_INTERVAL 200
-//TODO: separate taks for each loop?
+// TODO: separate task for each loop?
+void display_task(void *pvParameters)
+{
+	ESP_LOGW(TAG, "Initializing display and starting handle loop");
+	//get struct with pointers to all needed global objects from task parameter
+	display_task_parameters_t *objects = (display_task_parameters_t *)pvParameters;
 
-void display_task( void * pvParameters ){
-	char buf[20];
-	char buf1[20];
-	int len, len1;
-	int countFastloop = SLOW_LOOP_INTERVAL;
-	int countSlowLoop = VERY_SLOW_LOOP_INTERVAL;
+	// initialize display
+	display_init(objects->displayConfig);
+	// TODO check if successfully initialized
 
-	display_init();
-	//TODO check if successfully initialized
+	// show startup message
+	showStartupMsg();
+	vTaskDelay(STARTUP_MSG_TIMEOUT / portTICK_PERIOD_MS);
+	ssd1306_clear_screen(&dev, false);
 
-	//welcome msg
-	strcpy(buf, "Hello");
-	ssd1306_display_text_x3(&dev, 0, buf, 5, false);
-	vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-	//update stats
-	while(1){
-
-		if (countFastloop >= SLOW_LOOP_INTERVAL / FAST_LOOP_INTERVAL){
-			//---- very slow loop ----
-			if (countSlowLoop >= VERY_SLOW_LOOP_INTERVAL/SLOW_LOOP_INTERVAL){
-				//clear display - workaround for bugged line order after a few minutes
-				countSlowLoop = 0;
-				ssd1306_clear_screen(&dev, false);
-			}
-			//---- slow loop ----
-			countSlowLoop ++;
-			countFastloop = 0;
-			//--- battery stats ---
-			//TODO update only when no load (currentsensors = ~0A)
-			float battVoltage = getBatteryVoltage();
-			float battPercent = getBatteryPercent(battVoltage);
-			len = snprintf(buf, sizeof(buf), "Bat:%.1fV %.2fV", battVoltage, battVoltage/BAT_CELL_COUNT);
-			len1 = snprintf(buf1, sizeof(buf1), "B:%02.0f%%", battPercent);
-			ssd1306_display_text_x3(&dev, 0, buf1, len1, false);
-			ssd1306_display_text(&dev, 3, buf, len, false);
-			ssd1306_display_text(&dev, 4, buf, len, true);
+	// repeatedly update display with content
+	while (1)
+	{
+		if (objects->control->getCurrentMode() == controlMode_t::MENU)
+		{
+			//uses encoder events to control menu and updates display
+			handleMenu(objects, &dev);
 		}
-
-		//---- fast loop ----
-		//update speed/rpm
-		float sLeft = speedLeft.getKmph();
-		float rLeft = speedLeft.getRpm();
-		float sRight = speedRight.getKmph();
-		float rRight = speedRight.getRpm();
-		len = snprintf(buf, sizeof(buf), "L:%.1f R:%.1fkm/h", fabs(sLeft), fabs(sRight));
-		ssd1306_display_text(&dev, 5, buf, len, false);
-		len = snprintf(buf, sizeof(buf), "L:%4.0f R:%4.0fRPM", rLeft, rRight);
-		ssd1306_display_text(&dev, 6, buf, len, false);
-		//debug speed sensors
-		ESP_LOGD(TAG, "%s", buf);
-		//TODO show currentsensor values
-
-		vTaskDelay(FAST_LOOP_INTERVAL / portTICK_PERIOD_MS);
-		countFastloop++;
+		else //show selected status screen in any other mode
+		{
+			switch (selectedStatusPage)
+			{
+			default:
+			case STATUS_SCREEN_OVERVIEW:
+				showStatusScreenOverview(objects);
+				break;
+			case STATUS_SCREEN_SPEED:
+				showStatusScreenSpeed(objects);
+				break;
+			case STATUS_SCREEN_JOYSTICK:
+				showStatusScreenJoystick(objects);
+				break;
+			case STATUS_SCREEN_MOTORS:
+				showStatusScreenMotors(objects);
+				break;
+			}
+		}
+		// TODO add pages and menus
 	}
-	//TODO add pages and menus
-
-
+}
 
 	//-----------------------------------
 	//---- text-related example code ----
@@ -310,14 +512,3 @@ void display_task( void * pvParameters ){
 
 	//// Fade Out
 	//ssd1306_fadeout(&dev);
-
-#if 0
-	// Fade Out
-	for(int contrast=0xff;contrast>0;contrast=contrast-0x20) {
-		ssd1306_contrast(&dev, contrast);
-		vTaskDelay(40);
-	}
-#endif
-
-}
-

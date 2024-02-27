@@ -1,19 +1,26 @@
 #pragma once
 
+extern "C"
+{
+#include "nvs_flash.h"
+#include "nvs.h"
+}
 #include "motordrivers.hpp"
 #include "motorctl.hpp"
 #include "buzzer.hpp"
 #include "http.hpp"
 #include "auto.hpp"
+#include "speedsensor.hpp"
+#include "chairAdjust.hpp"
 
 
 //--------------------------------------------
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
 //enum that decides how the motors get controlled
-enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO};
+enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO, ADJUST_CHAIR, MENU};
 //string array representing the mode enum (for printing the state as string)
-extern const char* controlModeStr[7];
+extern const char* controlModeStr[9];
 
 //--- control_config_t ---
 //struct with config parameters
@@ -24,6 +31,13 @@ typedef struct control_config_t {
     float timeoutTolerancePer;  //percentage the duty can vary between timeout checks considered still inactive
 } control_config_t;
 
+
+//=======================================
+//============ control task =============
+//=======================================
+//task that controls the armchair modes and initiates commands generation and applies them to driver
+//parameter: pointer to controlledArmchair object 
+void task_control( void * pvParameters );
 
 
 
@@ -41,7 +55,12 @@ class controlledArmchair {
                 controlledMotor* motorLeft_f,
                 controlledMotor* motorRight_f,
                 evaluatedJoystick* joystick_f,
-                httpJoystick* httpJoystick_f
+                joystickGenerateCommands_config_t* joystickGenerateCommands_config_f,
+                httpJoystick* httpJoystick_f,
+                automatedArmchair_c* automatedArmchair,
+                cControlledRest * legRest,
+                cControlledRest * backRest,
+                nvs_handle_t * nvsHandle_f
                 );
 
         //--- functions ---
@@ -63,9 +82,19 @@ class controlledArmchair {
         //function that restarts timer which initiates the automatic timeout (switch to IDLE) after certain time of inactivity
         void resetTimeout();
 
-        //function for sending a button event (e.g. from button task at event) to control task
-        //TODO: use queue instead?
-        void sendButtonEvent(uint8_t count);
+        //methods to get the current control mode
+        controlMode_t getCurrentMode() const {return mode;};
+        const char *getCurrentModeStr() const { return controlModeStr[(int)mode]; };
+
+        //--- mode specific ---
+        // releases or locks joystick in place when in massage mode, returns true when input is frozen
+        bool toggleFreezeInputMassage();
+        // toggle between normal and alternative stick mapping (joystick reverse position inverted), returns true when alt mapping is active
+        bool toggleAltStickMapping();
+
+        // configure max dutycycle (in joystick or http mode)
+        void setMaxDuty(float maxDutyNew) { writeMaxDuty(maxDutyNew); };
+        float getMaxDuty() const {return joystickGenerateCommands_config.maxDuty; };
 
     private:
 
@@ -73,41 +102,25 @@ class controlledArmchair {
         //function that evaluates whether there is no activity/change on the motor duty for a certain time, if so a switch to IDLE is issued. - has to be run repeatedly in a slow interval
         void handleTimeout();
 
+        void loadMaxDuty(); //load stored value for maxDuty from nvs
+        void writeMaxDuty(float newMaxDuty); //write new value for maxDuty to nvs
+
+        void idleBothMotors(); //turn both motors off
+
         //--- objects ---
         buzzer_t* buzzer;
         controlledMotor* motorLeft;
         controlledMotor* motorRight;
         httpJoystick* httpJoystickMain_l;
         evaluatedJoystick* joystick_l;
+        joystickGenerateCommands_config_t joystickGenerateCommands_config;
+        automatedArmchair_c *automatedArmchair;
+        cControlledRest * legRest;
+        cControlledRest * backRest;
+        //handle for using the nvs flash (persistent config variables)
+        nvs_handle_t * nvsHandle;
 
-        //---variables ---
-        //struct for motor commands returned by generate functions of each mode
-        motorCommands_t commands;
-        //struct with config parameters
-        control_config_t config;
-
-        //store joystick data
-        joystickData_t stickData;
-        bool altStickMapping; //alternative joystick mapping (reverse mapped differently)
-
-        //variables for http mode
-        uint32_t http_timestamp_lastData = 0;
-
-        //variables for MASSAGE mode
-        bool freezeInput = false;
-
-        //variables for AUTO mode
-        auto_instruction_t instruction = auto_instruction_t::NONE; //variable to receive instructions from automatedArmchair
-        
-        //variable to store button event
-        uint8_t buttonCount = 0;
-
-        //definition of mode enum
-        controlMode_t mode = controlMode_t::IDLE;
-
-        //variable to store mode when toggling IDLE mode 
-        controlMode_t modePrevious; //default mode
-
+        //--- constants ---
         //command preset for idling motors
         const motorCommand_t cmd_motorIdle = {
             .state = motorstate_t::IDLE,
@@ -117,6 +130,41 @@ class controlledArmchair {
             .left = cmd_motorIdle,
             .right = cmd_motorIdle
         };
+        const joystickData_t joystickData_center = {
+            .position = joystickPos_t::CENTER,
+            .x = 0,
+            .y = 0,
+            .radius = 0,
+            .angle = 0
+        };
+
+        //---variables ---
+        //struct for motor commands returned by generate functions of each mode
+        motorCommands_t commands = cmds_bothMotorsIdle;
+        //struct with config parameters
+        control_config_t config;
+
+        //store joystick data
+        joystickData_t stickData = joystickData_center;
+        joystickData_t stickDataLast = joystickData_center;
+
+        //variables for http mode
+        uint32_t http_timestamp_lastData = 0;
+
+        //variables for MASSAGE mode
+        bool freezeInput = false;
+
+        //variables for AUTO mode
+        auto_instruction_t instruction = auto_instruction_t::NONE; //variable to receive instructions from automatedArmchair_c
+        
+        //variable to store button event
+        uint8_t buttonCount = 0;
+
+        //definition of mode enum
+        controlMode_t mode = controlMode_t::IDLE;
+
+        //variable to store mode when toggling IDLE mode 
+        controlMode_t modePrevious; //default mode
 
         //variable for slow loop
         uint32_t timestamp_SlowLoopLastRun = 0;

@@ -16,7 +16,22 @@ typedef struct fan_config_t {
 	uint32_t minOnMs;
 	uint32_t minOffMs;
 	uint32_t turnOffDelayMs;
-} fan_config;
+} fan_config_t;
+
+
+// struct with variables passed to task from main
+typedef struct task_fans_parameters_t {
+    fan_config_t fan_config;
+    controlledMotor * motorLeft;
+    controlledMotor * motorRight;
+} task_fans_parameters_t;
+
+
+//====================================
+//========== motorctl task ===========
+//====================================
+//note: pointer to task_fans_parameters_t has to be passed as task-parameter (config, motor objects)
+void task_fans( void * task_fans_parameters );
 
 
 

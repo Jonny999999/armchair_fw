@@ -1,12 +1,10 @@
-#include "hal/uart_types.h"
-#include "motordrivers.hpp"
-#include "types.hpp"
 extern "C"
 {
 #include <stdio.h>
 #include <esp_system.h>
 #include <esp_event.h>
 #include <nvs_flash.h>
+#include "nvs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -14,97 +12,94 @@ extern "C"
 #include "sdkconfig.h"
 #include "esp_spiffs.h"    
 
-#include "driver/ledc.h"
-
 //custom C files
 #include "wifi.h"
 }
 
+#include <new>
+
 //custom C++ files
+//folder common
+#include "uart_common.hpp"
+#include "motordrivers.hpp"
+#include "http.hpp"
+#include "speedsensor.hpp"
+#include "motorctl.hpp"
+
+//folder single_board
 #include "config.hpp"
 #include "control.hpp" 
 #include "button.hpp"
-#include "http.hpp"
-
-#include "uart_common.hpp"
-
 #include "display.hpp"
+#include "encoder.hpp"
 
-//tag for logging
+//only extends this file (no library):
+//outsourced all configuration related structures
+#include "config.cpp"
+
+
+
+//================================
+//======== declarations ==========
+//================================
+//--- declare all pointers to shared objects ---
+controlledMotor *motorLeft;
+controlledMotor *motorRight;
+
+// TODO initialize driver in createOjects like everything else
+// (as in 6e9b3d96d96947c53188be1dec421bd7ff87478e) 
+// issue with laggy encoder wenn calling methods via pointer though
+//sabertooth2x60a *sabertoothDriver;
+sabertooth2x60a sabertoothDriver(sabertoothConfig);
+
+evaluatedJoystick *joystick;
+
+buzzer_t *buzzer;
+
+controlledArmchair *control;
+
+automatedArmchair_c *automatedArmchair;
+
+httpJoystick *httpJoystickMain;
+
+speedSensor *speedLeft;
+speedSensor *speedRight;
+
+cControlledRest *legRest;
+cControlledRest *backRest;
+
+
+//--- lambda functions motor-driver ---
+// functions for updating the duty via currently used motor driver (hardware) that can then be passed to controlledMotor
+//-> makes it possible to easily use different motor drivers
+motorSetCommandFunc_t setLeftFunc = [&sabertoothDriver](motorCommand_t cmd)
+{
+	//TODO why encoder lag when call via pointer?
+    sabertoothDriver.setLeft(cmd);
+};
+motorSetCommandFunc_t setRightFunc = [&sabertoothDriver](motorCommand_t cmd)
+{
+    sabertoothDriver.setRight(cmd);
+};
+
+//--- lambda function http-joystick ---
+// function that initializes the http server requires a function pointer to function that handels each url
+// the httpd_uri config struct does not accept a pointer to a method of a class instance, directly
+// thus this lambda function is necessary:
+// declare pointer to receiveHttpData method of httpJoystick class
+esp_err_t (httpJoystick::*pointerToReceiveFunc)(httpd_req_t *req) = &httpJoystick::receiveHttpData;
+esp_err_t on_joystick_url(httpd_req_t *req)
+{
+    // run pointer to receiveHttpData function of httpJoystickMain instance
+    return (httpJoystickMain->*pointerToReceiveFunc)(req);
+}
+
+//--- tag for logging ---
 static const char * TAG = "main";
 
+//-- handle passed to tasks for accessing nvs --
+nvs_handle_t nvsHandle;
 
-
-//====================================
-//========== motorctl task ===========
-//====================================
-//task for handling the motors (ramp, current limit, driver)
-void task_motorctl( void * pvParameters ){
-    ESP_LOGI(TAG, "starting handle loop...");
-    while(1){
-        motorRight.handle();
-        motorLeft.handle();
-        //10khz -> T=100us
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
-}
-
-
-
-//======================================
-//============ buzzer task =============
-//======================================
-//TODO: move the task creation to buzzer class (buzzer.cpp)
-//e.g. only have function buzzer.createTask() in app_main
-void task_buzzer( void * pvParameters ){
-    ESP_LOGI("task_buzzer", "Start of buzzer task...");
-        //run function that waits for a beep events to arrive in the queue
-        //and processes them
-        buzzer.processQueue();
-}
-
-
-
-//=======================================
-//============ control task =============
-//=======================================
-//task that controls the armchair modes and initiates commands generation and applies them to driver
-void task_control( void * pvParameters ){
-    ESP_LOGI(TAG, "Initializing controlledArmchair and starting handle loop");
-    //start handle loop (control object declared in config.hpp)
-    control.startHandleLoop();
-}
-
-
-
-//======================================
-//============ button task =============
-//======================================
-//task that handles the button interface/commands
-void task_button( void * pvParameters ){
-    ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
-    //create button instance
-    buttonCommands commandButton(&buttonJoystick, &joystick, &control, &buzzer, &motorLeft, &motorRight);
-    //start handle loop
-    commandButton.startHandleLoop();
-}
-
-
-
-//=======================================
-//============== fan task ===============
-//=======================================
-//task that controlls fans for cooling the drivers
-void task_fans( void * pvParameters ){
-    ESP_LOGI(TAG, "Initializing fans and starting fan handle loop");
-    //create fan instances with config defined in config.cpp
-    controlledFan fan(configCooling, &motorLeft, &motorRight);
-    //repeatedly run fan handle function in a slow loop
-    while(1){
-        fan.handle();
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
-}
 
 
 
@@ -113,7 +108,7 @@ void task_fans( void * pvParameters ){
 //=================================
 //initialize spi flash filesystem (used for webserver)
 void init_spiffs(){
-    ESP_LOGI(TAG, "init spiffs");
+    ESP_LOGW(TAG, "initializing spiffs...");
     esp_vfs_spiffs_conf_t esp_vfs_spiffs_conf = {
         .base_path = "/spiffs",
         .partition_label = NULL,
@@ -131,29 +126,54 @@ void init_spiffs(){
 
 
 
-//==================================
-//======== define loglevels ========
-//==================================
-void setLoglevels(void){
-    //set loglevel for all tags:
-    esp_log_level_set("*", ESP_LOG_WARN);
 
-    //--- set loglevel for individual tags ---
-    esp_log_level_set("main", ESP_LOG_INFO);
-    //esp_log_level_set("buzzer", ESP_LOG_INFO);
-    //esp_log_level_set("motordriver", ESP_LOG_DEBUG);
-    //esp_log_level_set("motor-control", ESP_LOG_INFO);
-	//esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
-    //esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
-    esp_log_level_set("button", ESP_LOG_INFO);
-    esp_log_level_set("control", ESP_LOG_INFO);
-    //esp_log_level_set("fan-control", ESP_LOG_INFO);
-    esp_log_level_set("wifi", ESP_LOG_INFO);
-    esp_log_level_set("http", ESP_LOG_INFO);
-    //esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
-    esp_log_level_set("display", ESP_LOG_INFO);
-    //esp_log_level_set("current-sensors", ESP_LOG_INFO);
-    //esp_log_level_set("speedSensor", ESP_LOG_INFO);
+//=================================
+//========= createObjects =========
+//=================================
+//create all shared objects
+//their references can be passed to the tasks that need access in main
+
+//Note: the configuration structures (e.g. configMotorControlLeft) are outsourced to file 'config.cpp'
+
+void createObjects()
+{
+    // create sabertooth motor driver instance
+    // sabertooth2x60a sabertoothDriver(sabertoothConfig);
+    // with configuration above
+	//sabertoothDriver = new sabertooth2x60a(sabertoothConfig);
+
+	// create controlled motor instances (motorctl.hpp)
+    // with configurations from config.cpp
+    motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft, &nvsHandle);
+    motorRight = new controlledMotor(setRightFunc, configMotorControlRight, &nvsHandle);
+
+    // create speedsensor instances
+    // with configurations from config.cpp
+    speedLeft = new speedSensor(speedLeft_config);
+    speedRight = new speedSensor(speedRight_config);
+
+    // create joystick instance (joystick.hpp)
+    joystick = new evaluatedJoystick(configJoystick, &nvsHandle);
+
+    // create httpJoystick object (http.hpp)
+    httpJoystickMain = new httpJoystick(configHttpJoystickMain);
+    http_init_server(on_joystick_url);
+
+    // create buzzer object on pin 12 with gap between queued events of 1ms
+    buzzer = new buzzer_t(GPIO_NUM_12, 1);
+
+    // create objects for controlling the chair position
+    //                       gpio_up, gpio_down, name
+    legRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, "legRest");
+    backRest = new cControlledRest(GPIO_NUM_16, GPIO_NUM_4, "backRest");
+
+    // create control object (control.hpp)
+    // with configuration from config.cpp
+    control = new controlledArmchair(configControl, buzzer, motorLeft, motorRight, joystick, &joystickGenerateCommands_config, httpJoystickMain, automatedArmchair, legRest, backRest, &nvsHandle);
+
+    // create automatedArmchair_c object (for auto-mode) (auto.hpp)
+    automatedArmchair = new automatedArmchair_c(motorLeft, motorRight);
+
 }
 
 
@@ -163,70 +183,125 @@ void setLoglevels(void){
 //=========== app_main ============
 //=================================
 extern "C" void app_main(void) {
-	//enable 5V volate regulator
+	ESP_LOGW(TAG, "===== BOOT (pre main) Completed =====\n");
+
+	ESP_LOGW(TAG, "===== INITIALIZING COMPONENTS =====");
+	//--- define log levels ---
+	setLoglevels();
+
+	//--- enable 5V volate regulator ---
 	ESP_LOGW(TAG, "enabling 5V regulator...");
 	gpio_pad_select_gpio(GPIO_NUM_17);                                                  
 	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
 	gpio_set_level(GPIO_NUM_17, 1);                                                      
 
-	//---- define log levels ----
-	setLoglevels();
-
-	//----------------------------------------------
-	//--- create task for controlling the motors ---
-	//----------------------------------------------
-	//task that receives commands, handles ramp and current limit and executes commands using the motordriver function
-	xTaskCreate(&task_motorctl, "task_motor-control", 2*4096, NULL, 6, NULL);
-
-	//------------------------------
-	//--- create task for buzzer ---
-	//------------------------------
-	xTaskCreate(&task_buzzer, "task_buzzer", 2048, NULL, 2, NULL);
-
-	//-------------------------------
-	//--- create task for control ---
-	//-------------------------------
-	//task that generates motor commands depending on the current mode and sends those to motorctl task
-	xTaskCreate(&task_control, "task_control", 4096, NULL, 5, NULL);
-
-	//------------------------------
-	//--- create task for button ---
-	//------------------------------
-	//task that evaluates and processes the button input and runs the configured commands
-	xTaskCreate(&task_button, "task_button", 4096, NULL, 4, NULL);
-
-	//-----------------------------------
-	//--- create task for fan control ---
-	//-----------------------------------
-	//task that evaluates and processes the button input and runs the configured commands
-	xTaskCreate(&task_fans, "task_fans", 2048, NULL, 1, NULL);
-
-
-	//-----------------------------------
-	//----- create task for display -----
-	//-----------------------------------
-	//task that handles the display
-	xTaskCreate(&display_task, "display_task", 3*2048, NULL, 1, NULL);
-
-
-	//beep at startup
-	buzzer.beep(3, 70, 50);
-
 	//--- initialize nvs-flash and netif (needed for wifi) ---
+	ESP_LOGW(TAG,"initializing wifi...");
 	wifi_initNvs_initNetif();
 
 	//--- initialize spiffs ---
 	init_spiffs();
 
 	//--- initialize and start wifi ---
-	//FIXME: run wifi_init_client or wifi_init_ap as intended from control.cpp when switching state 
-	//currently commented out because of error "assert failed: xQueueSemaphoreTake queue.c:1549 (pxQueue->uxItemSize == 0)" when calling control->changeMode from button.cpp
-	//when calling control.changeMode(http) from main.cpp it worked without error for some reason?
-	ESP_LOGI(TAG,"starting wifi...");
+	ESP_LOGW(TAG,"starting wifi...");
 	//wifi_init_client(); //connect to existing wifi
 	wifi_init_ap(); //start access point
-	ESP_LOGI(TAG,"done starting wifi");
+	ESP_LOGD(TAG,"done starting wifi");
 
+	//--- initialize encoder ---
+	const QueueHandle_t encoderQueue = encoder_init(&encoder_config);
+
+	//--- initialize nvs-flash ---  (for persistant config values)
+	ESP_LOGW(TAG, "initializing nvs-flash...");
+	esp_err_t err = nvs_flash_init();
+	if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+	{
+		ESP_LOGE(TAG, "NVS truncated -> deleting flash");
+		// Retry nvs_flash_init
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		err = nvs_flash_init();
+	}
+	ESP_ERROR_CHECK(err);
+	//--- open nvs-flash ---
+	err = nvs_open("storage", NVS_READWRITE, &nvsHandle);
+	if (err != ESP_OK)
+		ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+
+	printf("\n");
+
+
+
+	//--- create all objects ---
+	ESP_LOGW(TAG, "===== CREATING SHARED OBJECTS =====");
+
+	//initialize sabertooth object in STACK (due to performance issues in heap)
+	///sabertoothDriver = static_cast<sabertooth2x60a*>(alloca(sizeof(sabertooth2x60a)));
+	///new (sabertoothDriver) sabertooth2x60a(sabertoothConfig);
+
+	//create all class instances used below in HEAP
+	createObjects();
+
+	printf("\n");
+
+
+
+	//--- create tasks ---
+	ESP_LOGW(TAG, "===== CREATING TASKS =====");
+
+	//----------------------------------------------
+	//--- create task for controlling the motors ---
+	//----------------------------------------------
+	//task for each motor that handles to following:
+	//receives commands from control via queue, handle ramp and current, apply new duty by passing it to method of motordriver (ptr)
+	xTaskCreate(&task_motorctl, "task_ctl-left-motor", 2*4096, motorLeft, 6, NULL);
+	xTaskCreate(&task_motorctl, "task_ctl-right-motor", 2*4096, motorRight, 6, NULL);
+
+	//------------------------------
+	//--- create task for buzzer ---
+	//------------------------------
+	//task that processes queued beeps
+	//note: pointer to shard object 'buzzer' is passed as task parameter:
+	xTaskCreate(&task_buzzer, "task_buzzer", 2048, buzzer, 2, NULL);
+
+	//-------------------------------
+	//--- create task for control ---
+	//-------------------------------
+	//task that generates motor commands depending on the current mode and sends those to motorctl task
+	//note: pointer to shared object 'control' is passed as task parameter:
+	xTaskCreate(&task_control, "task_control", 4096, control, 5, NULL);
+
+	//------------------------------
+	//--- create task for button ---
+	//------------------------------
+	//task that handles button/encoder events in any mode except 'MENU' (e.g. switch modes by pressing certain count)
+	task_button_parameters_t button_param = {control, joystick, encoderQueue, motorLeft, motorRight, buzzer};
+	xTaskCreate(&task_button, "task_button", 4096, &button_param, 3, NULL);
+
+	//-----------------------------------
+	//--- create task for fan control ---
+	//-----------------------------------
+	//task that controls cooling fans of the motor driver
+	task_fans_parameters_t fans_param = {configFans, motorLeft, motorRight};
+	xTaskCreate(&task_fans, "task_fans", 2048, &fans_param, 1, NULL);
+
+	//-----------------------------------
+	//----- create task for display -----
+	//-----------------------------------
+	//task that handles the display (show stats, handle menu in 'MENU' mode)
+	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer, &nvsHandle};
+	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 3, NULL);
+
+	vTaskDelay(200 / portTICK_PERIOD_MS); //wait for all tasks to finish initializing
+	printf("\n");
+
+
+
+	//--- startup finished ---
+	ESP_LOGW(TAG, "===== STARTUP FINISHED =====\n");
+	buzzer->beep(3, 70, 50);
+
+	//--- testing encoder ---
+	//xTaskCreate(&task_encoderExample, "task_buzzer", 2048, encoderQueue, 2, NULL);
 
 	//--- testing http server ---
 	//    wifi_init_client(); //connect to existing wifi
@@ -235,15 +310,17 @@ extern "C" void app_main(void) {
 	//    http_init_server();
 
 
-	//--- testing force http mode after startup ---
-	//control.changeMode(controlMode_t::HTTP);
+	//--- testing force specific mode after startup ---
+	//control->changeMode(controlMode_t::MENU);
 
 
 
 	//--- main loop ---
 	//does nothing except for testing things
 	while(1){
-		vTaskDelay(5000 / portTICK_PERIOD_MS);
+		vTaskDelay(portMAX_DELAY);
+		//vTaskDelay(5000 / portTICK_PERIOD_MS);
+
 		//---------------------------------
 		//-------- TESTING section --------
 		//---------------------------------

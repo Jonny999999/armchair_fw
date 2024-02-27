@@ -178,40 +178,25 @@ esp_err_t httpJoystick::receiveHttpData(httpd_req_t *req){
 //-------------------
 //----- getData -----
 //-------------------
-//wait for and return joystick data from queue, if timeout return NULL
+//wait for and return joystick data from queue, return last data if nothing received within 500ms, return center data when timeout exceeded
 joystickData_t httpJoystick::getData(){
 
     //--- get joystick data from queue ---
-    if( xQueueReceive( joystickDataQueue, &dataRead, pdMS_TO_TICKS(config.timeoutMs) ) ) {
-
+    if( xQueueReceive( joystickDataQueue, &dataRead, pdMS_TO_TICKS(500) ) ) { //dont wait longer than 500ms to not block the control loop for too long
         ESP_LOGD(TAG, "getData: received data (from queue): x=%.3f  y=%.3f  radius=%.3f  angle=%.3f",
                 dataRead.x, dataRead.y, dataRead.radius, dataRead.angle);
+        timeLastData = esp_log_timestamp();
     }
     //--- timeout ---
-    //no new data received within configured timeout
+    // send error message when last received data did NOT result in CENTER position and timeout exceeded
     else { 
-        //send error message when last received data did NOT result in CENTER position
-        if (dataRead.position != joystickPos_t::CENTER) {
+        if (dataRead.position != joystickPos_t::CENTER && (esp_log_timestamp() - timeLastData) > config.timeoutMs) {
             //change data to "joystick center" data to stop the motors
             dataRead = dataCenter;
-            ESP_LOGE(TAG, "TIMEOUT - no data received for 3s -> set to center");
+            ESP_LOGE(TAG, "TIMEOUT - no data received for %dms -> set to center", config.timeoutMs);
         }
     }
     return dataRead;
-}
-
-
-//--------------------------------------------
-//--- receiveHttpData for httpJoystickMain ---
-//--------------------------------------------
-//function that wraps pointer to member function of httpJoystickMain instance in a "normal" function which the webserver can run on joystick URL
-
-//declare pointer to receiveHttpData method of httpJoystick class
-esp_err_t (httpJoystick::*pointerToReceiveFunc)(httpd_req_t *req) = &httpJoystick::receiveHttpData;
-
-esp_err_t on_joystick_url(httpd_req_t *req){
-    //run pointer to receiveHttpData function of httpJoystickMain instance
-    return (httpJoystickMain.*pointerToReceiveFunc)(req);
 }
 
 
@@ -219,9 +204,13 @@ esp_err_t on_joystick_url(httpd_req_t *req){
 //============================
 //===== init http server =====
 //============================
-//function that initializes http server and configures available urls
-void http_init_server()
+//function that initializes http server and configures available url's
+
+//parameter: provide pointer to function that handle incomming joystick data (for configuring the url)
+//TODO add handle functions to future additional endpoints/urls here too
+void http_init_server(http_handler_t onJoystickUrl)
 {
+  ESP_LOGI(TAG, "initializing HTTP-Server...");
 
   //---- configure webserver ----
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -236,7 +225,7 @@ void http_init_server()
     httpd_uri_t joystick_url = {
       .uri = "/api/joystick",
       .method = HTTP_POST,
-      .handler = on_joystick_url,
+      .handler = onJoystickUrl,
       };
   httpd_register_uri_handler(server, &joystick_url);
 
@@ -265,8 +254,8 @@ void http_init_server()
 //function that destroys the http server
 void http_stop_server()
 {
-    printf("stopping http\n");
-    httpd_stop(server);
+  ESP_LOGW(TAG, "stopping HTTP-Server");
+  httpd_stop(server);
 }
 
 
