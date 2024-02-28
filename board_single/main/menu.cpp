@@ -343,6 +343,49 @@ menuItem_t item_decelLimit = {
 };
 
 
+
+//###############################
+//### select motorControlMode ###
+//###############################
+void item_motorControlMode_action(display_task_parameters_t *objects, SSD1306_t *display, int value)
+{
+    switch (value)
+    {
+    case 1:
+    default:
+    objects->motorLeft->setControlMode(motorControlMode_t::DUTY);
+    objects->motorRight->setControlMode(motorControlMode_t::DUTY);
+        break;
+    case 2:
+    objects->motorLeft->setControlMode(motorControlMode_t::CURRENT);
+    objects->motorRight->setControlMode(motorControlMode_t::CURRENT);
+        break;
+    case 3:
+    objects->motorLeft->setControlMode(motorControlMode_t::SPEED);
+    objects->motorRight->setControlMode(motorControlMode_t::SPEED);
+        break;
+    }
+}
+int item_motorControlMode_value(display_task_parameters_t *objects)
+{
+    return 1; // initial value shown / changed from //TODO get actual mode
+}
+menuItem_t item_motorControlMode = {
+    item_motorControlMode_action, // function action
+    item_motorControlMode_value,  // function get initial value or NULL(show in line 2)
+    NULL,                     // function get default value or NULL(dont set value, show msg)
+    1,                        // valueMin
+    3,                        // valueMax
+    1,                        // valueIncrement
+    "Control mode    ",       // title
+    "  sel. motor    ",       // line1 (above value)
+    "  control mode  ",       // line2 (above value)
+    "1: DUTY (defaul)",            // line4 * (below value)
+    "2: CURRENT",              // line5 *
+    "3: SPEED",            // line6
+    "",              // line7
+};
+
 //###################################
 //##### Traction Control System #####
 //###################################
@@ -372,10 +415,10 @@ menuItem_t item_tractionControlSystem = {
     "TCS / ASR       ",   // title
     "Traction Control",   // line1 (above value)
     "     System     ",   // line2 (above value)
-    "",                   // line4 * (below value)
-    "",                   // line5 *
-    "1: enable       ",   // line6
-    "0: disable      ",   // line7
+    "1: enable       ",   // line4 * (below value)
+    "0: disable      ",   // line5 *
+    "note: requires  ",   // line6
+    "speed ctl-mode  ",   // line7
 };
 
 
@@ -508,8 +551,8 @@ menuItem_t item_last = {
 //####################################################
 //### store all configured menu items in one array ###
 //####################################################
-const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_statusScreen, item_accelLimit, item_decelLimit, item_tractionControlSystem, item_reset, item_example, item_last};
-const int itemCount = 9;
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_statusScreen, item_maxDuty, item_accelLimit, item_decelLimit, item_motorControlMode, item_tractionControlSystem, item_reset, item_example, item_last};
+const int itemCount = 10;
 
 
 

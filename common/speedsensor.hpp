@@ -33,7 +33,7 @@ public:
 	float getKmph(); //kilometers per hour
 	float getMps(); //meters per second
 	float getRpm();  //rotations per minute
-	float getTimeLastUpdate() {return timeLastUpdate;};
+	uint32_t getTimeLastUpdate() {return timeLastUpdate;};
 
 	//variables for handling the encoder (public because ISR needs access)
 	speedSensor_config_t config;

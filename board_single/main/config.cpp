@@ -48,7 +48,7 @@ void setLoglevels(void)
 
 
 
-    esp_log_level_set("TESTING", ESP_LOG_VERBOSE);
+    esp_log_level_set("TESTING", ESP_LOG_ERROR);
 
 
 
@@ -98,6 +98,7 @@ sabertooth2x60_config_t sabertoothConfig = {
 //--- configure left motor (contol) ---
 motorctl_config_t configMotorControlLeft = {
     .name = "left",
+    .loggingEnabled = true,
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
@@ -113,6 +114,7 @@ motorctl_config_t configMotorControlLeft = {
 //--- configure right motor (contol) ---
 motorctl_config_t configMotorControlRight = {
     .name = "right",
+    .loggingEnabled = false,
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,

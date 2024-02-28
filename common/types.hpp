@@ -22,7 +22,6 @@ enum class motorstate_t {IDLE, FWD, REV, BRAKE};
 //definition of string array to be able to convert state enum to readable string (defined in motordrivers.cpp)
 extern const char* motorstateStr[4];
 
-enum class motorControlMode_t {DUTY, CURRENT, SPEED};
 
 
 //===========================
@@ -43,6 +42,7 @@ typedef struct motorCommands_t {
 //struct with all config parameters for a motor regarding ramp and current limit
 typedef struct motorctl_config_t {
     char * name;    //name for unique nvs storage-key prefix and logging
+    bool loggingEnabled; //enable/disable ALL log output (mostly better to debug only one instance)
     uint32_t msFadeAccel; //acceleration of the motor (ms it takes from 0% to 100%)
     uint32_t msFadeDecel; //deceleration of the motor (ms it takes from 100% to 0%)
 	bool currentLimitEnabled;
