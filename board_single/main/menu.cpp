@@ -343,6 +343,42 @@ menuItem_t item_decelLimit = {
 };
 
 
+//###################################
+//##### Traction Control System #####
+//###################################
+void tractionControlSystem_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
+{
+    if (value == 1){
+    objects->motorLeft->enableTractionControlSystem();
+    objects->motorRight->enableTractionControlSystem();
+    ESP_LOGW(TAG, "enabled Traction Control System");
+    } else {
+    objects->motorLeft->disableTractionControlSystem();
+    objects->motorRight->disableTractionControlSystem();
+    ESP_LOGW(TAG, "disabled Traction Control System");
+    }
+}
+int tractionControlSystem_currentValue(display_task_parameters_t * objects)
+{
+    return (int)objects->motorLeft->getTractionControlSystemStatus();
+}
+menuItem_t item_tractionControlSystem = {
+    tractionControlSystem_action,       // function action
+    tractionControlSystem_currentValue, // function get initial value or NULL(show in line 2)
+    NULL,                 // function get default value or NULL(dont set value, show msg)
+    0,                    // valueMin
+    1,                    // valueMax
+    1,                    // valueIncrement
+    "TCS / ASR       ",   // title
+    "Traction Control",   // line1 (above value)
+    "     System     ",   // line2 (above value)
+    "",                   // line4 * (below value)
+    "",                   // line5 *
+    "1: enable       ",   // line6
+    "0: disable      ",   // line7
+};
+
+
 //#####################
 //####### RESET #######
 //#####################
@@ -472,8 +508,8 @@ menuItem_t item_last = {
 //####################################################
 //### store all configured menu items in one array ###
 //####################################################
-const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_statusScreen, item_reset, item_example, item_last};
-const int itemCount = 8;
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_statusScreen, item_accelLimit, item_decelLimit, item_tractionControlSystem, item_reset, item_example, item_last};
+const int itemCount = 9;
 
 
 

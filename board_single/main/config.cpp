@@ -45,6 +45,13 @@ void setLoglevels(void)
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
     esp_log_level_set("menu", ESP_LOG_INFO);
     esp_log_level_set("encoder", ESP_LOG_INFO);
+
+
+
+    esp_log_level_set("TESTING", ESP_LOG_VERBOSE);
+
+
+
 }
 
 //==================================
@@ -94,6 +101,7 @@ motorctl_config_t configMotorControlLeft = {
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
+    .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_4, // GPIO32
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -108,6 +116,7 @@ motorctl_config_t configMotorControlRight = {
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
+    .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_5, // GPIO33
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,

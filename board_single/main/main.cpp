@@ -142,15 +142,15 @@ void createObjects()
     // with configuration above
 	//sabertoothDriver = new sabertooth2x60a(sabertoothConfig);
 
-	// create controlled motor instances (motorctl.hpp)
-    // with configurations from config.cpp
-    motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft, &nvsHandle);
-    motorRight = new controlledMotor(setRightFunc, configMotorControlRight, &nvsHandle);
-
     // create speedsensor instances
     // with configurations from config.cpp
     speedLeft = new speedSensor(speedLeft_config);
     speedRight = new speedSensor(speedRight_config);
+
+	// create controlled motor instances (motorctl.hpp)
+    // with configurations from config.cpp
+    motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft, &nvsHandle, speedLeft, &motorRight); //note: ptr to ptr of controlledMotor since it isnt defined yet
+    motorRight = new controlledMotor(setRightFunc, configMotorControlRight, &nvsHandle, speedRight, &motorLeft);
 
     // create joystick instance (joystick.hpp)
     joystick = new evaluatedJoystick(configJoystick, &nvsHandle);
