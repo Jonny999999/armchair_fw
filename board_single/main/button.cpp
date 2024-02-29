@@ -96,8 +96,8 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         // ## switch to ADJUST_CHAIR mode ##
         if (lastPressLong)
         {
-            ESP_LOGW(TAG, "cmd %d: toggle ADJUST_CHAIR", count);
-            control->toggleMode(controlMode_t::ADJUST_CHAIR);
+            ESP_LOGW(TAG, "cmd %d: switch to ADJUST_CHAIR", count);
+            control->changeMode(controlMode_t::ADJUST_CHAIR);
             }
             // ## toggle IDLE ##
             else {
@@ -114,14 +114,14 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 
         case 4:
         // ## switch to HTTP mode ##
-            ESP_LOGW(TAG, "cmd %d: toggle between HTTP and JOYSTICK", count);
-            control->toggleModes(controlMode_t::HTTP, controlMode_t::JOYSTICK); //toggle between HTTP and JOYSTICK mode
+            ESP_LOGW(TAG, "cmd %d: switch to HTTP", count);
+            control->changeMode(controlMode_t::HTTP); //switch to HTTP mode
             break;
 
         case 6:
         // ## switch to MASSAGE mode ##
-            ESP_LOGW(TAG, "cmd %d: toggle between MASSAGE and JOYSTICK", count);
-            control->toggleModes(controlMode_t::MASSAGE, controlMode_t::JOYSTICK); //toggle between MASSAGE and JOYSTICK mode
+            ESP_LOGW(TAG, "switch to MASSAGE");
+            control->changeMode(controlMode_t::MASSAGE); //switch to MASSAGE mode
             break;
 
         case 8:
@@ -129,7 +129,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
             //toggle deceleration fading between on and off
             //decelEnabled = motorLeft->toggleFade(fadeType_t::DECEL);
             //motorRight->toggleFade(fadeType_t::DECEL);
-            decelEnabled = motorLeft->toggleFade(fadeType_t::ACCEL);
+            decelEnabled = motorLeft->toggleFade(fadeType_t::ACCEL); //TODO remove/simplify this using less functions
             motorRight->toggleFade(fadeType_t::ACCEL);
             ESP_LOGW(TAG, "cmd %d: toggle deceleration fading to: %d", count, (int)decelEnabled);
             if (decelEnabled){
