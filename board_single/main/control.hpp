@@ -97,6 +97,8 @@ class controlledArmchair {
         void setMaxDuty(float maxDutyNew) { writeMaxDuty(maxDutyNew); };
         float getMaxDuty() const {return joystickGenerateCommands_config.maxDuty; };
 
+        uint32_t getInactivityDurationMs() {return esp_log_timestamp() - timestamp_lastActivity;};
+
     private:
 
         //--- functions ---

@@ -337,7 +337,7 @@ void controlledArmchair::resetTimeout(){
 // switch to IDLE when no activity (prevent accidential movement)
 // notify "power still on" when in IDLE for a very long time (prevent battery drain when forgotten to turn off)
 // this function has to be run repeatedly (can be slow interval)
-#define TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS 30 * 60 * 1000 // beep every 30 minutes for someone to notice
+#define TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS 10 * 60 * 1000 // beep every 30 minutes for someone to notice
 // note: timeout durations are configured in config.cpp
 void controlledArmchair::handleTimeout()
 {
@@ -347,25 +347,26 @@ void controlledArmchair::handleTimeout()
              noActivityDurationMs / 1000 / 60,
              noActivityDurationMs / 1000 % 60,
              config.timeoutSwitchToIdleMs / 1000,
-             config.timeoutNotifyPowerStillOnMs / 1000);
+             config.timeoutNotifyPowerStillOnMs / 1000 / 60 / 60);
 
     // timeout to IDLE when not idling already
     if (mode != controlMode_t::IDLE && noActivityDurationMs > config.timeoutSwitchToIdleMs)
     {
         ESP_LOGW(TAG, "timeout check: [TIMEOUT], no activity for more than %ds  -> switch to IDLE", config.timeoutSwitchToIdleMs / 1000);
         changeMode(controlMode_t::IDLE);
+        //TODO switch to previous status-screen when activity detected
     }
     // repeatedly notify via buzzer when in IDLE for a very long time to prevent battery drain ("forgot to turn off")
     // note: ignores user input while in IDLE
-    else if (esp_log_timestamp() - timestamp_lastModeChange > config.timeoutNotifyPowerStillOnMs)
+    else if ((esp_log_timestamp() - timestamp_lastModeChange) > config.timeoutNotifyPowerStillOnMs)
     {
         // beep in certain intervals
-        if (esp_log_timestamp() - timestamp_lastTimeoutBeep > TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS)
+        if ((esp_log_timestamp() - timestamp_lastTimeoutBeep) > TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS)
         {
-            ESP_LOGD(TAG, "timeout: [TIMEOUT] in IDLE for more than %.3f hours", (float)(esp_log_timestamp() - timestamp_lastModeChange) / 1000 / 60 / 60);
+            ESP_LOGW(TAG, "timeout: [TIMEOUT] in IDLE since %.3f hours -> beeping", (float)(esp_log_timestamp() - timestamp_lastModeChange) / 1000 / 60 / 60);
             // TODO dont beep at certain times ranges (e.g. at night)
             timestamp_lastTimeoutBeep = esp_log_timestamp();
-            buzzer->beep(4, 100, 50);
+            buzzer->beep(6, 100, 50);
         }
     }
 }

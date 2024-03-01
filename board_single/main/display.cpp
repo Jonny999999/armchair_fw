@@ -234,7 +234,7 @@ float getBatteryPercent()
 //shows overview on entire display:
 //Battery percentage, voltage, current, mode, rpm, speed
 #define STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL 500
-void showStatusScreenOverview(display_task_parameters_t * objects)
+void showStatusScreenOverview(display_task_parameters_t *objects)
 {
 	//-- battery percentage --
 	// TODO update when no load (currentsensors = ~0A) only
@@ -264,7 +264,6 @@ void showStatusScreenOverview(display_task_parameters_t * objects)
 				   objects->speedRight->getRpm());
 	vTaskDelay(STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL / portTICK_PERIOD_MS);
 }
-
 
 //############################
 //##### showScreen Speed #####
@@ -331,6 +330,42 @@ void showStatusScreenMotors(display_task_parameters_t *objects)
 }
 
 
+//###############################
+//#### showScreen Sreensaver ####
+//###############################
+// show minimal text scrolling across screen to prevent burn in
+// indicates that armchair is still on (probably "forgotten to be turned off")
+#define STATUS_SCREEN_TIMEOUT_NEXT_LINE_SEC 6
+void showStatusScreenScreensaver(display_task_parameters_t *objects)
+{
+		// to prevent burn-in only showing minimal and scrolling text
+		ssd1306_clear_screen(&dev, false);
+		ssd1306_hardware_scroll(&dev, SCROLL_RIGHT);
+
+		// loop through all lines (also scroll down)
+		for (int line = 0; line < 7; line++)
+		{
+			ssd1306_clear_screen(&dev, false);
+			displayTextLine(&dev, line, false, false, "IDLE since");
+			displayTextLine(&dev, line + 1, false, false, "%.1fh, B:%02.0f%%", (float)objects->control->getInactivityDurationMs() / 1000 / 60 / 60, getBatteryPercent());
+			// check exit condition while waiting some time before switching to next line
+			int secondsPassed = 0;
+			while (secondsPassed < STATUS_SCREEN_TIMEOUT_NEXT_LINE_SEC)
+			{
+				secondsPassed ++;
+				vTaskDelay(1000 / portTICK_PERIOD_MS);
+				// switch to default status screen, when IDLE mode is exited (timeout has ended)
+				if (objects->control->getCurrentMode() != controlMode_t::IDLE)
+				{
+					display_selectStatusPage(STATUS_SCREEN_OVERVIEW);
+					ssd1306_hardware_scroll(&dev, SCROLL_STOP);
+					return;
+				}
+			}
+		}
+		ssd1306_hardware_scroll(&dev, SCROLL_STOP);
+}
+
 //########################
 //#### showStartupMsg ####
 //########################
@@ -363,6 +398,8 @@ void display_selectStatusPage(displayStatusPage_t newStatusPage){
 //======= display task =======
 //============================
 // TODO: separate task for each loop?
+#define DISPLAY_IDLE_TIMEOUT_SCREENSAVER_MS 15*60*1000
+
 void display_task(void *pvParameters)
 {
 	ESP_LOGW(TAG, "Initializing display and starting handle loop");
@@ -403,7 +440,13 @@ void display_task(void *pvParameters)
 			case STATUS_SCREEN_MOTORS:
 				showStatusScreenMotors(objects);
 				break;
+			case STATUS_SCREEN_SCREENSAVER:
+				showStatusScreenScreensaver(objects);
+				break;
 			}
+			// switch to screensaver when no user activity for a long time, to prevent burn in
+			if (objects->control->getInactivityDurationMs() > DISPLAY_IDLE_TIMEOUT_SCREENSAVER_MS)
+				selectedStatusPage = STATUS_SCREEN_SCREENSAVER;
 		}
 		// TODO add pages and menus
 	}
