@@ -98,13 +98,14 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         {
             ESP_LOGW(TAG, "cmd %d: switch to ADJUST_CHAIR", count);
             control->changeMode(controlMode_t::ADJUST_CHAIR);
-            }
-            // ## toggle IDLE ##
-            else {
+        }
+        // ## toggle IDLE ##
+        else
+        {
             ESP_LOGW(TAG, "cmd %d: toggle IDLE", count);
-            control->toggleIdle(); //toggle between idle and previous/default mode
-            }
-            break;
+            control->toggleIdle(); // toggle between idle and previous/default mode
+        }
+        break;
 
         case 3:
         // ## switch to JOYSTICK mode ##
@@ -155,7 +156,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 // when not in MENU mode, repeatedly receives events from encoder button
 // and takes the corresponding action
 // this function has to be started once in a separate task
-#define INPUT_TIMEOUT 800 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
+#define INPUT_TIMEOUT 700 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
 void buttonCommands::startHandleLoop()
 {
     //-- variables --
@@ -178,7 +179,7 @@ void buttonCommands::startHandleLoop()
         //-- get events from encoder --
         if (xQueueReceive(encoderQueue, &ev, INPUT_TIMEOUT / portTICK_PERIOD_MS))
         {
-            control->resetTimeout(); //reset inactivity IDLE timeout
+            control->resetTimeout();          // user input -> reset switch to IDLE timeout
             switch (ev.type)
             {
                 break;

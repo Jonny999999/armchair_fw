@@ -121,11 +121,9 @@ motorctl_config_t configMotorControlRight = {
 //------------------------------
 control_config_t configControl = {
     .defaultMode = controlMode_t::JOYSTICK, // default mode after startup and toggling IDLE
-    //--- timeout ---
-    .timeoutMs = 3 * 60 * 1000, // time of inactivity after which the mode gets switched to IDLE
-    .timeoutTolerancePer = 5,   // percentage the duty can vary between timeout checks considered still inactive
-    //--- http mode ---
-
+    //--- timeouts ---
+    .timeoutSwitchToIdleMs = 5 * 60 * 1000, // time of inactivity after which the mode gets switched to IDLE
+    .timeoutNotifyPowerStillOnMs = 6 * 60 * 60 * 1000 // time in IDLE after which buzzer beeps in certain interval (notify "forgot to turn off")
 };
 
 //-------------------------------

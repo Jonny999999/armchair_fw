@@ -27,7 +27,8 @@ extern const char* controlModeStr[9];
 typedef struct control_config_t {
     controlMode_t defaultMode;  //default mode after startup and toggling IDLE
     //timeout options
-    uint32_t timeoutMs;         //time of inactivity after which the mode gets switched to IDLE
+    uint32_t timeoutSwitchToIdleMs;         //time of inactivity after which the mode gets switched to IDLE
+    uint32_t timeoutNotifyPowerStillOnMs;
     float timeoutTolerancePer;  //percentage the duty can vary between timeout checks considered still inactive
 } control_config_t;
 
@@ -169,10 +170,10 @@ class controlledArmchair {
         //variable for slow loop
         uint32_t timestamp_SlowLoopLastRun = 0;
 
-        //variables for detecting timeout (switch to idle, after inactivity)
-        float dutyLeft_lastActivity = 0;
-        float dutyRight_lastActivity = 0;
+        //variables for detecting timeout (switch to idle, or notify "forgot to turn off" after inactivity
+        uint32_t timestamp_lastModeChange = 0;
         uint32_t timestamp_lastActivity = 0;
+        uint32_t timestamp_lastTimeoutBeep = 0;
 };
 
 

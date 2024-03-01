@@ -5,7 +5,6 @@
 #include "control.hpp"
 #include "motorctl.hpp"
 #include "auto.hpp"
-#include "config.hpp"
 #include "joystick.hpp"
 
 

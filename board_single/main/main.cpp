@@ -27,7 +27,6 @@ extern "C"
 #include "motorctl.hpp"
 
 //folder single_board
-#include "config.hpp"
 #include "control.hpp" 
 #include "button.hpp"
 #include "display.hpp"
