@@ -337,7 +337,7 @@ void controlledArmchair::resetTimeout(){
 // switch to IDLE when no activity (prevent accidential movement)
 // notify "power still on" when in IDLE for a very long time (prevent battery drain when forgotten to turn off)
 // this function has to be run repeatedly (can be slow interval)
-#define TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS 10 * 60 * 1000 // beep every 30 minutes for someone to notice
+#define TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS 5 * 60 * 1000 // beep every 5 minutes for someone to notice
 // note: timeout durations are configured in config.cpp
 void controlledArmchair::handleTimeout()
 {
@@ -378,8 +378,6 @@ void controlledArmchair::handleTimeout()
 //-----------------------------------
 //function to change to a specified control mode
 void controlledArmchair::changeMode(controlMode_t modeNew) {
-    //reset timeout timer
-    resetTimeout();
 
     //exit if target mode is already active
     if (mode == modeNew) {

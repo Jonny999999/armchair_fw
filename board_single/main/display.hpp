@@ -22,6 +22,7 @@ extern "C" {
 
 // configuration for initializing display (passed to task as well)
 typedef struct display_config_t {
+    // initialization
     gpio_num_t gpio_scl;
     gpio_num_t gpio_sda;
     int gpio_reset; // negative number means reset pin is not connected or not used
@@ -29,7 +30,11 @@ typedef struct display_config_t {
     int height;
     int offsetX;
     bool flip;
-    int contrast;
+    // display-task
+    int contrastNormal;
+    int contrastReduced;
+    uint32_t timeoutReduceContrastMs;
+    uint32_t timeoutSwitchToScreensaverMs;
 } display_config_t;
 
 

@@ -29,7 +29,6 @@ typedef struct control_config_t {
     //timeout options
     uint32_t timeoutSwitchToIdleMs;         //time of inactivity after which the mode gets switched to IDLE
     uint32_t timeoutNotifyPowerStillOnMs;
-    float timeoutTolerancePer;  //percentage the duty can vary between timeout checks considered still inactive
 } control_config_t;
 
 

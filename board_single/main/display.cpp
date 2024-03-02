@@ -12,7 +12,13 @@ extern "C"{
 #define STARTUP_MSG_TIMEOUT 2000
 #define ADC_BATT_VOLTAGE ADC1_CHANNEL_6
 #define BAT_CELL_COUNT 7
+// continously vary display contrast from 0 to 250 in OVERVIEW status screen
+//#define BRIGHTNESS_TEST
 
+
+//=== variables ===
+// every function can access the display configuration from config.cpp
+static display_config_t displayConfig;
 
 
 //--------------------------
@@ -61,7 +67,10 @@ void display_init(display_config_t config){
 	ssd1306_init(&dev, config.width, config.height, config.offsetX);
 
 	ssd1306_clear_screen(&dev, false);
-	ssd1306_contrast(&dev, config.contrast);
+	ssd1306_contrast(&dev, config.contrastNormal);
+
+	//store configuration locally (e.g. for accessing timeouts)
+	displayConfig = config;
 }
 
 
@@ -233,7 +242,7 @@ float getBatteryPercent()
 //#############################
 //shows overview on entire display:
 //Battery percentage, voltage, current, mode, rpm, speed
-#define STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL 500
+#define STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL 400
 void showStatusScreenOverview(display_task_parameters_t *objects)
 {
 	//-- battery percentage --
@@ -263,7 +272,19 @@ void showStatusScreenOverview(display_task_parameters_t *objects)
 				   objects->speedLeft->getRpm(),
 				   objects->speedRight->getRpm());
 	vTaskDelay(STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+
+	//-- brightness test --
+#ifdef BRIGHTNESS_TEST
+	// continously vary brightness/contrast for testing
+	displayConfig.contrastNormal += 10;
+	if (displayConfig.contrastNormal > 255)
+		displayConfig.contrastNormal = 0;
+	ssd1306_contrast(&dev, displayConfig.contrastNormal);
+	vTaskDelay(100 / portTICK_PERIOD_MS);
+	ESP_LOGW(TAG, "TEST BRIGHTNESS, setting to %d", displayConfig.contrastNormal);
+#endif
 }
+
 
 //############################
 //##### showScreen Speed #####
@@ -314,8 +335,6 @@ void showStatusScreenJoystick(display_task_parameters_t * objects)
 #define STATUS_SCREEN_MOTORS_UPDATE_INTERVAL 150
 void showStatusScreenMotors(display_task_parameters_t *objects)
 {
-		// print all joystick data
-		joystickData_t data = objects->joystick->getData();
 		displayTextLine(&dev, 0, true, false, "%-4.0fW ", fabs(objects->motorLeft->getCurrentA()) * getBatteryVoltage());
 		displayTextLine(&dev, 3, true, false, "%-4.0fW ", fabs(objects->motorRight->getCurrentA()) * getBatteryVoltage());
 		//displayTextLine(&dev, 0, true, false, "L:%02.0f%%", objects->motorLeft->getStatus().duty);
@@ -333,37 +352,40 @@ void showStatusScreenMotors(display_task_parameters_t *objects)
 //###############################
 //#### showScreen Sreensaver ####
 //###############################
-// show minimal text scrolling across screen to prevent burn in
-// indicates that armchair is still on (probably "forgotten to be turned off")
-#define STATUS_SCREEN_TIMEOUT_NEXT_LINE_SEC 6
+// show inactivity duration and battery perventage scrolling across screen the entire screen to prevent burn in
+#define STATUS_SCREEN_SCREENSAVER_DELAY_NEXT_LINE_MS 10*1000
+#define STATUS_SCREEN_SCREENSAVER_UPDATE_INTERVAL 500
 void showStatusScreenScreensaver(display_task_parameters_t *objects)
 {
-		// to prevent burn-in only showing minimal and scrolling text
+	// note: scrolling is enabled at screen change (display_selectStatusPage())
+	static int msPassed = 0;
+	static int currentLine = 0;
+	static bool lineChanging = false;
+	// clear display once when rotating to next line
+	if (lineChanging) {
 		ssd1306_clear_screen(&dev, false);
-		ssd1306_hardware_scroll(&dev, SCROLL_RIGHT);
+		lineChanging = false;
+	}
+	// update text every iteration to prevent empty screen at start
+	displayTextLine(&dev, currentLine, false, false, "IDLE since:");
+	displayTextLine(&dev, currentLine + 1, false, false, "%.1fh, B:%02.0f%%",
+					(float)objects->control->getInactivityDurationMs() / 1000 / 60 / 60,
+					getBatteryPercent());
 
-		// loop through all lines (also scroll down)
-		for (int line = 0; line < 7; line++)
-		{
-			ssd1306_clear_screen(&dev, false);
-			displayTextLine(&dev, line, false, false, "IDLE since");
-			displayTextLine(&dev, line + 1, false, false, "%.1fh, B:%02.0f%%", (float)objects->control->getInactivityDurationMs() / 1000 / 60 / 60, getBatteryPercent());
-			// check exit condition while waiting some time before switching to next line
-			int secondsPassed = 0;
-			while (secondsPassed < STATUS_SCREEN_TIMEOUT_NEXT_LINE_SEC)
-			{
-				secondsPassed ++;
-				vTaskDelay(1000 / portTICK_PERIOD_MS);
-				// switch to default status screen, when IDLE mode is exited (timeout has ended)
-				if (objects->control->getCurrentMode() != controlMode_t::IDLE)
-				{
-					display_selectStatusPage(STATUS_SCREEN_OVERVIEW);
-					ssd1306_hardware_scroll(&dev, SCROLL_STOP);
-					return;
-				}
-			}
-		}
-		ssd1306_hardware_scroll(&dev, SCROLL_STOP);
+	// to not block the display task for several seconds returning every e.g. 500ms here
+	// -> ensures detection of activity (exit condition) in task loop is handled regularly
+	if (msPassed > STATUS_SCREEN_SCREENSAVER_DELAY_NEXT_LINE_MS) // switch to next line is due
+	{
+		msPassed = 0; // rest seconds count
+		// increment / rotate to next line
+		if (++currentLine >= 7) // rotate to next line
+			currentLine = 0;
+		lineChanging = true; //clear screen in next run
+	}
+	// wait update-update interval and increment passed time after each run
+	vTaskDelay(STATUS_SCREEN_SCREENSAVER_UPDATE_INTERVAL / portTICK_PERIOD_MS);
+	msPassed += STATUS_SCREEN_SCREENSAVER_UPDATE_INTERVAL;
+	// note: scrolling is disabled at screen change (display_selectStatusPage())
 }
 
 //########################
@@ -388,17 +410,39 @@ void showStartupMsg(){
 //============================
 //===== selectStatusPage =====
 //============================
-void display_selectStatusPage(displayStatusPage_t newStatusPage){
+void display_selectStatusPage(displayStatusPage_t newStatusPage)
+{
+	//-- run commands when switching FROM certain mode --
+	switch (selectedStatusPage)
+	{
+	case STATUS_SCREEN_SCREENSAVER: // disable scrolling when exiting screensaver
+		ssd1306_hardware_scroll(&dev, SCROLL_STOP);
+		break;
+	default:
+		break;
+	}
+
 	ESP_LOGW(TAG, "switching statusPage from %d to %d", (int)selectedStatusPage, (int)newStatusPage);
 	selectedStatusPage = newStatusPage;
+
+	//-- run commands when switching TO certain mode --
+	switch (selectedStatusPage)
+	{
+	case STATUS_SCREEN_SCREENSAVER:
+		ssd1306_clear_screen(&dev, false);
+		ssd1306_hardware_scroll(&dev, SCROLL_RIGHT);
+		break;
+	default:
+		break;
+	}
 }
+
 
 
 //============================
 //======= display task =======
 //============================
 // TODO: separate task for each loop?
-#define DISPLAY_IDLE_TIMEOUT_SCREENSAVER_MS 15*60*1000
 
 void display_task(void *pvParameters)
 {
@@ -444,9 +488,44 @@ void display_task(void *pvParameters)
 				showStatusScreenScreensaver(objects);
 				break;
 			}
-			// switch to screensaver when no user activity for a long time, to prevent burn in
-			if (objects->control->getInactivityDurationMs() > DISPLAY_IDLE_TIMEOUT_SCREENSAVER_MS)
-				selectedStatusPage = STATUS_SCREEN_SCREENSAVER;
+
+			//--- handle timeouts ---
+			uint32_t inactiveMs = objects->control->getInactivityDurationMs();
+			//-- screensaver --
+			// handle switch to screensaver when no user input for a long time
+			if (inactiveMs > displayConfig.timeoutSwitchToScreensaverMs) // timeout - switch to screensaver is due
+			{
+				if (selectedStatusPage != STATUS_SCREEN_SCREENSAVER){ // switch/log only once at change
+					ESP_LOGW(TAG, "no activity for more than %d min, switching to screensaver", inactiveMs / 1000 / 60);
+					display_selectStatusPage(STATUS_SCREEN_SCREENSAVER);
+				}
+			}
+			else if (selectedStatusPage == STATUS_SCREEN_SCREENSAVER) // exit screensaver when there was recent activity
+			{
+				ESP_LOGW(TAG, "recent activity detected, disabling screensaver");
+				display_selectStatusPage(STATUS_SCREEN_OVERVIEW);
+			}
+
+			//-- reduce brightness --
+			// handle brightness reduction when no user input for some time
+			static bool brightnessIsReduced = false;
+			if (inactiveMs > displayConfig.timeoutReduceContrastMs) // threshold exceeded - reduction of brightness is due
+			{
+				if (!brightnessIsReduced) //change / log only once at change
+				{
+					// reduce display brightness (less burn in)
+					ESP_LOGW(TAG, "no activity for more than %d min, reducing display brightness to %d/255", inactiveMs / 1000 / 60, displayConfig.contrastReduced);
+					ssd1306_contrast(&dev, displayConfig.contrastReduced);
+					brightnessIsReduced = true;
+				}
+			}
+			else if (brightnessIsReduced) // threshold not exceeded anymore, but still reduced
+			{
+				// increase display brighness again
+				ESP_LOGW(TAG, "recent activity detected, increasing brightness again");
+				ssd1306_contrast(&dev, displayConfig.contrastNormal);
+				brightnessIsReduced = false;
+			}
 		}
 		// TODO add pages and menus
 	}
