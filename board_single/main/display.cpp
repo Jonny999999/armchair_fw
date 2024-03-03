@@ -15,6 +15,9 @@ extern "C"{
 // continously vary display contrast from 0 to 250 in OVERVIEW status screen
 //#define BRIGHTNESS_TEST
 
+// if display and driver support hardware scrolling the SCREENSAVER status-screen will be smoother:
+//#define HARDWARE_SCROLL_AVAILABLE
+
 
 //=== variables ===
 // every function can access the display configuration from config.cpp
@@ -349,44 +352,70 @@ void showStatusScreenMotors(display_task_parameters_t *objects)
 }
 
 
-//###############################
-//#### showScreen Sreensaver ####
-//###############################
-// show inactivity duration and battery perventage scrolling across screen the entire screen to prevent burn in
-#define STATUS_SCREEN_SCREENSAVER_DELAY_NEXT_LINE_MS 10*1000
+// ################################
+// #### showScreen Screensaver ####
+// ################################
+//  show inactivity duration and battery perventage scrolling across screen the entire screen to prevent burn in
+#define STATUS_SCREEN_SCREENSAVER_DELAY_NEXT_LINE_MS 10 * 1000
 #define STATUS_SCREEN_SCREENSAVER_UPDATE_INTERVAL 500
+#define DISPLAY_HORIZONTAL_CHARACTER_COUNT 16
+#define DISPLAY_VERTICAL_LINE_COUNT 8
 void showStatusScreenScreensaver(display_task_parameters_t *objects)
 {
-	// note: scrolling is enabled at screen change (display_selectStatusPage())
+	//-- variables for line rotation --
 	static int msPassed = 0;
 	static int currentLine = 0;
 	static bool lineChanging = false;
 	// clear display once when rotating to next line
-	if (lineChanging) {
+	if (lineChanging)
+	{
 		ssd1306_clear_screen(&dev, false);
 		lineChanging = false;
 	}
+	//-- print 2 lines scrolling horizontally --
+#ifdef HARDWARE_SCROLL_AVAILABLE // when display supports hardware scrolling -> only the content has to be updated
+	// note: scrolling is enabled at screen change (display_selectStatusPage())
 	// update text every iteration to prevent empty screen at start
 	displayTextLine(&dev, currentLine, false, false, "IDLE since:");
 	displayTextLine(&dev, currentLine + 1, false, false, "%.1fh, B:%02.0f%%",
 					(float)objects->control->getInactivityDurationMs() / 1000 / 60 / 60,
 					getBatteryPercent());
-
+	// note: scrolling is disabled at screen change (display_selectStatusPage())
+#else // custom implementation to scroll the text 1 character to the right every iteration (also wraps over the end to beginning)
+	static int offset = DISPLAY_HORIZONTAL_CHARACTER_COUNT;
+	char buf1[64], buf2[64];
+	// scroll text left to right (taken window of the string moves to the left => offset 16->0, 16->0 ...)
+	offset -= 1;
+	if (offset < 0)
+		offset = DISPLAY_HORIZONTAL_CHARACTER_COUNT - 1; // 0 = no crop -> start over with crop
+	// note: these strings have to be symetrical and 2x display character count long
+	snprintf(buf1, 64, "IDLE since:     IDLE since:     ");
+	snprintf(buf2, 64, "%.1fh, B:%02.0f%%     %.1fh, B:%02.0f%%     ",
+			 (float)objects->control->getInactivityDurationMs() / 1000 / 60 / 60,
+			 getBatteryPercent(),
+			 (float)objects->control->getInactivityDurationMs() / 1000 / 60 / 60,
+			 getBatteryPercent());
+	// print strings on display while limiting to certain window (ignore certain count of characters at start)
+	displayTextLine(&dev, currentLine, false, false, "%s", buf1 + offset);
+	displayTextLine(&dev, currentLine + 1, false, false, "%s", buf2 + offset);
+#endif
+	//-- handle line rotation --
 	// to not block the display task for several seconds returning every e.g. 500ms here
 	// -> ensures detection of activity (exit condition) in task loop is handled regularly
 	if (msPassed > STATUS_SCREEN_SCREENSAVER_DELAY_NEXT_LINE_MS) // switch to next line is due
 	{
 		msPassed = 0; // rest seconds count
 		// increment / rotate to next line
-		if (++currentLine >= 7) // rotate to next line
+		if (++currentLine >= DISPLAY_VERTICAL_LINE_COUNT - 1) // rotate to next line
 			currentLine = 0;
-		lineChanging = true; //clear screen in next run
+		lineChanging = true; // clear screen in next run
 	}
-	// wait update-update interval and increment passed time after each run
+	//-- wait update interval --
+	// wait and increment passed time after each run
 	vTaskDelay(STATUS_SCREEN_SCREENSAVER_UPDATE_INTERVAL / portTICK_PERIOD_MS);
 	msPassed += STATUS_SCREEN_SCREENSAVER_UPDATE_INTERVAL;
-	// note: scrolling is disabled at screen change (display_selectStatusPage())
 }
+
 
 //########################
 //#### showStartupMsg ####
@@ -415,9 +444,11 @@ void display_selectStatusPage(displayStatusPage_t newStatusPage)
 	//-- run commands when switching FROM certain mode --
 	switch (selectedStatusPage)
 	{
-	case STATUS_SCREEN_SCREENSAVER: // disable scrolling when exiting screensaver
-		ssd1306_hardware_scroll(&dev, SCROLL_STOP);
+#ifdef HARDWARE_SCROLL_AVAILABLE
+	case STATUS_SCREEN_SCREENSAVER:
+		ssd1306_hardware_scroll(&dev, SCROLL_STOP); // disable scrolling when exiting screensaver
 		break;
+#endif
 	default:
 		break;
 	}
@@ -429,8 +460,10 @@ void display_selectStatusPage(displayStatusPage_t newStatusPage)
 	switch (selectedStatusPage)
 	{
 	case STATUS_SCREEN_SCREENSAVER:
-		ssd1306_clear_screen(&dev, false);
+		ssd1306_clear_screen(&dev, false); // clear screen when switching
+#ifdef HARDWARE_SCROLL_AVAILABLE
 		ssd1306_hardware_scroll(&dev, SCROLL_RIGHT);
+#endif
 		break;
 	default:
 		break;
