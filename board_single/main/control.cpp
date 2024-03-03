@@ -12,6 +12,7 @@ extern "C"
 #include "config.h"
 #include "control.hpp"
 #include "chairAdjust.hpp"
+#include "display.hpp" // needed for getBatteryPercent()
 
 
 //used definitions moved from config.h:
@@ -338,6 +339,7 @@ void controlledArmchair::resetTimeout(){
 // notify "power still on" when in IDLE for a very long time (prevent battery drain when forgotten to turn off)
 // this function has to be run repeatedly (can be slow interval)
 #define TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS 5 * 60 * 1000 // beep every 5 minutes for someone to notice
+#define TIMEOUT_POWER_STILL_ON_BATTERY_THRESHOLD_PERCENT 96 // only notify/beep when below certain percentage (prevent beeping when connected to charger)
 // note: timeout durations are configured in config.cpp
 void controlledArmchair::handleTimeout()
 {
@@ -349,6 +351,7 @@ void controlledArmchair::handleTimeout()
              config.timeoutSwitchToIdleMs / 1000,
              config.timeoutNotifyPowerStillOnMs / 1000 / 60 / 60);
 
+    // -- timeout switch to IDLE --
     // timeout to IDLE when not idling already
     if (mode != controlMode_t::IDLE && noActivityDurationMs > config.timeoutSwitchToIdleMs)
     {
@@ -356,15 +359,18 @@ void controlledArmchair::handleTimeout()
         changeMode(controlMode_t::IDLE);
         //TODO switch to previous status-screen when activity detected
     }
+
+    // -- timeout notify "forgot to turn off" --
     // repeatedly notify via buzzer when in IDLE for a very long time to prevent battery drain ("forgot to turn off")
-    // note: ignores user input while in IDLE
-    else if ((esp_log_timestamp() - timestamp_lastModeChange) > config.timeoutNotifyPowerStillOnMs)
+    // also battery charge-level has to be below certain threshold to prevent beeping in case connected to charger
+    // note: ignores user input while in IDLE (e.g. encoder rotation)
+    else if ((esp_log_timestamp() - timestamp_lastModeChange) > config.timeoutNotifyPowerStillOnMs && getBatteryPercent() < TIMEOUT_POWER_STILL_ON_BATTERY_THRESHOLD_PERCENT)
     {
         // beep in certain intervals
         if ((esp_log_timestamp() - timestamp_lastTimeoutBeep) > TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS)
         {
             ESP_LOGW(TAG, "timeout: [TIMEOUT] in IDLE since %.3f hours -> beeping", (float)(esp_log_timestamp() - timestamp_lastModeChange) / 1000 / 60 / 60);
-            // TODO dont beep at certain times ranges (e.g. at night)
+            // TODO dont beep at certain time ranges (e.g. at night)
             timestamp_lastTimeoutBeep = esp_log_timestamp();
             buzzer->beep(6, 100, 50);
         }
@@ -406,6 +412,11 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 #endif
             buzzer->beep(1,200,100);
 			break;
+
+        case controlMode_t::HTTP:
+            ESP_LOGW(TAG, "switching from HTTP mode -> stopping wifi-ap");
+            wifi_stop_ap();
+            break;
 
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading, reset frozen input");
@@ -452,6 +463,11 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             ESP_LOGW(TAG, "switching to IDLE mode: turning both motors off, beep");
             idleBothMotors();
             buzzer->beep(1, 900, 0);
+            break;
+
+        case controlMode_t::HTTP:
+            ESP_LOGW(TAG, "switching to HTTP mode -> starting wifi-ap");
+            wifi_start_ap();
             break;
 
         case controlMode_t::ADJUST_CHAIR:

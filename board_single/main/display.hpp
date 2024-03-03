@@ -59,6 +59,9 @@ typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED,
 // get precise battery voltage (using lookup table)
 float getBatteryVoltage();
 
+// get battery charge level in percent (using lookup table as discharge curve)
+float getBatteryPercent();
+
 // function to select one of the defined status screens which are shown on display when not in MENU mode
 void display_selectStatusPage(displayStatusPage_t newStatusPage);
 
