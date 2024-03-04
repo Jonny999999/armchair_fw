@@ -22,6 +22,7 @@ extern "C" {
 
 // configuration for initializing display (passed to task as well)
 typedef struct display_config_t {
+    // initialization
     gpio_num_t gpio_scl;
     gpio_num_t gpio_sda;
     int gpio_reset; // negative number means reset pin is not connected or not used
@@ -29,7 +30,11 @@ typedef struct display_config_t {
     int height;
     int offsetX;
     bool flip;
-    int contrast;
+    // display-task
+    int contrastNormal;
+    int contrastReduced;
+    uint32_t timeoutReduceContrastMs;
+    uint32_t timeoutSwitchToScreensaverMs;
 } display_config_t;
 
 
@@ -49,10 +54,13 @@ typedef struct display_task_parameters_t {
 
 
 // enum for selecting the currently shown status page (display content when not in MENU mode)
-typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED, STATUS_SCREEN_JOYSTICK, STATUS_SCREEN_MOTORS} displayStatusPage_t;
+typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED, STATUS_SCREEN_JOYSTICK, STATUS_SCREEN_MOTORS, STATUS_SCREEN_SCREENSAVER} displayStatusPage_t;
 
 // get precise battery voltage (using lookup table)
 float getBatteryVoltage();
+
+// get battery charge level in percent (using lookup table as discharge curve)
+float getBatteryPercent();
 
 // function to select one of the defined status screens which are shown on display when not in MENU mode
 void display_selectStatusPage(displayStatusPage_t newStatusPage);

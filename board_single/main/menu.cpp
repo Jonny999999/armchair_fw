@@ -11,7 +11,6 @@ extern "C"{
 
 #include "menu.hpp"
 #include "encoder.hpp"
-#include "config.hpp"
 #include "motorctl.hpp"
 
 
@@ -105,7 +104,7 @@ void item_calibrateJoystick_action(display_task_parameters_t *objects, SSD1306_t
         // save and next when button clicked, exit when long pressed
         if (xQueueReceive(objects->encoderQueue, &event, CALIBRATE_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS))
         {
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
             switch (event.type)
             {
             case RE_ET_BTN_CLICKED:
@@ -215,7 +214,7 @@ void item_debugJoystick_action(display_task_parameters_t * objects, SSD1306_t * 
         // exit when button pressed
         if (xQueueReceive(objects->encoderQueue, &event, DEBUG_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS))
         {
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
             switch (event.type)
             {
             case RE_ET_BTN_CLICKED:
@@ -700,7 +699,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
         {
             // reset menu- and control-timeout on any encoder event
             lastActivity = esp_log_timestamp();
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
             switch (event.type)
             {
             case RE_ET_CHANGED:
@@ -771,7 +770,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
         // wait for encoder event
         if (xQueueReceive(objects->encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
         {
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
             switch (event.type)
             {
             case RE_ET_CHANGED:
@@ -811,7 +810,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
             }
             // reset menu- and control-timeout on any encoder event
             lastActivity = esp_log_timestamp();
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
         }
         break;
     }

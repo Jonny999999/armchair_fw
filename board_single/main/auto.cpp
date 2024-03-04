@@ -1,5 +1,4 @@
 #include "auto.hpp"
-#include "config.hpp"
 
 //tag for logging
 static const char * TAG = "automatedArmchair";

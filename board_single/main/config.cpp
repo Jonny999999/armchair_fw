@@ -132,11 +132,9 @@ motorctl_config_t configMotorControlRight = {
 //------------------------------
 control_config_t configControl = {
     .defaultMode = controlMode_t::JOYSTICK, // default mode after startup and toggling IDLE
-    //--- timeout ---
-    .timeoutMs = 3 * 60 * 1000, // time of inactivity after which the mode gets switched to IDLE
-    .timeoutTolerancePer = 5,   // percentage the duty can vary between timeout checks considered still inactive
-    //--- http mode ---
-
+    //--- timeouts ---
+    .timeoutSwitchToIdleMs = 5 * 60 * 1000, // time of inactivity after which the mode gets switched to IDLE
+    .timeoutNotifyPowerStillOnMs = 6 * 60 * 60 * 1000 // time in IDLE after which buzzer beeps in certain interval (notify "forgot to turn off")
 };
 
 //-------------------------------
@@ -214,16 +212,21 @@ speedSensor_config_t speedRight_config{
 //-------------------------
 //-------- display --------
 //-------------------------
-display_config_t display_config {
+display_config_t display_config{
+    // hardware initialization
     .gpio_scl = GPIO_NUM_22,
     .gpio_sda = GPIO_NUM_23,
-    .gpio_reset = -1, //negative number disables reset feature
+    .gpio_reset = -1, // negative number disables reset feature
     .width = 128,
     .height = 64,
     .offsetX = 2,
     .flip = false,
-    .contrast = 0xff, //max: 255
-};
+    .contrastNormal = 170, // max: 255
+    // display task
+    .contrastReduced = 30,                    // max: 255
+    .timeoutReduceContrastMs = 5 * 60 * 1000, // actions at certain inactivity
+    .timeoutSwitchToScreensaverMs = 30 * 60 * 1000
+    };
 
 
 

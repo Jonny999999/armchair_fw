@@ -9,13 +9,14 @@ extern "C"
 #include "wifi.h"
 }
 
-#include "config.hpp"
+#include "config.h"
 #include "control.hpp"
 #include "chairAdjust.hpp"
+#include "display.hpp" // needed for getBatteryPercent()
 
 
-//used definitions moved from config.hpp:
-//#define JOYSTICK_TEST
+//used definitions moved from config.h:
+//#define JOYSTICK_LOG_IN_IDLE
 
 
 //tag for logging
@@ -70,7 +71,6 @@ controlledArmchair::controlledArmchair(
 void task_control( void * pvParameters ){
     controlledArmchair * control = (controlledArmchair *)pvParameters;
     ESP_LOGW(TAG, "Initializing controlledArmchair and starting handle loop");
-    //start handle loop (control object declared in config.hpp)
     control->startHandleLoop();
 }
 
@@ -95,13 +95,15 @@ void controlledArmchair::startHandleLoop() {
                 //motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 vTaskDelay(500 / portTICK_PERIOD_MS);
 #ifdef JOYSTICK_LOG_IN_IDLE
-				//get joystick data here (without using it)
-				//since loglevel is DEBUG, calculation details are output
-                joystick_l->getData();
+                // get joystick data and log it
+                joystickData_t data joystick_l->getData();
+                ESP_LOGI("JOYSTICK_LOG_IN_IDLE", "x=%.3f, y=%.3f, radius=%.3f, angle=%.3f, pos=%s, adcx=%d, adcy=%d",
+                         data.x, data.y, data.radius, data.angle,
+                         joystickPosStr[(int)data.position],
+                         objects->joystick->getRawX(), objects->joystick->getRawY());
 #endif
-                break;
-
-
+        break;
+            //------- handle JOYSTICK mode -------
             case controlMode_t::JOYSTICK:
                 vTaskDelay(50 / portTICK_PERIOD_MS);
                 //get current joystick data with getData method of evaluatedJoystick
@@ -113,6 +115,7 @@ void controlledArmchair::startHandleLoop() {
                 // only generate when the stick data actually changed (e.g. stick stayed in center)
                 if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
                 {
+                    resetTimeout(); //user input -> reset switch to IDLE timeout
                     commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
                     // apply motor commands
                     motorRight->setTarget(commands.right);
@@ -121,27 +124,34 @@ void controlledArmchair::startHandleLoop() {
                 else
                 {
                     vTaskDelay(20 / portTICK_PERIOD_MS);
-                    ESP_LOGD(TAG, "analog joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
+                    ESP_LOGV(TAG, "analog joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
                 }
                 break;
 
 
+            //------- handle MASSAGE mode -------
             case controlMode_t::MASSAGE:
                 vTaskDelay(10 / portTICK_PERIOD_MS);
                 //--- read joystick ---
-                //only update joystick data when input not frozen
-                if (!freezeInput){
+                // only update joystick data when input not frozen
+                stickDataLast = stickData;
+                if (!freezeInput)
                     stickData = joystick_l->getData();
-                }
                 //--- generate motor commands ---
-                //pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
-                commands = joystick_generateCommandsShaking(stickData);
-                //apply motor commands
-                motorRight->setTarget(commands.right); 
-                motorLeft->setTarget(commands.left); 
+                // only generate when the stick data actually changed (e.g. stick stayed in center)
+                if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
+                {
+                    resetTimeout(); // user input -> reset switch to IDLE timeout
+                    // pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
+                    commands = joystick_generateCommandsShaking(stickData);
+                    // apply motor commands
+                    motorRight->setTarget(commands.right);
+                    motorLeft->setTarget(commands.left);
+                }
                 break;
 
 
+            //------- handle HTTP mode -------
             case controlMode_t::HTTP:
                 //--- get joystick data from queue ---
                 stickDataLast = stickData;
@@ -152,6 +162,7 @@ void controlledArmchair::startHandleLoop() {
                 //--- generate motor commands ---
                 //only generate when the stick data actually changed (e.g. no new data recevied via http)
                 if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y ){
+                    resetTimeout(); // user input -> reset switch to IDLE timeout
                     // Note: timeout (no data received) is handled in getData method
                     commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
 
@@ -166,6 +177,7 @@ void controlledArmchair::startHandleLoop() {
                 break;
 
 
+            //------- handle AUTO mode -------
             case controlMode_t::AUTO:
                 vTaskDelay(20 / portTICK_PERIOD_MS);
                //generate commands
@@ -206,26 +218,26 @@ void controlledArmchair::startHandleLoop() {
                break;
 
 
+            //------- handle ADJUST_CHAIR mode -------
             case controlMode_t::ADJUST_CHAIR:
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 //--- read joystick ---
+                stickDataLast = stickData;
                 stickData = joystick_l->getData();
-                //--- idle motors ---
-                //commands = cmds_bothMotorsIdle; - now done once at mode change
-                //motorRight->setTarget(commands.right.state, commands.right.duty); 
-                //motorLeft->setTarget(commands.left.state, commands.left.duty); 
                 //--- control armchair position with joystick input ---
-                controlChairAdjustment(joystick_l->getData(), legRest, backRest);
+                // dont update when stick data did not change
+                if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
+                {
+                    resetTimeout(); // user input -> reset switch to IDLE timeout
+                    controlChairAdjustment(joystick_l->getData(), legRest, backRest);
+                }
                 break;
 
 
+            //------- handle MENU mode -------
             case controlMode_t::MENU:
-                vTaskDelay(1000 / portTICK_PERIOD_MS);
                 //nothing to do here, display task handles the menu
-                //--- idle motors ---
-                //commands = cmds_bothMotorsIdle; - now done once at mode change
-                //motorRight->setTarget(commands.right.state, commands.right.duty); 
-                //motorLeft->setTarget(commands.left.state, commands.left.duty); 
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
                 break;
 
               //TODO: add other modes here
@@ -238,8 +250,7 @@ void controlledArmchair::startHandleLoop() {
         if (esp_log_timestamp() - timestamp_SlowLoopLastRun > 5000) {
             ESP_LOGV(TAG, "running slow loop... time since last run: %.1fs", (float)(esp_log_timestamp() - timestamp_SlowLoopLastRun)/1000);
             timestamp_SlowLoopLastRun = esp_log_timestamp();
-
-            //run function that detects timeout (switch to idle)
+            //run function that detects timeout (switch to idle, or notify "forgot to turn off")
             handleTimeout();
         }
 
@@ -310,59 +321,58 @@ void controlledArmchair::idleBothMotors(){
     motorLeft->setTarget(cmd_motorIdle);
 }
 
+
 //-----------------------------------
 //---------- resetTimeout -----------
 //-----------------------------------
 void controlledArmchair::resetTimeout(){
     //TODO mutex
     timestamp_lastActivity = esp_log_timestamp();
+    ESP_LOGV(TAG, "timeout: activity detected, resetting timeout");
 }
-
 
 
 //------------------------------------
 //---------- handleTimeout -----------
 //------------------------------------
-//percentage the duty can vary since last timeout check and still counts as incative 
-//TODO: add this to config
-float inactivityTolerance = 10; 
+// switch to IDLE when no activity (prevent accidential movement)
+// notify "power still on" when in IDLE for a very long time (prevent battery drain when forgotten to turn off)
+// this function has to be run repeatedly (can be slow interval)
+#define TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS 5 * 60 * 1000 // beep every 5 minutes for someone to notice
+#define TIMEOUT_POWER_STILL_ON_BATTERY_THRESHOLD_PERCENT 96 // only notify/beep when below certain percentage (prevent beeping when connected to charger)
+// note: timeout durations are configured in config.cpp
+void controlledArmchair::handleTimeout()
+{
+    uint32_t noActivityDurationMs = esp_log_timestamp() - timestamp_lastActivity;
+    // log current inactivity and configured timeouts
+    ESP_LOGD(TAG, "timeout check: last activity %dmin and %ds ago - timeout IDLE after %ds - notify after power on after %dh",
+             noActivityDurationMs / 1000 / 60,
+             noActivityDurationMs / 1000 % 60,
+             config.timeoutSwitchToIdleMs / 1000,
+             config.timeoutNotifyPowerStillOnMs / 1000 / 60 / 60);
 
-//local function that checks whether two values differ more than a given tolerance
-bool validateActivity(float dutyOld, float dutyNow, float tolerance){
-    float dutyDelta = dutyNow - dutyOld;
-    if (fabs(dutyDelta) < tolerance) {
-        return false; //no significant activity detected
-    } else {
-        return true; //there was activity
+    // -- timeout switch to IDLE --
+    // timeout to IDLE when not idling already
+    if (mode != controlMode_t::IDLE && noActivityDurationMs > config.timeoutSwitchToIdleMs)
+    {
+        ESP_LOGW(TAG, "timeout check: [TIMEOUT], no activity for more than %ds  -> switch to IDLE", config.timeoutSwitchToIdleMs / 1000);
+        changeMode(controlMode_t::IDLE);
+        //TODO switch to previous status-screen when activity detected
     }
-}
 
-//function that evaluates whether there is no activity/change on the motor duty for a certain time. If so, a switch to IDLE is issued. - has to be run repeatedly in a slow interval
-void controlledArmchair::handleTimeout(){
-    //check for timeout only when not idling already
-    if (mode != controlMode_t::IDLE) {
-        //get current duty from controlled motor objects
-        float dutyLeftNow = motorLeft->getStatus().duty;
-        float dutyRightNow = motorRight->getStatus().duty;
-
-        //activity detected on any of the two motors
-        if (validateActivity(dutyLeft_lastActivity, dutyLeftNow, inactivityTolerance) 
-                || validateActivity(dutyRight_lastActivity, dutyRightNow, inactivityTolerance)
-           ){
-            ESP_LOGD(TAG, "timeout check: [activity] detected since last check -> reset");
-            //reset last duty and timestamp
-            dutyLeft_lastActivity = dutyLeftNow;
-            dutyRight_lastActivity = dutyRightNow;
-            resetTimeout();
-        }
-        //no activity on any motor and msTimeout exceeded
-        else if (esp_log_timestamp() - timestamp_lastActivity > config.timeoutMs){
-            ESP_LOGI(TAG, "timeout check: [TIMEOUT], no activity for more than %.ds  -> switch to idle", config.timeoutMs/1000);
-            //toggle to idle mode
-            toggleIdle();
-        }
-        else {
-            ESP_LOGD(TAG, "timeout check: [inactive], last activity %.1f s ago, timeout after %d s", (float)(esp_log_timestamp() - timestamp_lastActivity)/1000, config.timeoutMs/1000);
+    // -- timeout notify "forgot to turn off" --
+    // repeatedly notify via buzzer when in IDLE for a very long time to prevent battery drain ("forgot to turn off")
+    // also battery charge-level has to be below certain threshold to prevent beeping in case connected to charger
+    // note: ignores user input while in IDLE (e.g. encoder rotation)
+    else if ((esp_log_timestamp() - timestamp_lastModeChange) > config.timeoutNotifyPowerStillOnMs && getBatteryPercent() < TIMEOUT_POWER_STILL_ON_BATTERY_THRESHOLD_PERCENT)
+    {
+        // beep in certain intervals
+        if ((esp_log_timestamp() - timestamp_lastTimeoutBeep) > TIMEOUT_POWER_STILL_ON_BEEP_INTERVAL_MS)
+        {
+            ESP_LOGW(TAG, "timeout: [TIMEOUT] in IDLE since %.3f hours -> beeping", (float)(esp_log_timestamp() - timestamp_lastModeChange) / 1000 / 60 / 60);
+            // TODO dont beep at certain time ranges (e.g. at night)
+            timestamp_lastTimeoutBeep = esp_log_timestamp();
+            buzzer->beep(6, 100, 50);
         }
     }
 }
@@ -374,8 +384,6 @@ void controlledArmchair::handleTimeout(){
 //-----------------------------------
 //function to change to a specified control mode
 void controlledArmchair::changeMode(controlMode_t modeNew) {
-    //reset timeout timer
-    resetTimeout();
 
     //exit if target mode is already active
     if (mode == modeNew) {
@@ -385,6 +393,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 
     //copy previous mode
     modePrevious = mode;
+    //store time changed (needed for timeout)
+    timestamp_lastModeChange = esp_log_timestamp();
 
 	ESP_LOGW(TAG, "=== changing mode from %s to %s ===", controlModeStr[(int)mode], controlModeStr[(int)modeNew]);
 
@@ -402,6 +412,11 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 #endif
             buzzer->beep(1,200,100);
 			break;
+
+        case controlMode_t::HTTP:
+            ESP_LOGW(TAG, "switching from HTTP mode -> stopping wifi-ap");
+            wifi_stop_ap();
+            break;
 
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading, reset frozen input");
@@ -448,9 +463,11 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
             ESP_LOGW(TAG, "switching to IDLE mode: turning both motors off, beep");
             idleBothMotors();
             buzzer->beep(1, 900, 0);
-#ifdef JOYSTICK_LOG_IN_IDLE
-            esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
-#endif
+            break;
+
+        case controlMode_t::HTTP:
+            ESP_LOGW(TAG, "switching to HTTP mode -> starting wifi-ap");
+            wifi_start_ap();
             break;
 
         case controlMode_t::ADJUST_CHAIR:
@@ -540,9 +557,9 @@ void controlledArmchair::toggleMode(controlMode_t modePrimary){
 
 
 
-//-------------------------------
-//------ loadDecelDuration ------
-//-------------------------------
+//-----------------------------
+//-------- loadMaxDuty --------
+//-----------------------------
 // update local config value when maxDuty is stored in nvs
 void controlledArmchair::loadMaxDuty(void)
 {
