@@ -94,7 +94,10 @@ class controlledArmchair {
 
         // configure max dutycycle (in joystick or http mode)
         void setMaxDuty(float maxDutyNew) { writeMaxDuty(maxDutyNew); };
-        float getMaxDuty() const {return joystickGenerateCommands_config.maxDuty; };
+        float getMaxDuty() const {return joystickGenerateCommands_config.maxDutyStraight; };
+        // configure max boost (in joystick or http mode)
+        void setMaxRelativeBoostPer(float newValue) { joystickGenerateCommands_config.maxRelativeBoostPercentOfMaxDuty = newValue; };
+        float getMaxRelativeBoostPer() const {return joystickGenerateCommands_config.maxRelativeBoostPercentOfMaxDuty; };
 
         uint32_t getInactivityDurationMs() {return esp_log_timestamp() - timestamp_lastActivity;};
 

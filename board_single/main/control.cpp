@@ -570,11 +570,11 @@ void controlledArmchair::loadMaxDuty(void)
     switch (err)
     {
     case ESP_OK:
-        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %.2f with %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDuty, valueRead/100.0);
-        joystickGenerateCommands_config.maxDuty = (float)(valueRead/100.0);
+        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %.2f with %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDutyStraight, valueRead/100.0);
+        joystickGenerateCommands_config.maxDutyStraight = (float)(valueRead/100.0);
         break;
     case ESP_ERR_NVS_NOT_FOUND:
-        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDuty);
+        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDutyStraight);
         break;
     default:
         ESP_LOGE(TAG, "Error (%s) reading nvs!", esp_err_to_name(err));
@@ -589,12 +589,12 @@ void controlledArmchair::loadMaxDuty(void)
 // note: duty percentage gets stored as uint with factor 100 (to get more precision)
 void controlledArmchair::writeMaxDuty(float newValue){
     // check if unchanged
-    if(joystickGenerateCommands_config.maxDuty == newValue){
+    if(joystickGenerateCommands_config.maxDutyStraight == newValue){
         ESP_LOGW(TAG, "value unchanged at %.2f, not writing to nvs", newValue);
         return;
     }
     // update nvs value
-    ESP_LOGW(TAG, "updating nvs value '%s' from %.2f to %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDuty, newValue) ;
+    ESP_LOGW(TAG, "updating nvs value '%s' from %.2f to %.2f", "c-maxDuty", joystickGenerateCommands_config.maxDutyStraight, newValue) ;
     esp_err_t err = nvs_set_u16(*nvsHandle, "c-maxDuty", (uint16_t)(newValue*100));
     if (err != ESP_OK)
         ESP_LOGE(TAG, "nvs: failed writing");
@@ -604,5 +604,5 @@ void controlledArmchair::writeMaxDuty(float newValue){
     else
         ESP_LOGI(TAG, "nvs: successfully committed updates");
     // update variable
-    joystickGenerateCommands_config.maxDuty = newValue;
+    joystickGenerateCommands_config.maxDutyStraight = newValue;
 }

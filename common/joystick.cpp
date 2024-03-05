@@ -306,30 +306,38 @@ joystickPos_t joystick_evaluatePosition(float x, float y){
 //function that generates commands for both motors from the joystick data
 motorCommands_t joystick_generateCommandsDriving(joystickData_t data, joystickGenerateCommands_config_t * config){
 
-    //struct with current data of the joystick
-    //typedef struct joystickData_t {
-    //    joystickPos_t position;
-    //    float x;
-    //    float y;
-    //    float radius;
-    //    float angle;
-    //} joystickData_t;
-
-	//--- variables ---
-    motorCommands_t commands;
-    float dutyOffset = 5; //immediately starts with this duty, TODO add this to config
-    float dutyRange = config->maxDuty - config->dutyOffset;
-    float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
+	//--- interpret config parameters ---
+    float dutyOffset = config->dutyOffset; // immediately starts with this duty
+    float dutyRange = config->maxDutyStraight - config->dutyOffset; //duty at max radius
+    // calculate configured boost duty (added when turning)
+    float dutyBoost = config->maxDutyStraight * config->maxRelativeBoostPercentOfMaxDuty/100;
+    // limit to maximum possible duty
+    float dutyAvailable = 100 - config->maxDutyStraight;
+    if (dutyBoost > dutyAvailable) dutyBoost = dutyAvailable;
 	
-	//--- snap ratio to max at angle threshold --- 
-	//(-> more joystick area where inner wheel is off when turning)
-	/*
-	//FIXME works, but armchair unsusable because of current bug with motor driver (inner motor freezes after turn)
-	float ratioClipThreshold = 0.3;
-	if (ratio < ratioClipThreshold) ratio = 0;
-	else if (ratio > 1-ratioClipThreshold) ratio = 1;
-	//TODO subtract this clip threshold from available joystick range at ratio usage
-	*/
+
+    //--- calculate paramaters with current data ---
+    motorCommands_t commands; // store new motor commands
+
+    // -- calculate ratio --
+    // get current ratio from stick angle
+    float ratioActual = fabs(data.angle) / 90; //x=0 -> 90deg -> ratio=1 || y=0 -> 0deg -> ratio=0
+    ratioActual = 1 - ratioActual; // invert ratio
+    // scale and clip ratio according to configured tolerance 
+    // to have some joystick area at max ratio before reaching X-Axis-full-turn-mode
+    float ratio = ratioActual / (config->ratioSnapToOneThreshold); //0->0  threshold->1
+    // limit to 1 when above threshold (inside area max ratio)
+    if (ratio > 1) ratio = 1; // >threshold -> 1
+
+    // -- calculate outer tire boost --
+    #define BOOST_RATIO_MANIPULATION_SCALE 1.15 // >1 to apply boost slightly faster, this slightly compensates that available boost is most times less than reduction of inner duty, so for small turns the total speed feels more equal
+    float boostAmountOuter = data.radius*dutyBoost* ratio *BOOST_RATIO_MANIPULATION_SCALE;
+    // limit to max amount
+    if (boostAmountOuter > dutyBoost) boostAmountOuter = dutyBoost;
+
+    // -- calculate inner tire reduction --
+    float reductionAmountInner = (data.radius * dutyRange + dutyOffset) * ratio;
+
 
     //--- experimental alternative control mode ---
     if (config->altStickMapping == true){
@@ -380,36 +388,43 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, joystickGe
         case joystickPos_t::TOP_RIGHT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::FWD;
-            commands.left.duty = data.radius * dutyRange + dutyOffset;
-            commands.right.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
+            commands.left.duty = data.radius * dutyRange + boostAmountOuter + dutyOffset;
+            commands.right.duty = data.radius * dutyRange - reductionAmountInner + dutyOffset;
             break;
 
         case joystickPos_t::TOP_LEFT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::FWD;
-            commands.left.duty =  data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
-            commands.right.duty = data.radius * dutyRange + dutyOffset;
+            commands.left.duty = data.radius * dutyRange - reductionAmountInner + dutyOffset;
+            commands.right.duty = data.radius * dutyRange + boostAmountOuter + dutyOffset;
             break;
 
         case joystickPos_t::BOTTOM_LEFT:
             commands.left.state = motorstate_t::REV;
             commands.right.state = motorstate_t::REV;
-            commands.left.duty = data.radius * dutyRange + dutyOffset;
-            commands.right.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
+            commands.left.duty = data.radius * dutyRange + boostAmountOuter + dutyOffset;
+            commands.right.duty = data.radius * dutyRange - reductionAmountInner + dutyOffset;
             break;
 
         case joystickPos_t::BOTTOM_RIGHT:
             commands.left.state = motorstate_t::REV;
             commands.right.state = motorstate_t::REV;
-            commands.left.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
-            commands.right.duty =  data.radius * dutyRange + dutyOffset;
+            commands.left.duty = data.radius * dutyRange - reductionAmountInner + dutyOffset;
+            commands.right.duty = data.radius * dutyRange + boostAmountOuter + dutyOffset;
             break;
     }
 
-    ESP_LOGI(TAG_CMD, "generated commands from data: state=%s, angle=%.3f, ratio=%.3f/%.3f, radius=%.2f, x=%.2f, y=%.2f",
-            joystickPosStr[(int)data.position], data.angle, ratio, (1-ratio), data.radius, data.x, data.y);
-    ESP_LOGI(TAG_CMD, "motor left: state=%s, duty=%.3f", motorstateStr[(int)commands.left.state], commands.left.duty);
-    ESP_LOGI(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
+    // log input data
+    ESP_LOGD(TAG_CMD, "in: pos='%s', angle=%.3f, ratioActual/Scaled=%.2f/%.2f, r=%.2f, x=%.2f, y=%.2f",
+            joystickPosStr[(int)data.position], data.angle, ratioActual, ratio, data.radius, data.x, data.y);
+    // log generation details
+    ESP_LOGI(TAG_CMD, "left=%.2f, right=%.2f -- BoostOuter=%.1f, ReductionInner=%.1f, maxDuty=%.0f, maxBoost=%.0f, dutyOffset=%.0f",
+             commands.left.duty, commands.right.duty, 
+             boostAmountOuter, reductionAmountInner, 
+             config->maxDutyStraight, dutyBoost, dutyOffset);
+    // log generated motor commands
+    ESP_LOGD(TAG_CMD, "motor left: state=%s, duty=%.3f", motorstateStr[(int)commands.left.state], commands.left.duty);
+    ESP_LOGD(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
     return commands;
 }
 

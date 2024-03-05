@@ -265,8 +265,11 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
 {
     if(log) ESP_LOGE(TAG, "[%s] TIMEOUT, motor active, but no target data received for more than %ds -> switch from duty=%.2f to IDLE", config.name, TIMEOUT_IDLE_WHEN_NO_COMMAND / 1000, dutyTarget);
     receiveTimeout = true;
+    // set target and last command to IDLE
     state = motorstate_t::IDLE;
+    commandReceive.state = motorstate_t::IDLE;
     dutyTarget = 0; // todo put this in else section of queue (no data received) and add control mode "timeout"?
+    commandReceive.duty = 0;
 }
 
 

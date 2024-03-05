@@ -276,6 +276,34 @@ menuItem_t item_maxDuty = {
 };
 
 
+//##################################
+//##### set max relative boost #####
+//##################################
+void maxRelativeBoost_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
+{
+    objects->control->setMaxRelativeBoostPer(value);
+}
+int maxRelativeBoost_currentValue(display_task_parameters_t * objects)
+{
+    return (int)objects->control->getMaxRelativeBoostPer();
+}
+menuItem_t item_maxRelativeBoost = {
+    maxRelativeBoost_action,       // function action
+    maxRelativeBoost_currentValue, // function get initial value or NULL(show in line 2)
+    NULL,                 // function get default value or NULL(dont set value, show msg)
+    0,                    // valueMin
+    150,                  // valueMax
+    1,                    // valueIncrement
+    "Set max Boost   ",   // title
+    "Set max Boost % ",                   // line1 (above value)
+    "for outer tire  ",   // line2 (above value)
+    "",                   // line4 * (below value)
+    "",                   // line5 *
+    "  % of max duty ",   // line6
+    "added on turning",   // line7
+};
+
+
 //######################
 //##### accelLimit #####
 //######################
@@ -550,8 +578,8 @@ menuItem_t item_last = {
 //####################################################
 //### store all configured menu items in one array ###
 //####################################################
-const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_statusScreen, item_maxDuty, item_accelLimit, item_decelLimit, item_motorControlMode, item_tractionControlSystem, item_reset, item_example, item_last};
-const int itemCount = 10;
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_statusScreen, item_maxDuty, item_maxRelativeBoost, item_accelLimit, item_decelLimit, item_motorControlMode, item_tractionControlSystem, item_reset, item_example, item_last};
+const int itemCount = 11;
 
 
 
