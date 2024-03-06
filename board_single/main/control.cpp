@@ -59,6 +59,9 @@ controlledArmchair::controlledArmchair(
     
     // override default config value if maxDuty is found in nvs
     loadMaxDuty();
+
+    // create semaphore for preventing race condition: mode-change operations while currently still executing certain mode
+    handleIteration_mutex = xSemaphoreCreateMutex();
 }
 
 
@@ -75,188 +78,207 @@ void task_control( void * pvParameters ){
 }
 
 
+
 //----------------------------------
 //---------- Handle loop -----------
 //----------------------------------
-//function that repeatedly generates motor commands depending on the current mode
-void controlledArmchair::startHandleLoop() {
-    while (1){
-        ESP_LOGV(TAG, "control loop executing... mode=%s", controlModeStr[(int)mode]);
+// start endless loop that repeatedly calls handle() and handleTimeout() methods
+void controlledArmchair::startHandleLoop()
+{
+    while (1)
+    {
+        // mutex to prevent race condition with actions beeing run at mode change and previous mode still beeing executed
+        if (xSemaphoreTake(handleIteration_mutex, portMAX_DELAY) == pdTRUE)
+        {
+            //--- handle current mode ---
+            ESP_LOGV(TAG, "control loop executing... mode='%s'", controlModeStr[(int)mode]);
+            handle();
 
-        switch(mode) {
-            default:
-                mode = controlMode_t::IDLE;
-                break;
+            xSemaphoreGive(handleIteration_mutex);
+        } // end mutex
 
-            case controlMode_t::IDLE:
-                //copy preset commands for idling both motors - now done once at mode change
-                //commands = cmds_bothMotorsIdle;
-                //motorRight->setTarget(commands.right.state, commands.right.duty); 
-                //motorLeft->setTarget(commands.left.state, commands.left.duty); 
-                vTaskDelay(500 / portTICK_PERIOD_MS);
-#ifdef JOYSTICK_LOG_IN_IDLE
-                // get joystick data and log it
-                joystickData_t data joystick_l->getData();
-                ESP_LOGI("JOYSTICK_LOG_IN_IDLE", "x=%.3f, y=%.3f, radius=%.3f, angle=%.3f, pos=%s, adcx=%d, adcy=%d",
-                         data.x, data.y, data.radius, data.angle,
-                         joystickPosStr[(int)data.position],
-                         objects->joystick->getRawX(), objects->joystick->getRawY());
-#endif
-        break;
-            //------- handle JOYSTICK mode -------
-            case controlMode_t::JOYSTICK:
-                vTaskDelay(50 / portTICK_PERIOD_MS);
-                //get current joystick data with getData method of evaluatedJoystick
-                stickDataLast = stickData;
-                stickData = joystick_l->getData();
-                //additionaly scale coordinates (more detail in slower area)
-                joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.35); //TODO: add scaling parameters to config
-                // generate motor commands
-                // only generate when the stick data actually changed (e.g. stick stayed in center)
-                if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
-                {
-                    resetTimeout(); //user input -> reset switch to IDLE timeout
-                    commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
-                    // apply motor commands
-                    motorRight->setTarget(commands.right);
-                    motorLeft->setTarget(commands.left);
-                }
-                else
-                {
-                    vTaskDelay(20 / portTICK_PERIOD_MS);
-                    ESP_LOGV(TAG, "analog joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
-                }
-                break;
-
-
-            //------- handle MASSAGE mode -------
-            case controlMode_t::MASSAGE:
-                vTaskDelay(10 / portTICK_PERIOD_MS);
-                //--- read joystick ---
-                // only update joystick data when input not frozen
-                stickDataLast = stickData;
-                if (!freezeInput)
-                    stickData = joystick_l->getData();
-                //--- generate motor commands ---
-                // only generate when the stick data actually changed (e.g. stick stayed in center)
-                if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
-                {
-                    resetTimeout(); // user input -> reset switch to IDLE timeout
-                    // pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
-                    commands = joystick_generateCommandsShaking(stickData);
-                    // apply motor commands
-                    motorRight->setTarget(commands.right);
-                    motorLeft->setTarget(commands.left);
-                }
-                break;
-
-
-            //------- handle HTTP mode -------
-            case controlMode_t::HTTP:
-                //--- get joystick data from queue ---
-                stickDataLast = stickData;
-                stickData = httpJoystickMain_l->getData(); //get last stored data from receive queue (waits up to 500ms for new event to arrive)
-                //scale coordinates additionally (more detail in slower area)
-                joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.4); //TODO: add scaling parameters to config
-                ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
-                //--- generate motor commands ---
-                //only generate when the stick data actually changed (e.g. no new data recevied via http)
-                if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y ){
-                    resetTimeout(); // user input -> reset switch to IDLE timeout
-                    // Note: timeout (no data received) is handled in getData method
-                    commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
-
-                    //--- apply commands to motors ---
-                    motorRight->setTarget(commands.right);
-                    motorLeft->setTarget(commands.left);
-                }
-                else
-                {
-                    ESP_LOGD(TAG, "http joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
-                }
-                break;
-
-
-            //------- handle AUTO mode -------
-            case controlMode_t::AUTO:
-                vTaskDelay(20 / portTICK_PERIOD_MS);
-               //generate commands
-               commands = automatedArmchair->generateCommands(&instruction);
-                //--- apply commands to motors ---
-               motorRight->setTarget(commands.right); 
-               motorLeft->setTarget(commands.left); 
-
-               //process received instruction
-               switch (instruction) {
-                   case auto_instruction_t::NONE:
-                       break;
-                   case auto_instruction_t::SWITCH_PREV_MODE:
-                       toggleMode(controlMode_t::AUTO);
-                       break;
-                   case auto_instruction_t::SWITCH_JOYSTICK_MODE:
-                       changeMode(controlMode_t::JOYSTICK);
-                       break;
-                   case auto_instruction_t::RESET_ACCEL_DECEL:
-                       //enable downfading (set to default value)
-                       motorLeft->setFade(fadeType_t::DECEL, true);
-                       motorRight->setFade(fadeType_t::DECEL, true);
-                       //set upfading to default value
-                       motorLeft->setFade(fadeType_t::ACCEL, true);
-                       motorRight->setFade(fadeType_t::ACCEL, true);
-                       break;
-                   case auto_instruction_t::RESET_ACCEL:
-                       //set upfading to default value
-                       motorLeft->setFade(fadeType_t::ACCEL, true);
-                       motorRight->setFade(fadeType_t::ACCEL, true);
-                       break;
-                   case auto_instruction_t::RESET_DECEL:
-                       //enable downfading (set to default value)
-                       motorLeft->setFade(fadeType_t::DECEL, true);
-                       motorRight->setFade(fadeType_t::DECEL, true);
-                       break;
-               }
-               break;
-
-
-            //------- handle ADJUST_CHAIR mode -------
-            case controlMode_t::ADJUST_CHAIR:
-                vTaskDelay(100 / portTICK_PERIOD_MS);
-                //--- read joystick ---
-                stickDataLast = stickData;
-                stickData = joystick_l->getData();
-                //--- control armchair position with joystick input ---
-                // dont update when stick data did not change
-                if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
-                {
-                    resetTimeout(); // user input -> reset switch to IDLE timeout
-                    controlChairAdjustment(joystick_l->getData(), legRest, backRest);
-                }
-                break;
-
-
-            //------- handle MENU mode -------
-            case controlMode_t::MENU:
-                //nothing to do here, display task handles the menu
-                vTaskDelay(1000 / portTICK_PERIOD_MS);
-                break;
-
-              //TODO: add other modes here
-        }
-
-        //-----------------------
-        //------ slow loop ------
-        //-----------------------
-        //this section is run about every 5s (+500ms)
-        if (esp_log_timestamp() - timestamp_SlowLoopLastRun > 5000) {
-            ESP_LOGV(TAG, "running slow loop... time since last run: %.1fs", (float)(esp_log_timestamp() - timestamp_SlowLoopLastRun)/1000);
+        //--- slow loop ---
+        // this section is run approx every 5s (+500ms)
+        if (esp_log_timestamp() - timestamp_SlowLoopLastRun > 5000)
+        {
+            ESP_LOGV(TAG, "running slow loop... time since last run: %.1fs", (float)(esp_log_timestamp() - timestamp_SlowLoopLastRun) / 1000);
             timestamp_SlowLoopLastRun = esp_log_timestamp();
-            //run function that detects timeout (switch to idle, or notify "forgot to turn off")
+            //--- handle timeouts ---
+            // run function that detects timeouts (switch to idle, or notify "forgot to turn off")
             handleTimeout();
         }
+        vTaskDelay(5 / portTICK_PERIOD_MS); // small delay necessary to give modeChange() a chance to take the mutex
+        // TODO: move mode specific delays from handle() to here, to prevent unnecessary long mutex lock
+    }
+}
 
-    }//end while(1)
-}//end startHandleLoop
 
+//-------------------------------------
+//---------- Handle control -----------
+//-------------------------------------
+// function that repeatedly generates motor commands and runs actions depending on the current mode
+void controlledArmchair::handle()
+{
+
+    switch (mode)
+    {
+    default:
+        //switch to IDLE mode when current mode is not implemented
+        changeMode(controlMode_t::IDLE);
+        break;
+
+    //------- handle IDLE -------
+    case controlMode_t::IDLE:
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+        // TODO repeatedly set motors to idle, in case driver bugs? Currently 15s motorctl timeout would have to pass
+#ifdef JOYSTICK_LOG_IN_IDLE
+        // get joystick data and log it
+        joystickData_t data joystick_l->getData();
+        ESP_LOGI("JOYSTICK_LOG_IN_IDLE", "x=%.3f, y=%.3f, radius=%.3f, angle=%.3f, pos=%s, adcx=%d, adcy=%d",
+                 data.x, data.y, data.radius, data.angle,
+                 joystickPosStr[(int)data.position],
+                 objects->joystick->getRawX(), objects->joystick->getRawY());
+#endif
+        break;
+
+    //------- handle JOYSTICK mode -------
+    case controlMode_t::JOYSTICK:
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+        // get current joystick data with getData method of evaluatedJoystick
+        stickDataLast = stickData;
+        stickData = joystick_l->getData();
+        // additionaly scale coordinates (more detail in slower area)
+        joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.5); // TODO: add scaling parameters to config
+        // generate motor commands
+        // only generate when the stick data actually changed (e.g. stick stayed in center)
+        if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
+        {
+            resetTimeout(); // user input -> reset switch to IDLE timeout
+            commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
+            // apply motor commands
+            motorRight->setTarget(commands.right);
+            motorLeft->setTarget(commands.left);
+        }
+        else
+        {
+            vTaskDelay(20 / portTICK_PERIOD_MS);
+            ESP_LOGV(TAG, "analog joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
+        }
+        break;
+
+    //------- handle MASSAGE mode -------
+    case controlMode_t::MASSAGE:
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        //--- read joystick ---
+        // only update joystick data when input not frozen
+        stickDataLast = stickData;
+        if (!freezeInput)
+            stickData = joystick_l->getData();
+        //--- generate motor commands ---
+        // only generate when the stick data actually changed (e.g. stick stayed in center)
+        if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
+        {
+            resetTimeout(); // user input -> reset switch to IDLE timeout
+            // pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
+            commands = joystick_generateCommandsShaking(stickData);
+            // apply motor commands
+            motorRight->setTarget(commands.right);
+            motorLeft->setTarget(commands.left);
+        }
+        break;
+
+    //------- handle HTTP mode -------
+    case controlMode_t::HTTP:
+        //--- get joystick data from queue ---
+        stickDataLast = stickData;
+        stickData = httpJoystickMain_l->getData(); // get last stored data from receive queue (waits up to 500ms for new event to arrive)
+        // scale coordinates additionally (more detail in slower area)
+        joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.4); // TODO: add scaling parameters to config
+        ESP_LOGD(TAG, "generating commands from x=%.3f  y=%.3f  radius=%.3f  angle=%.3f", stickData.x, stickData.y, stickData.radius, stickData.angle);
+        //--- generate motor commands ---
+        // only generate when the stick data actually changed (e.g. no new data recevied via http)
+        if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
+        {
+            resetTimeout(); // user input -> reset switch to IDLE timeout
+            // Note: timeout (no data received) is handled in getData method
+            commands = joystick_generateCommandsDriving(stickData, &joystickGenerateCommands_config);
+
+            //--- apply commands to motors ---
+            motorRight->setTarget(commands.right);
+            motorLeft->setTarget(commands.left);
+        }
+        else
+        {
+            ESP_LOGD(TAG, "http joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
+        }
+        break;
+
+    //------- handle AUTO mode -------
+    case controlMode_t::AUTO:
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+        // generate commands
+        commands = automatedArmchair->generateCommands(&instruction);
+        //--- apply commands to motors ---
+        motorRight->setTarget(commands.right);
+        motorLeft->setTarget(commands.left);
+
+        // process received instruction
+        switch (instruction)
+        {
+        case auto_instruction_t::NONE:
+            break;
+        case auto_instruction_t::SWITCH_PREV_MODE:
+            toggleMode(controlMode_t::AUTO);
+            break;
+        case auto_instruction_t::SWITCH_JOYSTICK_MODE:
+            changeMode(controlMode_t::JOYSTICK);
+            break;
+        case auto_instruction_t::RESET_ACCEL_DECEL:
+            // enable downfading (set to default value)
+            motorLeft->setFade(fadeType_t::DECEL, true);
+            motorRight->setFade(fadeType_t::DECEL, true);
+            // set upfading to default value
+            motorLeft->setFade(fadeType_t::ACCEL, true);
+            motorRight->setFade(fadeType_t::ACCEL, true);
+            break;
+        case auto_instruction_t::RESET_ACCEL:
+            // set upfading to default value
+            motorLeft->setFade(fadeType_t::ACCEL, true);
+            motorRight->setFade(fadeType_t::ACCEL, true);
+            break;
+        case auto_instruction_t::RESET_DECEL:
+            // enable downfading (set to default value)
+            motorLeft->setFade(fadeType_t::DECEL, true);
+            motorRight->setFade(fadeType_t::DECEL, true);
+            break;
+        }
+        break;
+
+    //------- handle ADJUST_CHAIR mode -------
+    case controlMode_t::ADJUST_CHAIR:
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        //--- read joystick ---
+        stickDataLast = stickData;
+        stickData = joystick_l->getData();
+        //--- control armchair position with joystick input ---
+        // dont update when stick data did not change
+        if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
+        {
+            resetTimeout(); // user input -> reset switch to IDLE timeout
+            controlChairAdjustment(joystick_l->getData(), legRest, backRest);
+        }
+        break;
+
+    //------- handle MENU mode -------
+    case controlMode_t::MENU:
+        // nothing to do here, display task handles the menu
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        break;
+
+        // TODO: add other modes here
+    }
+
+} // end - handle method
 
 
 
@@ -383,35 +405,43 @@ void controlledArmchair::handleTimeout()
 //----------- changeMode ------------
 //-----------------------------------
 //function to change to a specified control mode
-void controlledArmchair::changeMode(controlMode_t modeNew) {
+void controlledArmchair::changeMode(controlMode_t modeNew)
+{
 
-    //exit if target mode is already active
-    if (mode == modeNew) {
+    // exit if target mode is already active
+    if (mode == modeNew)
+    {
         ESP_LOGE(TAG, "changeMode: Already in target mode '%s' -> nothing to change", controlModeStr[(int)mode]);
         return;
     }
 
-    //copy previous mode
-    modePrevious = mode;
-    //store time changed (needed for timeout)
-    timestamp_lastModeChange = esp_log_timestamp();
+    // mutex to wait for current handle iteration (control-task) to finish
+    // prevents race conditions where operations when changing mode are run but old mode gets handled still
+    ESP_LOGI(TAG, "changeMode: waiting for current handle() iteration to finish...");
+    if (xSemaphoreTake(handleIteration_mutex, portMAX_DELAY) == pdTRUE)
+    {
+        // copy previous mode
+        modePrevious = mode;
+        // store time changed (needed for timeout)
+        timestamp_lastModeChange = esp_log_timestamp();
 
-	ESP_LOGW(TAG, "=== changing mode from %s to %s ===", controlModeStr[(int)mode], controlModeStr[(int)modeNew]);
+        ESP_LOGW(TAG, "=== changing mode from %s to %s ===", controlModeStr[(int)mode], controlModeStr[(int)modeNew]);
 
-	//========== commands change FROM mode ==========
-	//run functions when changing FROM certain mode
-	switch(modePrevious){
-		default:
-			ESP_LOGI(TAG, "noting to execute when changing FROM this mode");
-			break;
+        //========== commands change FROM mode ==========
+        // run functions when changing FROM certain mode
+        switch (modePrevious)
+        {
+        default:
+            ESP_LOGI(TAG, "noting to execute when changing FROM this mode");
+            break;
 
-		case controlMode_t::IDLE:
+        case controlMode_t::IDLE:
 #ifdef JOYSTICK_LOG_IN_IDLE
-			ESP_LOGI(TAG, "disabling debug output for 'evaluatedJoystick'");
-			esp_log_level_set("evaluatedJoystick", ESP_LOG_WARN); //FIXME: loglevel from config
+            ESP_LOGI(TAG, "disabling debug output for 'evaluatedJoystick'");
+            esp_log_level_set("evaluatedJoystick", ESP_LOG_WARN); // FIXME: loglevel from config
 #endif
-            buzzer->beep(1,200,100);
-			break;
+            buzzer->beep(1, 200, 100);
+            break;
 
         case controlMode_t::HTTP:
             ESP_LOGW(TAG, "switching from HTTP mode -> stopping wifi-ap");
@@ -420,41 +450,40 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading, reset frozen input");
-            //TODO: fix issue when downfading was disabled before switching to massage mode - currently it gets enabled again here...
-            //enable downfading (set to default value)
+            // TODO: fix issue when downfading was disabled before switching to massage mode - currently it gets enabled again here...
+            // enable downfading (set to default value)
             motorLeft->setFade(fadeType_t::DECEL, true);
             motorRight->setFade(fadeType_t::DECEL, true);
-            //set upfading to default value
+            // set upfading to default value
             motorLeft->setFade(fadeType_t::ACCEL, true);
             motorRight->setFade(fadeType_t::ACCEL, true);
-            //reset frozen input state
+            // reset frozen input state
             freezeInput = false;
             break;
 
         case controlMode_t::AUTO:
             ESP_LOGW(TAG, "switching from AUTO mode -> restoring fading to default");
-            //TODO: fix issue when downfading was disabled before switching to auto mode - currently it gets enabled again here...
-            //enable downfading (set to default value)
+            // TODO: fix issue when downfading was disabled before switching to auto mode - currently it gets enabled again here...
+            // enable downfading (set to default value)
             motorLeft->setFade(fadeType_t::DECEL, true);
             motorRight->setFade(fadeType_t::DECEL, true);
-            //set upfading to default value
+            // set upfading to default value
             motorLeft->setFade(fadeType_t::ACCEL, true);
             motorRight->setFade(fadeType_t::ACCEL, true);
             break;
 
         case controlMode_t::ADJUST_CHAIR:
             ESP_LOGW(TAG, "switching from ADJUST_CHAIR mode => turning off adjustment motors...");
-            //prevent motors from being always on in case of mode switch while joystick is not in center thus motors currently moving
+            // prevent motors from being always on in case of mode switch while joystick is not in center thus motors currently moving
             legRest->setState(REST_OFF);
             backRest->setState(REST_OFF);
             break;
+        }
 
-    }
-
-
-    //========== commands change TO mode ==========
-    //run functions when changing TO certain mode
-    switch(modeNew){
+        //========== commands change TO mode ==========
+        // run functions when changing TO certain mode
+        switch (modeNew)
+        {
         default:
             ESP_LOGI(TAG, "noting to execute when changing TO this mode");
             break;
@@ -482,23 +511,24 @@ void controlledArmchair::changeMode(controlMode_t modeNew) {
 
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching to MASSAGE mode -> reducing fading");
-            uint32_t shake_msFadeAccel = 500; //TODO: move this to config
+            uint32_t shake_msFadeAccel = 500; // TODO: move this to config
 
-            //disable downfading (max. deceleration)
+            // disable downfading (max. deceleration)
             motorLeft->setFade(fadeType_t::DECEL, false);
             motorRight->setFade(fadeType_t::DECEL, false);
-            //reduce upfading (increase acceleration)
+            // reduce upfading (increase acceleration)
             motorLeft->setFade(fadeType_t::ACCEL, shake_msFadeAccel);
             motorRight->setFade(fadeType_t::ACCEL, shake_msFadeAccel);
             break;
+        }
 
-    }
+        //--- update mode to new mode ---
+        mode = modeNew;
 
-    //--- update mode to new mode ---
-    //TODO: add mutex
-    mode = modeNew;
+        // unlock mutex for control task to continue handling modes
+        xSemaphoreGive(handleIteration_mutex);
+    } // end mutex
 }
-
 
 //TODO simplify the following 3 functions? can be replaced by one?
 
@@ -526,7 +556,7 @@ void controlledArmchair::toggleModes(controlMode_t modePrimary, controlMode_t mo
     } 
     //switch to primary mode when any other mode is active
     else {
-        ESP_LOGW(TAG, "toggleModes: switching from %s to primary mode %s", controlModeStr[(int)mode], controlModeStr[(int)modePrimary]);
+        ESP_LOGW(TAG, "toggleModes: switching from '%s' to primary mode '%s'", controlModeStr[(int)mode], controlModeStr[(int)modePrimary]);
         //buzzer->beep(4,200,100);
         changeMode(modePrimary);
     }
@@ -542,13 +572,13 @@ void controlledArmchair::toggleMode(controlMode_t modePrimary){
 
     //switch to previous mode when primary is already active
     if (mode == modePrimary){
-        ESP_LOGW(TAG, "toggleMode: switching from primaryMode %s to previousMode %s", controlModeStr[(int)mode], controlModeStr[(int)modePrevious]);
+        ESP_LOGW(TAG, "toggleMode: switching from primaryMode '%s' to previousMode '%s'", controlModeStr[(int)mode], controlModeStr[(int)modePrevious]);
         //buzzer->beep(2,200,100);
         changeMode(modePrevious); //switch to previous mode
     } 
     //switch to primary mode when any other mode is active
     else {
-        ESP_LOGW(TAG, "toggleModes: switching from %s to primary mode %s", controlModeStr[(int)mode], controlModeStr[(int)modePrimary]);
+        ESP_LOGW(TAG, "toggleModes: switching from '%s' to primary mode '%s'", controlModeStr[(int)mode], controlModeStr[(int)modePrimary]);
         //buzzer->beep(4,200,100);
         changeMode(modePrimary);
     }

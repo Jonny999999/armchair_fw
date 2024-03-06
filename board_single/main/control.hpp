@@ -37,7 +37,7 @@ typedef struct control_config_t {
 //=======================================
 //task that controls the armchair modes and initiates commands generation and applies them to driver
 //parameter: pointer to controlledArmchair object 
-void task_control( void * pvParameters );
+void task_control( void * controlledArmchair );
 
 
 
@@ -64,7 +64,7 @@ class controlledArmchair {
                 );
 
         //--- functions ---
-        //task that repeatedly generates motor commands depending on the current mode
+        //endless loop that repeatedly calls handle() and handleTimeout() methods respecting mutex
         void startHandleLoop();
 
         //function that changes to a specified control mode
@@ -104,6 +104,9 @@ class controlledArmchair {
     private:
 
         //--- functions ---
+        //generate motor commands or run actions depending on the current mode
+        void handle();
+
         //function that evaluates whether there is no activity/change on the motor duty for a certain time, if so a switch to IDLE is issued. - has to be run repeatedly in a slow interval
         void handleTimeout();
 
@@ -148,6 +151,9 @@ class controlledArmchair {
         motorCommands_t commands = cmds_bothMotorsIdle;
         //struct with config parameters
         control_config_t config;
+
+        //mutex to prevent race condition between handle() and changeMode()
+        SemaphoreHandle_t handleIteration_mutex;
 
         //store joystick data
         joystickData_t stickData = joystickData_center;
