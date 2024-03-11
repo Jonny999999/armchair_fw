@@ -254,7 +254,7 @@ joystickGenerateCommands_config_t joystickGenerateCommands_config{
     //-- maxDuty --
     // max duty when both motors are at equal ratio e.g. driving straight forward
     // better to be set less than 100% to have some reserve for boosting the outer tire when turning
-    .maxDutyStraight = 85,
+    .maxDutyStraight = 75,
     //-- maxBoost --
     // boost is amount of duty added to maxDutyStraight to outer tire while turning
     // => turning: inner tire gets slower, outer tire gets faster

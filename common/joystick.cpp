@@ -330,7 +330,7 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, joystickGe
     if (ratio > 1) ratio = 1; // >threshold -> 1
 
     // -- calculate outer tire boost --
-    #define BOOST_RATIO_MANIPULATION_SCALE 1.15 // >1 to apply boost slightly faster, this slightly compensates that available boost is most times less than reduction of inner duty, so for small turns the total speed feels more equal
+    #define BOOST_RATIO_MANIPULATION_SCALE 1.05 // >1 to apply boost slightly faster, this slightly compensates that available boost is most times less than reduction of inner duty, so for small turns the total speed feels more equal
     float boostAmountOuter = data.radius*dutyBoost* ratio *BOOST_RATIO_MANIPULATION_SCALE;
     // limit to max amount
     if (boostAmountOuter > dutyBoost) boostAmountOuter = dutyBoost;

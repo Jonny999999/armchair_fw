@@ -148,7 +148,7 @@ void controlledArmchair::handle()
         stickDataLast = stickData;
         stickData = joystick_l->getData();
         // additionaly scale coordinates (more detail in slower area)
-        joystick_scaleCoordinatesLinear(&stickData, 0.6, 0.5); // TODO: add scaling parameters to config
+        joystick_scaleCoordinatesLinear(&stickData, 0.7, 0.45); // TODO: add scaling parameters to config
         // generate motor commands
         // only generate when the stick data actually changed (e.g. stick stayed in center)
         if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
