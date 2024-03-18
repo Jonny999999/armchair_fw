@@ -174,17 +174,15 @@ void controlledArmchair::handle()
         stickDataLast = stickData;
         if (!freezeInput)
             stickData = joystick_l->getData();
-        //--- generate motor commands ---
-        // only generate when the stick data actually changed (e.g. stick stayed in center)
+        // reset timeout when joystick data changed
         if (stickData.x != stickDataLast.x || stickData.y != stickDataLast.y)
-        {
             resetTimeout(); // user input -> reset switch to IDLE timeout
-            // pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
-            commands = joystick_generateCommandsShaking(stickData);
-            // apply motor commands
-            motorRight->setTarget(commands.right);
-            motorLeft->setTarget(commands.left);
-        }
+        //--- generate motor commands ---
+        // pass joystick data from getData method of evaluatedJoystick to generateCommandsShaking function
+        commands = joystick_generateCommandsShaking(stickData);
+        // apply motor commands
+        motorRight->setTarget(commands.right);
+        motorLeft->setTarget(commands.left);
         break;
 
     //------- handle HTTP mode -------
