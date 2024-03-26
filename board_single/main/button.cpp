@@ -75,7 +75,10 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         if (lastPressLong)
         {
             control->changeMode(controlMode_t::MENU);
-            ESP_LOGW(TAG, "1x long press -> change to menu mode");
+            ESP_LOGW(TAG, "1x long press -> clear encoder queue and change to menu mode");
+            // clear encoder event queue (prevent menu from exiting immediately due to long press event just happend)
+            rotary_encoder_event_t ev;
+            while (xQueueReceive(encoderQueue, &ev, 0) == pdPASS);
             buzzer->beep(20, 20, 10);
             vTaskDelay(500 / portTICK_PERIOD_MS);
         }
@@ -156,7 +159,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 // when not in MENU mode, repeatedly receives events from encoder button
 // and takes the corresponding action
 // this function has to be started once in a separate task
-#define INPUT_TIMEOUT 700 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
+#define INPUT_TIMEOUT 500 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
 void buttonCommands::startHandleLoop()
 {
     //-- variables --

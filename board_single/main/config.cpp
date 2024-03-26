@@ -45,6 +45,13 @@ void setLoglevels(void)
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
     esp_log_level_set("menu", ESP_LOG_INFO);
     esp_log_level_set("encoder", ESP_LOG_INFO);
+
+
+
+    esp_log_level_set("TESTING", ESP_LOG_ERROR);
+
+
+
 }
 
 //==================================
@@ -91,9 +98,11 @@ sabertooth2x60_config_t sabertoothConfig = {
 //--- configure left motor (contol) ---
 motorctl_config_t configMotorControlLeft = {
     .name = "left",
+    .loggingEnabled = true,
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
+    .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_4, // GPIO32
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -105,9 +114,11 @@ motorctl_config_t configMotorControlLeft = {
 //--- configure right motor (contol) ---
 motorctl_config_t configMotorControlRight = {
     .name = "right",
+    .loggingEnabled = false,
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
+    .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_5, // GPIO33
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -240,7 +251,19 @@ rotary_encoder_t encoder_config = {
 //-----------------------------------
 //configure parameters for motor command generation from joystick data
 joystickGenerateCommands_config_t joystickGenerateCommands_config{
-    .maxDuty = 100,
-    .dutyOffset = 5, // duty at which motors start immediately
-    .altStickMapping = false,
+    //-- maxDuty --
+    // max duty when both motors are at equal ratio e.g. driving straight forward
+    // better to be set less than 100% to have some reserve for boosting the outer tire when turning
+    .maxDutyStraight = 75,
+    //-- maxBoost --
+    // boost is amount of duty added to maxDutyStraight to outer tire while turning
+    // => turning: inner tire gets slower, outer tire gets faster
+    // 0: boost = 0 (disabled)
+    // 100: boost = maxDutyStraight (e.g. when maxDuty is 50, outer motor can still reach 100 (50+50))
+    .maxRelativeBoostPercentOfMaxDuty = 60,
+    // 60: when maxDuty is set above 62% (equals 0.6*62 = 38% boost) the outer tire can still reach 100% - below 62 maxDuty the boosted speed is also reduced.
+    // => setting this value lower prevents desired low max duty configuration from being way to fast in curves.
+    .dutyOffset = 5,                // duty at which motors start immediately
+    .ratioSnapToOneThreshold = 0.9, // threshold ratio snaps to 1 to have some area of max turning before entering X-Axis-full-rotate mode
+    .altStickMapping = false        // invert reverse direction
 };
