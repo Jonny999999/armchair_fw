@@ -27,8 +27,8 @@ extern const char* controlModeStr[9];
 typedef struct control_config_t {
     controlMode_t defaultMode;  //default mode after startup and toggling IDLE
     //timeout options
-    uint32_t timeoutMs;         //time of inactivity after which the mode gets switched to IDLE
-    float timeoutTolerancePer;  //percentage the duty can vary between timeout checks considered still inactive
+    uint32_t timeoutSwitchToIdleMs;         //time of inactivity after which the mode gets switched to IDLE
+    uint32_t timeoutNotifyPowerStillOnMs;
 } control_config_t;
 
 
@@ -37,7 +37,7 @@ typedef struct control_config_t {
 //=======================================
 //task that controls the armchair modes and initiates commands generation and applies them to driver
 //parameter: pointer to controlledArmchair object 
-void task_control( void * pvParameters );
+void task_control( void * controlledArmchair );
 
 
 
@@ -64,7 +64,7 @@ class controlledArmchair {
                 );
 
         //--- functions ---
-        //task that repeatedly generates motor commands depending on the current mode
+        //endless loop that repeatedly calls handle() and handleTimeout() methods respecting mutex
         void startHandleLoop();
 
         //function that changes to a specified control mode
@@ -94,11 +94,19 @@ class controlledArmchair {
 
         // configure max dutycycle (in joystick or http mode)
         void setMaxDuty(float maxDutyNew) { writeMaxDuty(maxDutyNew); };
-        float getMaxDuty() const {return joystickGenerateCommands_config.maxDuty; };
+        float getMaxDuty() const {return joystickGenerateCommands_config.maxDutyStraight; };
+        // configure max boost (in joystick or http mode)
+        void setMaxRelativeBoostPer(float newValue) { joystickGenerateCommands_config.maxRelativeBoostPercentOfMaxDuty = newValue; };
+        float getMaxRelativeBoostPer() const {return joystickGenerateCommands_config.maxRelativeBoostPercentOfMaxDuty; };
+
+        uint32_t getInactivityDurationMs() {return esp_log_timestamp() - timestamp_lastActivity;};
 
     private:
 
         //--- functions ---
+        //generate motor commands or run actions depending on the current mode
+        void handle();
+
         //function that evaluates whether there is no activity/change on the motor duty for a certain time, if so a switch to IDLE is issued. - has to be run repeatedly in a slow interval
         void handleTimeout();
 
@@ -144,6 +152,9 @@ class controlledArmchair {
         //struct with config parameters
         control_config_t config;
 
+        //mutex to prevent race condition between handle() and changeMode()
+        SemaphoreHandle_t handleIteration_mutex;
+
         //store joystick data
         joystickData_t stickData = joystickData_center;
         joystickData_t stickDataLast = joystickData_center;
@@ -169,10 +180,10 @@ class controlledArmchair {
         //variable for slow loop
         uint32_t timestamp_SlowLoopLastRun = 0;
 
-        //variables for detecting timeout (switch to idle, after inactivity)
-        float dutyLeft_lastActivity = 0;
-        float dutyRight_lastActivity = 0;
+        //variables for detecting timeout (switch to idle, or notify "forgot to turn off" after inactivity
+        uint32_t timestamp_lastModeChange = 0;
         uint32_t timestamp_lastActivity = 0;
+        uint32_t timestamp_lastTimeoutBeep = 0;
 };
 
 

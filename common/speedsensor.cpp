@@ -93,6 +93,7 @@ void IRAM_ATTR onEncoderRising(void *arg)
 		// calculate rotational speed
 		uint64_t pulseSum = pulse1 + pulse2 + pulse3;
 		sensor->currentRpm = direction * (sensor->config.degreePerGroup / 360.0 * 60.0 / ((double)pulseSum / 1000000.0));
+		sensor->timeLastUpdate = currentTime;
 	}
 }
 

@@ -28,14 +28,20 @@ void task_motorctl( void * ptrControlledMotor ){
 //======== constructor ========
 //=============================
 //constructor, simultaniously initialize instance of motor driver 'motor' and current sensor 'cSensor' with provided config (see below lines after ':')
-controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle_f): 
+controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle_f, speedSensor * speedSensor_f, controlledMotor ** otherMotor_f):
+    //create current sensor
 	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent, config_control.currentSnapToZeroThreshold, config_control.currentInverted) {
 		//copy parameters for controlling the motor
 		config = config_control;
+        log = config.loggingEnabled;
 		//pointer to update motot dury method
 		motorSetCommand = setCommandFunc;
         //pointer to nvs handle
         nvsHandle = nvsHandle_f;
+        //pointer to other motor object
+        ppOtherMotor = otherMotor_f;
+        //pointer to speed sensor
+        sSensor = speedSensor_f;
 
         //create queue, initialize config values
 		init();
@@ -105,61 +111,185 @@ void controlledMotor::handle(){
 
     //TODO: History: skip fading when motor was running fast recently / alternatively add rot-speed sensor
 
-    //--- receive commands from queue ---
+    //--- RECEIVE DATA FROM QUEUE ---
     if( xQueueReceive( commandQueue, &commandReceive, timeoutWaitForCommand / portTICK_PERIOD_MS ) ) //wait time is always 0 except when at target duty already
     {
-        ESP_LOGV(TAG, "[%s] Read command from queue: state=%s, duty=%.2f", config.name, motorstateStr[(int)commandReceive.state], commandReceive.duty);
+        if(log) ESP_LOGV(TAG, "[%s] Read command from queue: state=%s, duty=%.2f", config.name, motorstateStr[(int)commandReceive.state], commandReceive.duty);
         state = commandReceive.state;
         dutyTarget = commandReceive.duty;
 		receiveTimeout = false;
 		timestamp_commandReceived = esp_log_timestamp();
 
-        //--- convert duty ---
-        //define target duty (-100 to 100) from provided duty and motorstate
-        //this value is more suitable for the fading algorithm
-        switch(commandReceive.state){
-            case motorstate_t::BRAKE:
-                //update state
-                state = motorstate_t::BRAKE;
-                //dutyTarget = 0;
-                dutyTarget = fabs(commandReceive.duty);
-                break;
-            case motorstate_t::IDLE:
-                dutyTarget = 0;
-                break;
-            case motorstate_t::FWD:
-                dutyTarget = fabs(commandReceive.duty);
-                break;
-            case motorstate_t::REV:
-                dutyTarget = - fabs(commandReceive.duty);
-                break;
-        }
     }
 
-    //--- timeout, no data ---
-    // turn motors off if no data received for a long time (e.g. no uart data or control task offline)
-    if (dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_IDLE_WHEN_NO_COMMAND && !receiveTimeout)
+
+
+
+
+// ----- EXPERIMENTAL, DIFFERENT MODES -----
+// define target duty differently depending on current contro-mode
+//declare variables used inside switch
+float ampereNow, ampereTarget, ampereDiff;
+float speedDiff;
+    switch (mode)
     {
-        ESP_LOGE(TAG, "[%s] TIMEOUT, motor active, but no target data received for more than %ds -> switch from duty=%.2f to IDLE", config.name, TIMEOUT_IDLE_WHEN_NO_COMMAND / 1000, dutyTarget);
-        receiveTimeout = true;
-        state = motorstate_t::IDLE;
-        dutyTarget = 0;
+    case motorControlMode_t::DUTY: // regulate to desired duty (as originally)
+        //--- convert duty ---
+        // define target duty (-100 to 100) from provided duty and motorstate
+        // this value is more suitable for t
+        // todo scale target input with DUTY-MAX here instead of in joysick cmd generationhe fading algorithm
+        switch (commandReceive.state)
+        {
+        case motorstate_t::BRAKE:
+            // update state
+            state = motorstate_t::BRAKE;
+            // dutyTarget = 0;
+            dutyTarget = fabs(commandReceive.duty);
+            break;
+        case motorstate_t::IDLE:
+            dutyTarget = 0;
+            break;
+        case motorstate_t::FWD:
+            dutyTarget = fabs(commandReceive.duty);
+            break;
+        case motorstate_t::REV:
+            dutyTarget = -fabs(commandReceive.duty);
+            break;
+        }
+        break;
+
+#define CURRENT_CONTROL_ALLOWED_AMPERE_DIFF 1 //difference from target where no change is made yet
+#define CURRENT_CONTROL_MIN_AMPERE 0.7 //current where motor is turned off
+//TODO define different, fixed fading configuration in current mode, fade down can be significantly less (500/500ms fade up worked fine)
+    case motorControlMode_t::CURRENT: // regulate to desired current flow
+        ampereNow = cSensor.read();
+        ampereTarget = config.currentMax * commandReceive.duty / 100; // TODO ensure input data is 0-100 (no duty max), add currentMax to menu/config
+        if (commandReceive.state == motorstate_t::REV) ampereTarget = - ampereTarget; //target is negative when driving reverse
+        ampereDiff = ampereTarget - ampereNow;
+        if(log) ESP_LOGV("TESTING", "[%s] CURRENT-CONTROL: ampereNow=%.2f, ampereTarget=%.2f, diff=%.2f", config.name, ampereNow, ampereTarget, ampereDiff); // todo handle brake
+
+        //--- when IDLE to keep the current at target zero motor needs to be on for some duty (to compensate generator current) 
+        if (commandReceive.duty == 0 && fabs(ampereNow) < CURRENT_CONTROL_MIN_AMPERE){ //stop motors completely when current is very low already
+            dutyTarget = 0;
+        }
+        else if (fabs(ampereDiff) > CURRENT_CONTROL_ALLOWED_AMPERE_DIFF || commandReceive.duty == 0) //#### BOOST BY 1 A
+        {
+            if (ampereDiff > 0 && commandReceive.state != motorstate_t::REV) // forward need to increase current
+            {
+                dutyTarget = 100; // todo add custom fading depending on diff? currently very dependent of fade times
+            }
+            else if (ampereDiff < 0 && commandReceive.state != motorstate_t::FWD) // backward need to increase current (more negative)
+            {
+                dutyTarget = -100;
+            }
+            else // fwd too much, rev too much -> decrease
+            {
+                dutyTarget = 0;
+            }
+            if(log) ESP_LOGV("TESTING", "[%s] CURRENT-CONTROL: set target to %.0f%%", config.name, dutyTarget);
+        }
+        else
+        {
+            dutyTarget = dutyNow; // target current reached
+            if(log) ESP_LOGD("TESTING", "[%s] CURRENT-CONTROL: target current %.3f reached", config.name, dutyTarget);
+        }
+        break;
+
+#define SPEED_CONTROL_MAX_SPEED_KMH 10
+#define SPEED_CONTROL_ALLOWED_KMH_DIFF 0.6
+#define SPEED_CONTROL_MIN_SPEED 0.7 //" start from standstill" always accelerate to this speed, ignoring speedsensor data
+    case motorControlMode_t::SPEED: // regulate to desired speed
+        speedNow = sSensor->getKmph();
+    
+        //caculate target speed from input
+        speedTarget = SPEED_CONTROL_MAX_SPEED_KMH * commandReceive.duty / 100; // TODO add maxSpeed to config
+        // target speed negative when driving reverse
+        if (commandReceive.state == motorstate_t::REV)
+            speedTarget = -speedTarget;
+    if (sSensor->getTimeLastUpdate() != timestamp_speedLastUpdate ){ //only modify duty when new speed data available
+        timestamp_speedLastUpdate = sSensor->getTimeLastUpdate(); //TODO get time only once
+        speedDiff = speedTarget - speedNow;
+    } else {
+        if(log) ESP_LOGV("TESTING", "[%s] SPEED-CONTROL: no new speed data, not changing duty", config.name);
+        speedDiff = 0;
+    }
+        if(log) ESP_LOGV("TESTING", "[%s] SPEED-CONTROL: target-speed=%.2f, current-speed=%.2f, diff=%.3f", config.name, speedTarget, speedNow, speedDiff);
+
+        //stop when target is 0
+        if (commandReceive.duty == 0) { //TODO add IDLE, BRAKE state
+        if(log) ESP_LOGV("TESTING", "[%s] SPEED-CONTROL: OFF, target is 0... current-speed=%.2f, diff=%.3f", config.name, speedNow, speedDiff);
+            dutyTarget = 0;
+        }
+        else if (fabs(speedNow) < SPEED_CONTROL_MIN_SPEED){ //start from standstill or too slow (not enough speedsensor data)
+            if (log)
+                ESP_LOGV("TESTING", "[%s] SPEED-CONTROL: starting from standstill -> increase duty... target-speed=%.2f, current-speed=%.2f, diff=%.3f", config.name, speedTarget, speedNow, speedDiff);
+            if (commandReceive.state == motorstate_t::FWD)
+            dutyTarget = 100;
+            else if (commandReceive.state == motorstate_t::REV)
+            dutyTarget = -100;
+        }
+        else if (fabs(speedDiff) > SPEED_CONTROL_ALLOWED_KMH_DIFF) //speed too fast/slow
+        {
+            if (speedDiff > 0 && commandReceive.state != motorstate_t::REV) // forward need to increase speed
+            {
+                // TODO retain max duty here
+                dutyTarget = 100; // todo add custom fading depending on diff? currently very dependent of fade times
+            if(log) ESP_LOGV("TESTING", "[%s] SPEED-CONTROL: speed to low (fwd), diff=%.2f, increasing set target from %.1f%% to %.1f%%", config.name, speedDiff, dutyNow, dutyTarget);
+            }
+            else if (speedDiff < 0 && commandReceive.state != motorstate_t::FWD) // backward need to increase speed (more negative)
+            {
+                dutyTarget = -100;
+            if(log) ESP_LOGV("TESTING", "[%s] SPEED-CONTROL: speed to low (rev), diff=%.2f, increasing set target from %.1f%% to %.1f%%", config.name, speedDiff, dutyNow, dutyTarget);
+            }
+            else // fwd too much, rev too much -> decrease
+            {
+                dutyTarget = 0;
+            if(log) ESP_LOGV("TESTING", "[%s] SPEED-CONTROL: speed to high, diff=%.2f, decreasing set target from %.1f%% to %.1f%%", config.name, speedDiff, dutyNow, dutyTarget);
+            }
+        }
+        else
+        {
+            dutyTarget = dutyNow; // target speed reached
+            if(log) ESP_LOGD("TESTING", "[%s] SPEED-CONTROL: target speed %.3f reached", config.name, speedTarget);
+        }
+
+        break;
     }
 
-    //--- calculate difference ---
-    dutyDelta = dutyTarget - dutyNow;
+
+
+
+//--- TIMEOUT NO DATA ---
+// turn motors off if no data received for a long time (e.g. no uart data or control task offline)
+if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_IDLE_WHEN_NO_COMMAND && !receiveTimeout)
+{
+    if(log) ESP_LOGE(TAG, "[%s] TIMEOUT, motor active, but no target data received for more than %ds -> switch from duty=%.2f to IDLE", config.name, TIMEOUT_IDLE_WHEN_NO_COMMAND / 1000, dutyTarget);
+    receiveTimeout = true;
+    // set target and last command to IDLE
+    state = motorstate_t::IDLE;
+    commandReceive.state = motorstate_t::IDLE;
+    dutyTarget = 0; // todo put this in else section of queue (no data received) and add control mode "timeout"?
+    commandReceive.duty = 0;
+}
+
+
+    //--- CALCULATE DUTY-DIFF ---
+        dutyDelta = dutyTarget - dutyNow;
     //positive: need to increase by that value
     //negative: need to decrease
 
-    //--- already at target ---
+
+    //--- DETECT ALREADY AT TARGET ---
     // when already at exact target duty there is no need to run very fast to handle fading
     //-> slow down loop by waiting significantly longer for new commands to arrive
-    if ((dutyDelta == 0 && !config.currentLimitEnabled) || (dutyTarget == 0 && dutyNow == 0)) //when current limit enabled only slow down when duty is 0
+    if (mode != motorControlMode_t::CURRENT  //dont slow down when in CURRENT mode at all
+    && ((dutyDelta == 0 && !config.currentLimitEnabled && !config.tractionControlSystemEnabled && mode != motorControlMode_t::SPEED) //when neither of current-limit, tractioncontrol or speed-mode is enabled slow down when target reached 
+    || (dutyTarget == 0 && dutyNow == 0))) //otherwise only slow down when when actually off
     {
-        //increase timeout once when duty is the same (once)
+        //increase queue timeout when duty is the same (once)
         if (timeoutWaitForCommand == 0)
         { // TODO verify if state matches too?
-            ESP_LOGI(TAG, "[%s] already at target duty %.2f, slowing down...", config.name, dutyTarget);
+            if(log) ESP_LOGI(TAG, "[%s] already at target duty %.2f, slowing down...", config.name, dutyTarget);
             timeoutWaitForCommand = TIMEOUT_QUEUE_WHEN_AT_TARGET; // wait in queue very long, for new command to arrive
         }
         vTaskDelay(20 / portTICK_PERIOD_MS); // add small additional delay overall, in case the same commands get spammed
@@ -168,44 +298,43 @@ void controlledMotor::handle(){
     else if (timeoutWaitForCommand != 0)
     {
         timeoutWaitForCommand = 0; // dont wait additional time for new commands, handle fading fast
-        ESP_LOGI(TAG, "[%s] duty changed to %.2f, resuming at full speed", config.name, dutyTarget);
+        if(log) ESP_LOGI(TAG, "[%s] duty changed to %.2f, resuming at full speed", config.name, dutyTarget);
         // adjust lastRun timestamp to not mess up fading, due to much time passed but with no actual duty change
         timestampLastRunUs = esp_timer_get_time() - 20*1000; //subtract approx 1 cycle delay
     }
     //TODO skip rest of the handle function below using return? Some regular driver updates sound useful though
 
 
-    //--- calculate increment ---
-    //calculate increment for fading UP with passed time since last run and configured fade time
-    int64_t usPassed = esp_timer_get_time() - timestampLastRunUs;
-    if (msFadeAccel > 0){
-    dutyIncrementAccel = ( usPassed / ((float)msFadeAccel * 1000) ) * 100; //TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
-    } else {
-        dutyIncrementAccel = 100;
-    }
-
-    //calculate increment for fading DOWN with passed time since last run and configured fade time
-    if (msFadeDecel > 0){
-        dutyIncrementDecel = ( usPassed / ((float)msFadeDecel * 1000) ) * 100; 
-    } else {
-        dutyIncrementDecel = 100;
-    }
-
-
 	//--- BRAKE ---
 	//brake immediately, update state, duty and exit this cycle of handle function
 	if (state == motorstate_t::BRAKE){
-		ESP_LOGD(TAG, "braking - skip fading");
+		if(log) ESP_LOGD(TAG, "braking - skip fading");
 		motorSetCommand({motorstate_t::BRAKE, dutyTarget});
-		ESP_LOGD(TAG, "[%s] Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", config.name, motorstateStr[(int)state], dutyNow, currentNow);
+		if(log) ESP_LOGD(TAG, "[%s] Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", config.name, motorstateStr[(int)state], dutyNow, currentNow);
 		//dutyNow = 0;
 		return; //no need to run the fade algorithm
 	}
 
 
-
-
 	//----- FADING -----
+    //calculate passed time since last run
+    int64_t usPassed = esp_timer_get_time() - timestampLastRunUs;
+
+    //--- calculate increment ---
+    //calculate increment for fading UP with passed time since last run and configured fade time
+    if (tcs_isExceeded) // disable acceleration when slippage is currently detected
+        dutyIncrementAccel = 0;
+    else if (msFadeAccel > 0)
+        dutyIncrementAccel = (usPassed / ((float)msFadeAccel * 1000)) * 100; // TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    else //no accel limit (immediately set to 100)
+        dutyIncrementAccel = 100;
+
+    //calculate increment for fading DOWN with passed time since last run and configured fade time
+    if (msFadeDecel > 0)
+        dutyIncrementDecel = ( usPassed / ((float)msFadeDecel * 1000) ) * 100; 
+    else //no decel limit (immediately reduce to 0)
+        dutyIncrementDecel = 100;
+    
     //fade duty to target (up and down)
     //TODO: this needs optimization (can be more clear and/or simpler)
     if (dutyDelta > 0) { //difference positive -> increasing duty (-100 -> 100)
@@ -226,7 +355,7 @@ void controlledMotor::handle(){
     }
 
 
-	//----- CURRENT LIMIT -----
+    //----- CURRENT LIMIT -----
 	currentNow = cSensor.read();
 	if ((config.currentLimitEnabled) && (dutyDelta != 0)){
 		if (fabs(currentNow) > config.currentMax){
@@ -240,11 +369,89 @@ void controlledMotor::handle(){
 			} else if (dutyNow > currentLimitDecrement) {
 				dutyNow -= currentLimitDecrement;
 			}
-			ESP_LOGW(TAG, "[%s] current limit exceeded! now=%.3fA max=%.1fA => decreased duty from %.3f to %.3f", config.name, currentNow, config.currentMax, dutyOld, dutyNow);
+			if(log) ESP_LOGW(TAG, "[%s] current limit exceeded! now=%.3fA max=%.1fA => decreased duty from %.3f to %.3f", config.name, currentNow, config.currentMax, dutyOld, dutyNow);
 		}
 	}
 
+
+    //----- TRACTION CONTROL -----
+    //reduce duty when turning faster than expected
+    //TODO only run this when speed sensors actually updated
+    //handle tcs when enabled and new speed sensor data is available  TODO: currently assumes here that speed sensor data of other motor updated as well
+    #define TCS_MAX_ALLOWED_RATIO_DIFF 0.1 //when motor speed ratio differs more than that, one motor is slowed down
+    #define TCS_NO_SPEED_DATA_TIMEOUT_US 200*1000
+    #define TCS_MIN_SPEED_KMH 1 //must be at least that fast for TCS to be enabled
+    //TODO rework this: clearer structure (less nested if statements)
+    if (config.tractionControlSystemEnabled && mode == motorControlMode_t::SPEED && sSensor->getTimeLastUpdate() != tcs_timestampLastSpeedUpdate && (esp_timer_get_time() - tcs_timestampLastRun < TCS_NO_SPEED_DATA_TIMEOUT_US)){
+        //update last speed update received
+        tcs_timestampLastSpeedUpdate = sSensor->getTimeLastUpdate(); //TODO: re-use tcs_timestampLastRun in if statement, instead of having additional variable SpeedUpdate
+
+        //calculate time passed since last run
+        uint32_t tcs_usPassed = esp_timer_get_time() - tcs_timestampLastRun; // passed time since last time handled
+        tcs_timestampLastRun = esp_timer_get_time();
+
+        //get motor stats
+        float speedNowThis = sSensor->getKmph();
+        float speedNowOther = (*ppOtherMotor)->getCurrentSpeed();
+        float speedTargetThis = speedTarget;
+        float speedTargetOther = (*ppOtherMotor)->getTargetSpeed();
+        float dutyTargetOther = (*ppOtherMotor)->getTargetDuty();
+        float dutyTargetThis = dutyTarget;
+        float dutyNowOther = (*ppOtherMotor)->getDuty();
+        float dutyNowThis = dutyNow;
+
+
+        //calculate expected ratio
+        float ratioSpeedTarget = speedTargetThis / speedTargetOther;
+        //calculate current ratio of actual measured rotational speed
+        float ratioSpeedNow = speedNowThis / speedNowOther;
+        //calculate current duty ration (logging only)
+        float ratioDutyNow = dutyNowThis / dutyNowOther;
+
+        //calculate unexpected difference
+        float ratioDiff = ratioSpeedNow - ratioSpeedTarget;
+        if(log) ESP_LOGD("TESTING", "[%s] TCS: speedThis=%.3f, speedOther=%.3f, ratioSpeedTarget=%.3f, ratioSpeedNow=%.3f, ratioDutyNow=%.3f, diff=%.3f", config.name, speedNowThis, speedNowOther, ratioSpeedTarget, ratioSpeedNow, ratioDutyNow, ratioDiff);
+
+        //-- handle rotating faster than expected --
+        //TODO also increase duty when other motor is slipping? (diff negative)
+        if (speedNowThis < TCS_MIN_SPEED_KMH) { //disable / turn off TCS when currently too slow (danger of deadlock)
+            tcs_isExceeded = false;
+            tcs_usExceeded = 0;
+        }
+        else if (ratioDiff > TCS_MAX_ALLOWED_RATIO_DIFF ) // motor turns too fast compared to expected target ratio
+        {
+            if (!tcs_isExceeded) // just started being too fast
+            {
+                tcs_timestampBeginExceeded = esp_timer_get_time();
+                tcs_isExceeded = true; //also blocks further acceleration (fade)
+                if(log) ESP_LOGW("TESTING", "[%s] TCS: now exceeding max allowed ratio diff! diff=%.2f max=%.2f", config.name, ratioDiff, TCS_MAX_ALLOWED_RATIO_DIFF);
+            }
+            else
+            { // too fast for more than 2 cycles already
+                tcs_usExceeded = esp_timer_get_time() - tcs_timestampBeginExceeded; //time too fast already
+                if(log) ESP_LOGI("TESTING", "[%s] TCS: faster than expected since %dms, current ratioDiff=%.2f  -> slowing down", config.name, tcs_usExceeded/1000, ratioDiff);
+                // calculate amount duty gets decreased
+                float dutyDecrement = (tcs_usPassed / ((float)msFadeDecel * 1000)) * 100; //TODO optimize dynamic increment: P:scale with ratio-difference, I: scale with duration exceeded
+                // decrease duty
+                if(log) ESP_LOGI("TESTING", "[%s] TCS: msPassed=%.3f, reducing duty by %.3f%%", config.name, (float)tcs_usPassed/1000, dutyDecrement);
+                fade(&dutyNow, 0, -dutyDecrement); //reduce duty but not less than 0
+            }
+        }
+        else
+        { // not exceeded
+            tcs_isExceeded = false;
+            tcs_usExceeded = 0;
+        }
+    }
+    else // TCS mode not active or timed out
+    {    // not exceeded
+        tcs_isExceeded = false;
+        tcs_usExceeded = 0;
+        }
+
 	
+
+
     //--- define new motorstate --- (-100 to 100 => direction)
 	state=getStateFromDuty(dutyNow);
 
@@ -254,25 +461,27 @@ void controlledMotor::handle(){
 	//FWD -> IDLE -> FWD  continue without waiting
 	//FWD -> IDLE -> REV  wait for dead-time in IDLE
 	//TODO check when changed only?
-	if (	//not enough time between last direction state
-			(   state == motorstate_t::FWD && (esp_log_timestamp() - timestampsModeLastActive[(int)motorstate_t::REV] < config.deadTimeMs))
-			|| (state == motorstate_t::REV && (esp_log_timestamp() - timestampsModeLastActive[(int)motorstate_t::FWD] < config.deadTimeMs))
-	   ){
-		ESP_LOGD(TAG, "waiting dead-time... dir change %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
-		if (!deadTimeWaiting){ //log start
-			deadTimeWaiting = true;
-			ESP_LOGI(TAG, "starting dead-time... %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
-		}
-		//force IDLE state during wait
-		state = motorstate_t::IDLE;
-		dutyNow = 0;
-	} else {
-		if (deadTimeWaiting){ //log end
-			deadTimeWaiting = false;
-			ESP_LOGI(TAG, "dead-time ended - continue with %s", motorstateStr[(int)state]);
-		}
-		ESP_LOGV(TAG, "deadtime: no change below deadtime detected... dir=%s, duty=%.1f", motorstateStr[(int)state], dutyNow);
-	}
+    if (config.deadTimeMs > 0) { //deadTime is enabled
+	    if (	//not enough time between last direction state
+	    		(   state == motorstate_t::FWD && (esp_log_timestamp() - timestampsModeLastActive[(int)motorstate_t::REV] < config.deadTimeMs))
+	    		|| (state == motorstate_t::REV && (esp_log_timestamp() - timestampsModeLastActive[(int)motorstate_t::FWD] < config.deadTimeMs))
+	       ){
+	    	if(log) ESP_LOGD(TAG, "waiting dead-time... dir change %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
+	    	if (!deadTimeWaiting){ //log start
+	    		deadTimeWaiting = true;
+	    		if(log) ESP_LOGI(TAG, "starting dead-time... %s -> %s", motorstateStr[(int)statePrev], motorstateStr[(int)state]);
+	    	}
+	    	//force IDLE state during wait
+	    	state = motorstate_t::IDLE;
+	    	dutyNow = 0;
+	    } else {
+	    	if (deadTimeWaiting){ //log end
+	    		deadTimeWaiting = false;
+	    		if(log) ESP_LOGI(TAG, "dead-time ended - continue with %s", motorstateStr[(int)state]);
+	    	}
+	    	if(log) ESP_LOGV(TAG, "deadtime: no change below deadtime detected... dir=%s, duty=%.1f", motorstateStr[(int)state], dutyNow);
+	    }
+    }
 			
 
 	//--- save current actual motorstate and timestamp ---
@@ -284,7 +493,7 @@ void controlledMotor::handle(){
 
     //--- apply new target to motor ---
     motorSetCommand({state, (float)fabs(dutyNow)});
-	ESP_LOGI(TAG, "[%s] Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", config.name, motorstateStr[(int)state], dutyNow, currentNow);
+	if(log) ESP_LOGI(TAG, "[%s] Set Motordriver: state=%s, duty=%.2f - Measurements: current=%.2f, speed=N/A", config.name, motorstateStr[(int)state], dutyNow, currentNow);
     //note: BRAKE state is handled earlier
     
 
@@ -300,11 +509,11 @@ void controlledMotor::handle(){
 //function to set the target mode and duty of a motor
 //puts the provided command in a queue for the handle function running in another task
 void controlledMotor::setTarget(motorCommand_t commandSend){
-    ESP_LOGI(TAG, "[%s] setTarget: Inserting command to queue: state='%s'(%d), duty=%.2f", config.name, motorstateStr[(int)commandSend.state], (int)commandSend.state, commandSend.duty);
+    if(log) ESP_LOGI(TAG, "[%s] setTarget: Inserting command to queue: state='%s'(%d), duty=%.2f", config.name, motorstateStr[(int)commandSend.state], (int)commandSend.state, commandSend.duty);
     //send command to queue (overwrite if an old command is still in the queue and not processed)
     xQueueOverwrite( commandQueue, ( void * )&commandSend);
     //xQueueSend( commandQueue, ( void * )&commandSend, ( TickType_t ) 0 );
-    ESP_LOGD(TAG, "finished inserting new command");
+    if(log) ESP_LOGD(TAG, "finished inserting new command");
 }
 
 // accept target state and duty as separate agrguments:

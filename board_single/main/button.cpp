@@ -75,7 +75,10 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         if (lastPressLong)
         {
             control->changeMode(controlMode_t::MENU);
-            ESP_LOGW(TAG, "1x long press -> change to menu mode");
+            ESP_LOGW(TAG, "1x long press -> clear encoder queue and change to menu mode");
+            // clear encoder event queue (prevent menu from exiting immediately due to long press event just happend)
+            rotary_encoder_event_t ev;
+            while (xQueueReceive(encoderQueue, &ev, 0) == pdPASS);
             buzzer->beep(20, 20, 10);
             vTaskDelay(500 / portTICK_PERIOD_MS);
         }
@@ -96,15 +99,16 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         // ## switch to ADJUST_CHAIR mode ##
         if (lastPressLong)
         {
-            ESP_LOGW(TAG, "cmd %d: toggle ADJUST_CHAIR", count);
-            control->toggleMode(controlMode_t::ADJUST_CHAIR);
-            }
-            // ## toggle IDLE ##
-            else {
+            ESP_LOGW(TAG, "cmd %d: switch to ADJUST_CHAIR", count);
+            control->changeMode(controlMode_t::ADJUST_CHAIR);
+        }
+        // ## toggle IDLE ##
+        else
+        {
             ESP_LOGW(TAG, "cmd %d: toggle IDLE", count);
-            control->toggleIdle(); //toggle between idle and previous/default mode
-            }
-            break;
+            control->toggleIdle(); // toggle between idle and previous/default mode
+        }
+        break;
 
         case 3:
         // ## switch to JOYSTICK mode ##
@@ -114,14 +118,14 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 
         case 4:
         // ## switch to HTTP mode ##
-            ESP_LOGW(TAG, "cmd %d: toggle between HTTP and JOYSTICK", count);
-            control->toggleModes(controlMode_t::HTTP, controlMode_t::JOYSTICK); //toggle between HTTP and JOYSTICK mode
+            ESP_LOGW(TAG, "cmd %d: switch to HTTP", count);
+            control->changeMode(controlMode_t::HTTP); //switch to HTTP mode
             break;
 
         case 6:
         // ## switch to MASSAGE mode ##
-            ESP_LOGW(TAG, "cmd %d: toggle between MASSAGE and JOYSTICK", count);
-            control->toggleModes(controlMode_t::MASSAGE, controlMode_t::JOYSTICK); //toggle between MASSAGE and JOYSTICK mode
+            ESP_LOGW(TAG, "switch to MASSAGE");
+            control->changeMode(controlMode_t::MASSAGE); //switch to MASSAGE mode
             break;
 
         case 8:
@@ -129,7 +133,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
             //toggle deceleration fading between on and off
             //decelEnabled = motorLeft->toggleFade(fadeType_t::DECEL);
             //motorRight->toggleFade(fadeType_t::DECEL);
-            decelEnabled = motorLeft->toggleFade(fadeType_t::ACCEL);
+            decelEnabled = motorLeft->toggleFade(fadeType_t::ACCEL); //TODO remove/simplify this using less functions
             motorRight->toggleFade(fadeType_t::ACCEL);
             ESP_LOGW(TAG, "cmd %d: toggle deceleration fading to: %d", count, (int)decelEnabled);
             if (decelEnabled){
@@ -155,7 +159,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 // when not in MENU mode, repeatedly receives events from encoder button
 // and takes the corresponding action
 // this function has to be started once in a separate task
-#define INPUT_TIMEOUT 800 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
+#define INPUT_TIMEOUT 500 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
 void buttonCommands::startHandleLoop()
 {
     //-- variables --
@@ -178,7 +182,7 @@ void buttonCommands::startHandleLoop()
         //-- get events from encoder --
         if (xQueueReceive(encoderQueue, &ev, INPUT_TIMEOUT / portTICK_PERIOD_MS))
         {
-            control->resetTimeout(); //reset inactivity IDLE timeout
+            control->resetTimeout();          // user input -> reset switch to IDLE timeout
             switch (ev.type)
             {
                 break;

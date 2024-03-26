@@ -45,6 +45,13 @@ void setLoglevels(void)
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
     esp_log_level_set("menu", ESP_LOG_INFO);
     esp_log_level_set("encoder", ESP_LOG_INFO);
+
+
+
+    esp_log_level_set("TESTING", ESP_LOG_ERROR);
+
+
+
 }
 
 //==================================
@@ -91,9 +98,11 @@ sabertooth2x60_config_t sabertoothConfig = {
 //--- configure left motor (contol) ---
 motorctl_config_t configMotorControlLeft = {
     .name = "left",
+    .loggingEnabled = true,
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
+    .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_4, // GPIO32
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -105,9 +114,11 @@ motorctl_config_t configMotorControlLeft = {
 //--- configure right motor (contol) ---
 motorctl_config_t configMotorControlRight = {
     .name = "right",
+    .loggingEnabled = false,
     .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
+    .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_5, // GPIO33
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -121,11 +132,9 @@ motorctl_config_t configMotorControlRight = {
 //------------------------------
 control_config_t configControl = {
     .defaultMode = controlMode_t::JOYSTICK, // default mode after startup and toggling IDLE
-    //--- timeout ---
-    .timeoutMs = 3 * 60 * 1000, // time of inactivity after which the mode gets switched to IDLE
-    .timeoutTolerancePer = 5,   // percentage the duty can vary between timeout checks considered still inactive
-    //--- http mode ---
-
+    //--- timeouts ---
+    .timeoutSwitchToIdleMs = 5 * 60 * 1000, // time of inactivity after which the mode gets switched to IDLE
+    .timeoutNotifyPowerStillOnMs = 6 * 60 * 60 * 1000 // time in IDLE after which buzzer beeps in certain interval (notify "forgot to turn off")
 };
 
 //-------------------------------
@@ -203,16 +212,21 @@ speedSensor_config_t speedRight_config{
 //-------------------------
 //-------- display --------
 //-------------------------
-display_config_t display_config {
+display_config_t display_config{
+    // hardware initialization
     .gpio_scl = GPIO_NUM_22,
     .gpio_sda = GPIO_NUM_23,
-    .gpio_reset = -1, //negative number disables reset feature
+    .gpio_reset = -1, // negative number disables reset feature
     .width = 128,
     .height = 64,
     .offsetX = 2,
     .flip = false,
-    .contrast = 0xff, //max: 255
-};
+    .contrastNormal = 170, // max: 255
+    // display task
+    .contrastReduced = 30,                    // max: 255
+    .timeoutReduceContrastMs = 5 * 60 * 1000, // actions at certain inactivity
+    .timeoutSwitchToScreensaverMs = 30 * 60 * 1000
+    };
 
 
 
@@ -237,7 +251,19 @@ rotary_encoder_t encoder_config = {
 //-----------------------------------
 //configure parameters for motor command generation from joystick data
 joystickGenerateCommands_config_t joystickGenerateCommands_config{
-    .maxDuty = 100,
-    .dutyOffset = 5, // duty at which motors start immediately
-    .altStickMapping = false,
+    //-- maxDuty --
+    // max duty when both motors are at equal ratio e.g. driving straight forward
+    // better to be set less than 100% to have some reserve for boosting the outer tire when turning
+    .maxDutyStraight = 75,
+    //-- maxBoost --
+    // boost is amount of duty added to maxDutyStraight to outer tire while turning
+    // => turning: inner tire gets slower, outer tire gets faster
+    // 0: boost = 0 (disabled)
+    // 100: boost = maxDutyStraight (e.g. when maxDuty is 50, outer motor can still reach 100 (50+50))
+    .maxRelativeBoostPercentOfMaxDuty = 60,
+    // 60: when maxDuty is set above 62% (equals 0.6*62 = 38% boost) the outer tire can still reach 100% - below 62 maxDuty the boosted speed is also reduced.
+    // => setting this value lower prevents desired low max duty configuration from being way to fast in curves.
+    .dutyOffset = 5,                // duty at which motors start immediately
+    .ratioSnapToOneThreshold = 0.9, // threshold ratio snaps to 1 to have some area of max turning before entering X-Axis-full-rotate mode
+    .altStickMapping = false        // invert reverse direction
 };

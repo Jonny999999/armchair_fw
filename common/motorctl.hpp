@@ -13,6 +13,7 @@ extern "C"
 
 #include "motordrivers.hpp"
 #include "currentsensor.hpp"
+#include "speedsensor.hpp"
 
 
 //=======================================
@@ -23,6 +24,7 @@ extern "C"
 
 typedef void (*motorSetCommandFunc_t)(motorCommand_t cmd);
 
+enum class motorControlMode_t {DUTY, CURRENT, SPEED};
 
 //===================================
 //====== controlledMotor class ======
@@ -30,11 +32,20 @@ typedef void (*motorSetCommandFunc_t)(motorCommand_t cmd);
 class controlledMotor {
     public:
         //--- functions ---
-        controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle); //constructor with structs for configuring motordriver and parameters for control TODO: add configuration for currentsensor
+        //TODO move speedsensor object creation in this class to (pass through / wrap methods)
+        controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle, speedSensor * speedSensor, controlledMotor ** otherMotor); //constructor with structs for configuring motordriver and parameters for control TODO: add configuration for currentsensor
         void handle(); //controls motor duty with fade and current limiting feature (has to be run frequently by another task)
         void setTarget(motorstate_t state_f, float duty_f = 0); //adds target command to queue for handle function
         void setTarget(motorCommand_t command); 
         motorCommand_t getStatus(); //get current status of the motor (returns struct with state and duty)
+        float getDuty() {return dutyNow;};
+        float getTargetDuty() {return dutyTarget;};
+        float getTargetSpeed() {return speedTarget;};
+        float getCurrentSpeed() {return sSensor->getKmph();};
+        void enableTractionControlSystem() {config.tractionControlSystemEnabled = true;};
+        void disableTractionControlSystem() {config.tractionControlSystemEnabled = false; tcs_isExceeded = false;};
+        bool getTractionControlSystemStatus() {return config.tractionControlSystemEnabled;};
+        void setControlMode(motorControlMode_t newMode) {mode = newMode;};
 
         uint32_t getFade(fadeType_t fadeType); //get currently set acceleration or deceleration fading time
         uint32_t getFadeDefault(fadeType_t fadeType); //get acceleration or deceleration fading time from config
@@ -60,6 +71,11 @@ class controlledMotor {
         QueueHandle_t commandQueue = NULL;
 		//current sensor
 		currentSensor cSensor;
+        //speed sensor
+        speedSensor * sSensor;
+        //other motor (needed for traction control)
+        controlledMotor ** ppOtherMotor; //ptr to ptr of controlledMotor (because not created at initialization yet)
+
 
 		//function pointer that sets motor duty (driver)
 		motorSetCommandFunc_t motorSetCommand;
@@ -68,15 +84,24 @@ class controlledMotor {
         //TODO add name for logging?
         //struct for storing control specific parameters
         motorctl_config_t config;
+        bool log = false;
         motorstate_t state = motorstate_t::IDLE;
+        motorControlMode_t mode = motorControlMode_t::DUTY; //default control mode
         //handle for using the nvs flash (persistent config variables)
         nvs_handle_t * nvsHandle;
 
         float currentMax;
         float currentNow;
 
+        //speed mode
+        float speedTarget = 0;
+        float speedNow = 0;
+        uint32_t timestamp_speedLastUpdate = 0;
+
+
         float dutyTarget = 0;
         float dutyNow = 0;
+
         float dutyIncrementAccel;
         float dutyIncrementDecel;
         float dutyDelta;
@@ -97,6 +122,13 @@ class controlledMotor {
 
 		uint32_t timestamp_commandReceived = 0;
 		bool receiveTimeout = false;
+
+        //traction control system
+        uint32_t tcs_timestampLastSpeedUpdate = 0; //track speedsensor update
+        int64_t tcs_timestampBeginExceeded = 0; //track start of event
+        uint32_t tcs_usExceeded = 0; //sum up time
+        bool tcs_isExceeded = false; //is currently too fast
+        int64_t tcs_timestampLastRun = 0;
 };
 
 //====================================

@@ -33,6 +33,7 @@ public:
 	float getKmph(); //kilometers per hour
 	float getMps(); //meters per second
 	float getRpm();  //rotations per minute
+	uint32_t getTimeLastUpdate() {return timeLastUpdate;};
 
 	//variables for handling the encoder (public because ISR needs access)
 	speedSensor_config_t config;
@@ -45,6 +46,7 @@ public:
 	int debugCount = 0;
 	uint32_t debug_countIgnoredSequencesTooShort = 0;
 	double currentRpm = 0;
+	uint32_t timeLastUpdate = 0;
 
 private:
 	static bool isrIsInitialized; // default false due to static

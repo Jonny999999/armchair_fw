@@ -11,7 +11,6 @@ extern "C"{
 
 #include "menu.hpp"
 #include "encoder.hpp"
-#include "config.hpp"
 #include "motorctl.hpp"
 
 
@@ -105,7 +104,7 @@ void item_calibrateJoystick_action(display_task_parameters_t *objects, SSD1306_t
         // save and next when button clicked, exit when long pressed
         if (xQueueReceive(objects->encoderQueue, &event, CALIBRATE_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS))
         {
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
             switch (event.type)
             {
             case RE_ET_BTN_CLICKED:
@@ -215,7 +214,7 @@ void item_debugJoystick_action(display_task_parameters_t * objects, SSD1306_t * 
         // exit when button pressed
         if (xQueueReceive(objects->encoderQueue, &event, DEBUG_JOYSTICK_UPDATE_INTERVAL / portTICK_PERIOD_MS))
         {
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
             switch (event.type)
             {
             case RE_ET_BTN_CLICKED:
@@ -274,6 +273,34 @@ menuItem_t item_maxDuty = {
     "",                   // line5 *
     "      1-100     ",   // line6
     "     percent    ",   // line7
+};
+
+
+//##################################
+//##### set max relative boost #####
+//##################################
+void maxRelativeBoost_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
+{
+    objects->control->setMaxRelativeBoostPer(value);
+}
+int maxRelativeBoost_currentValue(display_task_parameters_t * objects)
+{
+    return (int)objects->control->getMaxRelativeBoostPer();
+}
+menuItem_t item_maxRelativeBoost = {
+    maxRelativeBoost_action,       // function action
+    maxRelativeBoost_currentValue, // function get initial value or NULL(show in line 2)
+    NULL,                 // function get default value or NULL(dont set value, show msg)
+    0,                    // valueMin
+    150,                  // valueMax
+    1,                    // valueIncrement
+    "Set max Boost   ",   // title
+    "Set max Boost % ",                   // line1 (above value)
+    "for outer tire  ",   // line2 (above value)
+    "",                   // line4 * (below value)
+    "",                   // line5 *
+    "  % of max duty ",   // line6
+    "added on turning",   // line7
 };
 
 
@@ -340,6 +367,85 @@ menuItem_t item_decelLimit = {
     "",                      // line5 *
     "milliseconds    ",      // line6
     "from 100 to 0%  ",      // line7
+};
+
+
+
+//###############################
+//### select motorControlMode ###
+//###############################
+void item_motorControlMode_action(display_task_parameters_t *objects, SSD1306_t *display, int value)
+{
+    switch (value)
+    {
+    case 1:
+    default:
+    objects->motorLeft->setControlMode(motorControlMode_t::DUTY);
+    objects->motorRight->setControlMode(motorControlMode_t::DUTY);
+        break;
+    case 2:
+    objects->motorLeft->setControlMode(motorControlMode_t::CURRENT);
+    objects->motorRight->setControlMode(motorControlMode_t::CURRENT);
+        break;
+    case 3:
+    objects->motorLeft->setControlMode(motorControlMode_t::SPEED);
+    objects->motorRight->setControlMode(motorControlMode_t::SPEED);
+        break;
+    }
+}
+int item_motorControlMode_value(display_task_parameters_t *objects)
+{
+    return 1; // initial value shown / changed from //TODO get actual mode
+}
+menuItem_t item_motorControlMode = {
+    item_motorControlMode_action, // function action
+    item_motorControlMode_value,  // function get initial value or NULL(show in line 2)
+    NULL,                     // function get default value or NULL(dont set value, show msg)
+    1,                        // valueMin
+    3,                        // valueMax
+    1,                        // valueIncrement
+    "Control mode    ",       // title
+    "  sel. motor    ",       // line1 (above value)
+    "  control mode  ",       // line2 (above value)
+    "1: DUTY (defaul)",            // line4 * (below value)
+    "2: CURRENT",              // line5 *
+    "3: SPEED",            // line6
+    "",              // line7
+};
+
+//###################################
+//##### Traction Control System #####
+//###################################
+void tractionControlSystem_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
+{
+    if (value == 1){
+    objects->motorLeft->enableTractionControlSystem();
+    objects->motorRight->enableTractionControlSystem();
+    ESP_LOGW(TAG, "enabled Traction Control System");
+    } else {
+    objects->motorLeft->disableTractionControlSystem();
+    objects->motorRight->disableTractionControlSystem();
+    ESP_LOGW(TAG, "disabled Traction Control System");
+    }
+}
+int tractionControlSystem_currentValue(display_task_parameters_t * objects)
+{
+    return (int)objects->motorLeft->getTractionControlSystemStatus();
+}
+menuItem_t item_tractionControlSystem = {
+    tractionControlSystem_action,       // function action
+    tractionControlSystem_currentValue, // function get initial value or NULL(show in line 2)
+    NULL,                 // function get default value or NULL(dont set value, show msg)
+    0,                    // valueMin
+    1,                    // valueMax
+    1,                    // valueIncrement
+    "TCS / ASR       ",   // title
+    "Traction Control",   // line1 (above value)
+    "     System     ",   // line2 (above value)
+    "1: enable       ",   // line4 * (below value)
+    "0: disable      ",   // line5 *
+    "note: requires  ",   // line6
+    "speed ctl-mode  ",   // line7
 };
 
 
@@ -472,8 +578,8 @@ menuItem_t item_last = {
 //####################################################
 //### store all configured menu items in one array ###
 //####################################################
-const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_maxDuty, item_accelLimit, item_decelLimit, item_statusScreen, item_reset, item_example, item_last};
-const int itemCount = 8;
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_statusScreen, item_maxDuty, item_maxRelativeBoost, item_accelLimit, item_decelLimit, item_motorControlMode, item_tractionControlSystem, item_reset, item_example, item_last};
+const int itemCount = 11;
 
 
 
@@ -621,7 +727,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
         {
             // reset menu- and control-timeout on any encoder event
             lastActivity = esp_log_timestamp();
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
             switch (event.type)
             {
             case RE_ET_CHANGED:
@@ -692,7 +798,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
         // wait for encoder event
         if (xQueueReceive(objects->encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
         {
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
             switch (event.type)
             {
             case RE_ET_CHANGED:
@@ -732,7 +838,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
             }
             // reset menu- and control-timeout on any encoder event
             lastActivity = esp_log_timestamp();
-            objects->control->resetTimeout();
+            objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
         }
         break;
     }

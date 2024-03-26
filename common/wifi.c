@@ -21,26 +21,45 @@ static const char *TAG = "wifi";
 static esp_event_handler_instance_t instance_any_id;
 
 
-//============================================
-//============ init nvs and netif ============
-//============================================
-//initialize nvs-flash and netif (needed for both AP and CLIENT)
+//##########################################
+//############ common functions ############
+//##########################################
+
+//============================
+//========= init nvs =========
+//============================
+//initialize nvs-flash (needed for both AP and CLIENT)
 //has to be run once at startup 
-void wifi_initNvs_initNetif(){
+void wifi_initNvs(){
     //Initialize NVS (needed for wifi)
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
+	esp_err_t err = nvs_flash_init();
+	if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+	{
+		ESP_LOGE(TAG, "NVS truncated -> deleting flash");
+		// Retry nvs_flash_init
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		err = nvs_flash_init();
+	}
+	ESP_ERROR_CHECK(err);
+}
+
+
+//==============================
+//========= init netif =========
+//==============================
+//initialize netif (needed for both AP and CLIENT)
+//has to be run once at startup 
+void wifi_initNetif(){
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 }
 
 
-//===========================================
-//============ init access point ============
-//===========================================
+
+
+//############################################
+//############### access point ###############
+//############################################
 
 //--------------------------------------------
 //------ configuration / declarations --------
@@ -66,10 +85,12 @@ static void wifi_event_handler_ap(void* arg, esp_event_base_t event_base,
     }
 }
 
-//-----------------------
-//------ init ap --------
-//-----------------------
-void wifi_init_ap(void)
+
+
+//========================
+//====== start AP ========
+//========================
+void wifi_start_ap(void)
 {
     ap = esp_netif_create_default_wifi_ap();
 
@@ -107,9 +128,9 @@ void wifi_init_ap(void)
 
 
 //=============================
-//========= deinit AP =========
+//========== stop AP ==========
 //=============================
-void wifi_deinit_ap(void)
+void wifi_stop_ap(void)
 {
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
@@ -123,9 +144,9 @@ void wifi_deinit_ap(void)
 
 
 
-//===========================================
-//=============== init client ===============
-//===========================================
+//##########################################
+//################# client #################
+//##########################################
 
 //--------------------------------------------
 //------ configuration / declarations --------
@@ -168,10 +189,13 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
-//---------------------------
-//------ init client --------
-//---------------------------
-void wifi_init_client(void)
+
+
+
+//===========================
+//====== init client ========
+//===========================
+void wifi_start_client(void)
 {
     s_wifi_event_group = xEventGroupCreate();
     sta = esp_netif_create_default_wifi_sta();
@@ -249,10 +273,10 @@ void wifi_init_client(void)
 
 
 
-//=================================
-//========= deinit client =========
-//=================================
-void wifi_deinit_client(void)
+//===============================
+//========= stop client =========
+//===============================
+void wifi_stop_client(void)
 {
     /* The event will not be processed after unregister */
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));

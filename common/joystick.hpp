@@ -69,14 +69,16 @@ typedef struct joystickData_t {
     float angle;
 } joystickData_t;
 
-
 // struct with parameters provided to joystick_GenerateCommandsDriving()
-typedef struct joystickGenerateCommands_config_t {
-    float maxDuty;
-    float dutyOffset;
-    bool altStickMapping;
+typedef struct joystickGenerateCommands_config_t
+{
+    float maxDutyStraight;  // max duty applied when driving with ratio=1 (when turning it might increase by Boost)
+    float maxRelativeBoostPercentOfMaxDuty; // max duty percent added to outer tire when turning (max actual is 100-maxDutyStraight) - set 0 to disable
+    // note: to be able to reduce the overall driving speed boost has to be limited as well otherwise outer tire when turning would always be 100% no matter of maxDuty
+    float dutyOffset;              // motors immediately start with this duty (duty movement starts)
+    float ratioSnapToOneThreshold; // have some area around X-Axis where inner tire is completely off - set 1 to disable
+    bool altStickMapping;          // swap reverse direction
 } joystickGenerateCommands_config_t;
-
 
 //------------------------------------
 //----- evaluatedJoystick class  -----
