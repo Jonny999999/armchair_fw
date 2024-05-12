@@ -329,12 +329,28 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
     else //no accel limit (immediately set to 100)
         dutyIncrementAccel = 100;
 
+#define DECEL_BOOST_START_THRESHOLD 10  // boost deceleration when stick/target duty is more than that value in opposite direction
+#define DECEL_BOOST_MIN_DECEL_TIME 200 // milliseconds from 100% to 0%
     //calculate increment for fading DOWN with passed time since last run and configured fade time
-    if (msFadeDecel > 0)
-        dutyIncrementDecel = ( usPassed / ((float)msFadeDecel * 1000) ) * 100; 
-    else //no decel limit (immediately reduce to 0)
+    if (msFadeDecel == 0) //no decel limit (immediately reduce to 0)
         dutyIncrementDecel = 100;
-    
+    //--- dynamic fading ---
+    //detect when quicker brake response is desired (e.g. full speed forward, joystick suddenly is full reverse -> break fast)
+    else if (commandReceive.state != state && fabs(dutyTarget) > DECEL_BOOST_START_THRESHOLD)
+    {
+        float normalIncrementDecel = (usPassed / ((float)msFadeDecel * 1000)) * 100; //TODO limit all increments to 100?
+        //calculate absolute maximum allowed deceleration
+        float maximumIncrementDecel = (usPassed / (DECEL_BOOST_MIN_DECEL_TIME * 1000)) * 100; 
+        //calculate how much boost is applied (percent) depending on how much the joystick is in opposite direction
+        float decelBoostFactor = (fabs(dutyTarget) - DECEL_BOOST_START_THRESHOLD) / (100 - DECEL_BOOST_START_THRESHOLD);
+        //calculate total deceleration increment (normal + boost)
+        dutyIncrementDecel = normalIncrementDecel + decelBoostFactor * fabs(maximumIncrementDecel - normalIncrementDecel);
+        if(log) ESP_LOGW(TAG, "boosting deceleration by %.2f%% of remainder to max decel", decelBoostFactor * 100);
+    }
+    else
+        // normal deceleration according to configured time
+        dutyIncrementDecel = (usPassed / ((float)msFadeDecel * 1000)) * 100;
+
     //fade duty to target (up and down)
     //TODO: this needs optimization (can be more clear and/or simpler)
     if (dutyDelta > 0) { //difference positive -> increasing duty (-100 -> 100)
