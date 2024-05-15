@@ -32,7 +32,7 @@ void setLoglevels(void)
     // esp_log_level_set("motordriver", ESP_LOG_DEBUG);
     esp_log_level_set("motor-control", ESP_LOG_WARN);
     // esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
-    // esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
+    esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
     esp_log_level_set("button", ESP_LOG_INFO);
     esp_log_level_set("control", ESP_LOG_INFO);
     // esp_log_level_set("fan-control", ESP_LOG_INFO);

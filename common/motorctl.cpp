@@ -330,8 +330,9 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
         dutyIncrementAccel = 100;
 
 #define DECEL_BOOST_START_THRESHOLD 10  // boost deceleration when stick/target duty is more than that value in opposite direction
-#define DECEL_BOOST_MIN_DECEL_TIME 200 // milliseconds from 100% to 0%
+#define DECEL_BOOST_MIN_DECEL_TIME 350 // milliseconds from 100% to 0%
     //calculate increment for fading DOWN with passed time since last run and configured fade time
+    // FIXME: dutyTarget does not represent joystick pos (max maxDuty) -> currently breaks when maxDuty is not set to 100
     if (msFadeDecel == 0) //no decel limit (immediately reduce to 0)
         dutyIncrementDecel = 100;
     //--- dynamic fading ---
@@ -340,12 +341,13 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
     {
         float normalIncrementDecel = (usPassed / ((float)msFadeDecel * 1000)) * 100; //TODO limit all increments to 100?
         //calculate absolute maximum allowed deceleration
-        float maximumIncrementDecel = (usPassed / (DECEL_BOOST_MIN_DECEL_TIME * 1000)) * 100; 
+        float maximumIncrementDecel = ((float)usPassed / (DECEL_BOOST_MIN_DECEL_TIME * 1000)) * 100; 
         //calculate how much boost is applied (percent) depending on how much the joystick is in opposite direction
         float decelBoostFactor = (fabs(dutyTarget) - DECEL_BOOST_START_THRESHOLD) / (100 - DECEL_BOOST_START_THRESHOLD);
         //calculate total deceleration increment (normal + boost)
         dutyIncrementDecel = normalIncrementDecel + decelBoostFactor * fabs(maximumIncrementDecel - normalIncrementDecel);
         if(log) ESP_LOGW(TAG, "boosting deceleration by %.2f%% of remainder to max decel", decelBoostFactor * 100);
+        if(log) ESP_LOGW(TAG, "normalInc=%.5f,  maxInc=%.5f,  totalInc=%.5f", normalIncrementDecel, maximumIncrementDecel, dutyIncrementDecel);
     }
     else
         // normal deceleration according to configured time
