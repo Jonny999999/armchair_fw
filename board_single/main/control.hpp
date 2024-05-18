@@ -13,6 +13,8 @@ extern "C"
 #include "speedsensor.hpp"
 #include "chairAdjust.hpp"
 
+//percentage stick has to be moved in the opposite driving direction of current motor direction for braking to start
+#define BRAKE_START_STICK_PERCENTAGE 95
 
 //--------------------------------------------
 //---- struct, enum, variable declarations ---
@@ -93,7 +95,11 @@ class controlledArmchair {
         bool toggleAltStickMapping();
 
         // configure max dutycycle (in joystick or http mode)
-        void setMaxDuty(float maxDutyNew) { writeMaxDuty(maxDutyNew); };
+        void setMaxDuty(float maxDutyNew) { 
+            writeMaxDuty(maxDutyNew);
+            motorLeft->setBrakeStartThresholdDuty(joystickGenerateCommands_config.maxDutyStraight * BRAKE_START_STICK_PERCENTAGE/100);
+            motorRight->setBrakeStartThresholdDuty(joystickGenerateCommands_config.maxDutyStraight * BRAKE_START_STICK_PERCENTAGE/100);
+        };
         float getMaxDuty() const {return joystickGenerateCommands_config.maxDutyStraight; };
         // configure max boost (in joystick or http mode)
         void setMaxRelativeBoostPer(float newValue) { joystickGenerateCommands_config.maxRelativeBoostPercentOfMaxDuty = newValue; };

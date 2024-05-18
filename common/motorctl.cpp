@@ -320,40 +320,62 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
     //calculate passed time since last run
     int64_t usPassed = esp_timer_get_time() - timestampLastRunUs;
 
-    //--- calculate increment ---
+    //--- calculate increment (acceleration) ---
     //calculate increment for fading UP with passed time since last run and configured fade time
+    //- traction control -
     if (tcs_isExceeded) // disable acceleration when slippage is currently detected
         dutyIncrementAccel = 0;
+    //- recent braking -
+    //FIXME reset timeout when duty less
+    else if (isBraking && (esp_log_timestamp() - timestampBrakeStart) < config.brakePauseBeforeResume) // prevent immediate direction change when currently braking with timeout (eventually currently sliding)
+    {
+        if (log) ESP_LOGI(TAG, "pause after brake... -> accel = 0");
+        dutyIncrementAccel = 0;
+    }
+    //- normal accel -
     else if (msFadeAccel > 0)
         dutyIncrementAccel = (usPassed / ((float)msFadeAccel * 1000)) * 100; // TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    //- sport mode -
     else //no accel limit (immediately set to 100)
         dutyIncrementAccel = 100;
 
-#define DECEL_BOOST_START_THRESHOLD 10  // boost deceleration when stick/target duty is more than that value in opposite direction
-#define DECEL_BOOST_MIN_DECEL_TIME 350 // milliseconds from 100% to 0%
-    //calculate increment for fading DOWN with passed time since last run and configured fade time
-    // FIXME: dutyTarget does not represent joystick pos (max maxDuty) -> currently breaks when maxDuty is not set to 100
-    if (msFadeDecel == 0) //no decel limit (immediately reduce to 0)
+    //--- calculate increment (deceleration) ---
+    //- sport mode -
+    if (msFadeDecel == 0){ //no decel limit (immediately reduce to 0)
         dutyIncrementDecel = 100;
-    //--- dynamic fading ---
-    //detect when quicker brake response is desired (e.g. full speed forward, joystick suddenly is full reverse -> break fast)
-    else if (commandReceive.state != state && fabs(dutyTarget) > DECEL_BOOST_START_THRESHOLD)
-    {
-        float normalIncrementDecel = (usPassed / ((float)msFadeDecel * 1000)) * 100; //TODO limit all increments to 100?
-        //calculate absolute maximum allowed deceleration
-        float maximumIncrementDecel = ((float)usPassed / (DECEL_BOOST_MIN_DECEL_TIME * 1000)) * 100; 
-        //calculate how much boost is applied (percent) depending on how much the joystick is in opposite direction
-        float decelBoostFactor = (fabs(dutyTarget) - DECEL_BOOST_START_THRESHOLD) / (100 - DECEL_BOOST_START_THRESHOLD);
-        //calculate total deceleration increment (normal + boost)
-        dutyIncrementDecel = normalIncrementDecel + decelBoostFactor * fabs(maximumIncrementDecel - normalIncrementDecel);
-        if(log) ESP_LOGW(TAG, "boosting deceleration by %.2f%% of remainder to max decel", decelBoostFactor * 100);
-        if(log) ESP_LOGW(TAG, "normalInc=%.5f,  maxInc=%.5f,  totalInc=%.5f", normalIncrementDecel, maximumIncrementDecel, dutyIncrementDecel);
     }
-    else
+    //- brake -
+    //detect when quicker brake response is desired (e.g. full speed forward, joystick suddenly is full reverse -> break fast)
+    #define NO_BRAKE_THRESHOLD_TOO_SLOW_DUTY 10 //TODO test/adjust this - dont brake when slow already (avoids starting full dead time)
+    else if (commandReceive.state != state && // direction differs
+             fabs(dutyNow) > NO_BRAKE_THRESHOLD_TOO_SLOW_DUTY && // not very slow already
+             fabs(dutyTarget) > brakeStartThreshold) // joystick above threshold
+    {
+        // set braking state and track start time (both for disabling acceleration for some time)
+        if (!isBraking) {
+            if (log) ESP_LOGW(TAG, "started braking...");
+            timestampBrakeStart = esp_log_timestamp();
+            isBraking = true;
+        }
+        // use brake deceleration instead of normal deceleration
+        dutyIncrementDecel = (usPassed / ((float)config.brakeDecel * 1000)) * 100;
+        if(log) ESP_LOGI(TAG, "braking (target duty >%.0f%% in other direction) -> using deceleration %dms", brakeStartThreshold, config.brakeDecel);
+    }
+    //- normal deceleration -
+    else {
         // normal deceleration according to configured time
         dutyIncrementDecel = (usPassed / ((float)msFadeDecel * 1000)) * 100;
+    }
 
-    //fade duty to target (up and down)
+    // reset braking state when start condition is no longer met (stick below threshold again)
+    if (isBraking &&
+        (fabs(dutyTarget) < brakeStartThreshold || commandReceive.state == state))
+    {
+        ESP_LOGW(TAG, "brake condition no longer met");
+        isBraking = false;
+    }
+
+    //--- fade duty to target (up and down) ---
     //TODO: this needs optimization (can be more clear and/or simpler)
     if (dutyDelta > 0) { //difference positive -> increasing duty (-100 -> 100)
         if (dutyNow < 0) { //reverse, decelerating

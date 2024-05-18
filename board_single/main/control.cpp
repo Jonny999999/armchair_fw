@@ -59,6 +59,10 @@ controlledArmchair::controlledArmchair(
     
     // override default config value if maxDuty is found in nvs
     loadMaxDuty();
+    // update brake start threshold with actual max duty for motorctl
+    ESP_LOGW(TAG, "setting brake start threshold for both motors to %.0f", joystickGenerateCommands_config.maxDutyStraight * BRAKE_START_STICK_PERCENTAGE / 100);
+    motorLeft->setBrakeStartThresholdDuty(joystickGenerateCommands_config.maxDutyStraight * BRAKE_START_STICK_PERCENTAGE / 100);
+    motorRight->setBrakeStartThresholdDuty(joystickGenerateCommands_config.maxDutyStraight * BRAKE_START_STICK_PERCENTAGE / 100);
 
     // create semaphore for preventing race condition: mode-change operations while currently still executing certain mode
     handleIteration_mutex = xSemaphoreCreateMutex();

@@ -32,7 +32,7 @@ void setLoglevels(void)
     // esp_log_level_set("motordriver", ESP_LOG_DEBUG);
     esp_log_level_set("motor-control", ESP_LOG_WARN);
     // esp_log_level_set("evaluatedJoystick", ESP_LOG_DEBUG);
-    esp_log_level_set("joystickCommands", ESP_LOG_DEBUG);
+    esp_log_level_set("joystickCommands", ESP_LOG_WARN);
     esp_log_level_set("button", ESP_LOG_INFO);
     esp_log_level_set("control", ESP_LOG_INFO);
     // esp_log_level_set("fan-control", ESP_LOG_INFO);
@@ -108,7 +108,9 @@ motorctl_config_t configMotorControlLeft = {
     .currentMax = 30,
     .currentInverted = true,
     .currentSnapToZeroThreshold = 0.15,
-    .deadTimeMs = 0 // minimum time motor is off between direction change
+    .deadTimeMs = 0, // minimum time motor is off between direction change
+    .brakePauseBeforeResume = 1500,
+    .brakeDecel = 400,
 };
 
 //--- configure right motor (contol) ---
@@ -124,7 +126,9 @@ motorctl_config_t configMotorControlRight = {
     .currentMax = 30,
     .currentInverted = false,
     .currentSnapToZeroThreshold = 0.25,
-    .deadTimeMs = 0 // minimum time motor is off between direction change
+    .deadTimeMs = 0, // minimum time motor is off between direction change
+    .brakePauseBeforeResume = 1500,
+    .brakeDecel = 400,
 };
 
 //------------------------------
