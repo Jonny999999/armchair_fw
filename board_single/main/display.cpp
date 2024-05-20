@@ -441,6 +441,13 @@ void showStartupMsg(){
 //============================
 void display_selectStatusPage(displayStatusPage_t newStatusPage)
 {
+	// get number of available screens
+	const displayStatusPage_t max = STATUS_SCREEN_SCREENSAVER;
+	const uint8_t maxItems = (uint8_t)max;
+	// limit to available pages
+	if (newStatusPage > maxItems) newStatusPage = (displayStatusPage_t)(maxItems);
+	else if (newStatusPage < 0) newStatusPage = (displayStatusPage_t)0;
+
 	//-- run commands when switching FROM certain mode --
 	switch (selectedStatusPage)
 	{
@@ -470,6 +477,41 @@ void display_selectStatusPage(displayStatusPage_t newStatusPage)
 	}
 }
 
+//============================
+//===== rotateStatusPage =====
+//============================
+// select next/previous status screen and rotate to start/end (uses all available in struct)
+void display_rotateStatusPage(bool reverseDirection, bool noRotate)
+{
+	// get number of available screens
+	const displayStatusPage_t max = STATUS_SCREEN_SCREENSAVER;
+	const uint8_t maxItems = (uint8_t)max - 1; // screensaver is not relevant
+
+	if (reverseDirection == false) // rotate next
+	{
+		if (selectedStatusPage >= maxItems) // already at last item
+		{
+			if (noRotate)
+				return;										  // stay at last item when rotating disabled
+			display_selectStatusPage((displayStatusPage_t)0); // rotate to first item
+		}
+		else
+			// select next screen
+			display_selectStatusPage((displayStatusPage_t)((int)selectedStatusPage + 1));
+	}
+	else // rotate back
+	{
+		if (selectedStatusPage <= 0) // already at first item
+		{
+			if (noRotate)
+				return;												   // stay at first item when rotating disabled
+			display_selectStatusPage((displayStatusPage_t)(maxItems)); // rotate to last item
+		}
+		else
+			// select previous screen
+			display_selectStatusPage((displayStatusPage_t)((int)selectedStatusPage - 1));
+	}
+}
 
 
 //============================

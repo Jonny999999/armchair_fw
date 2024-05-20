@@ -9,6 +9,7 @@ extern "C"
 
 #include "button.hpp"
 #include "encoder.hpp"
+#include "display.hpp"
 
 // tag for logging
 static const char *TAG = "button";
@@ -164,7 +165,7 @@ void buttonCommands::startHandleLoop()
 {
     //-- variables --
     bool isPressed = false;
-    static rotary_encoder_event_t ev; // store event data
+    static rotary_encoder_event_t event; // store event data
     // int count = 0; (from class)
 
     while (1)
@@ -180,10 +181,10 @@ void buttonCommands::startHandleLoop()
         }
 
         //-- get events from encoder --
-        if (xQueueReceive(encoderQueue, &ev, INPUT_TIMEOUT / portTICK_PERIOD_MS))
+        if (xQueueReceive(encoderQueue, &event, INPUT_TIMEOUT / portTICK_PERIOD_MS))
         {
             control->resetTimeout();          // user input -> reset switch to IDLE timeout
-            switch (ev.type)
+            switch (event.type)
             {
                 break;
             case RE_ET_BTN_PRESSED:
@@ -196,9 +197,20 @@ void buttonCommands::startHandleLoop()
                 ESP_LOGD(TAG, "Button released");
                 isPressed = false; // rest stored state
                 break;
+            case RE_ET_CHANGED: // scroll through status pages when simply rotating encoder
+                if (event.diff > 0)
+                {
+                    display_rotateStatusPage(true, true); //select NEXT status screen, stau at last element (dont rotate to first)
+                    buzzer->beep(1, 65, 0);
+                }
+                else
+                {
+                    display_rotateStatusPage(false, true); //select PREVIOUS status screen, stay at first element (dont rotate to last)
+                    buzzer->beep(1, 65, 0);
+                }
+                break;
             case RE_ET_BTN_LONG_PRESSED:
             case RE_ET_BTN_CLICKED:
-            case RE_ET_CHANGED:
             default:
                 break;
             }
