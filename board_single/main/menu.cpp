@@ -370,6 +370,38 @@ menuItem_t item_decelLimit = {
 };
 
 
+// ######################
+// ##### brakeDecel #####
+// ######################
+void item_brakeDecel_action(display_task_parameters_t * objects, SSD1306_t * display, int value)
+{
+    objects->motorLeft->setBrakeDecel((uint32_t)value);
+    objects->motorRight->setBrakeDecel((uint32_t)value);
+}
+int item_brakeDecel_value(display_task_parameters_t * objects)
+{
+    return objects->motorLeft->getBrakeDecel();
+}
+int item_brakeDecel_default(display_task_parameters_t * objects)
+{
+    return objects->motorLeft->getBrakeDecelDefault();
+}
+menuItem_t item_brakeDecel = {
+    item_brakeDecel_action,  // function action
+    item_brakeDecel_value,   // function get initial value or NULL(show in line 2)
+    item_brakeDecel_default, // function get default value or NULL(dont set value, show msg)
+    0,                       // valueMin
+    10000,                   // valueMax
+    100,                     // valueIncrement
+    "Brake decel.    ",      // title
+    " Fade down time ",      // line1 (above value)
+    "",                      // line2 <= showing "default = %d"
+    "",                      // line4 * (below value)
+    "",                      // line5 *
+    "milliseconds    ",      // line6
+    "from 100 to 0%  ",      // line7
+};
+
 
 //###############################
 //### select motorControlMode ###
@@ -578,8 +610,8 @@ menuItem_t item_last = {
 //####################################################
 //### store all configured menu items in one array ###
 //####################################################
-const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_statusScreen, item_maxDuty, item_maxRelativeBoost, item_accelLimit, item_decelLimit, item_motorControlMode, item_tractionControlSystem, item_reset, item_example, item_last};
-const int itemCount = 11;
+const menuItem_t menuItems[] = {item_centerJoystick, item_calibrateJoystick, item_debugJoystick, item_statusScreen, item_maxDuty, item_maxRelativeBoost, item_accelLimit, item_decelLimit, item_brakeDecel, item_motorControlMode, item_tractionControlSystem, item_reset, item_example, item_last};
+const int itemCount = 12;
 
 
 

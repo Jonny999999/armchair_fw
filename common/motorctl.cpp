@@ -30,7 +30,8 @@ void task_motorctl( void * ptrControlledMotor ){
 //constructor, simultaniously initialize instance of motor driver 'motor' and current sensor 'cSensor' with provided config (see below lines after ':')
 controlledMotor::controlledMotor(motorSetCommandFunc_t setCommandFunc,  motorctl_config_t config_control, nvs_handle_t * nvsHandle_f, speedSensor * speedSensor_f, controlledMotor ** otherMotor_f):
     //create current sensor
-	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent, config_control.currentSnapToZeroThreshold, config_control.currentInverted) {
+	cSensor(config_control.currentSensor_adc, config_control.currentSensor_ratedCurrent, config_control.currentSnapToZeroThreshold, config_control.currentInverted),
+    configDefault(config_control){
 		//copy parameters for controlling the motor
 		config = config_control;
         log = config.loggingEnabled;
@@ -333,15 +334,15 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
         dutyIncrementAccel = 0;
     }
     //- normal accel -
-    else if (msFadeAccel > 0)
-        dutyIncrementAccel = (usPassed / ((float)msFadeAccel * 1000)) * 100; // TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
+    else if (config.msFadeAccel > 0)
+        dutyIncrementAccel = (usPassed / ((float)config.msFadeAccel * 1000)) * 100; // TODO define maximum increment - first run after startup (or long) pause can cause a very large increment
     //- sport mode -
     else //no accel limit (immediately set to 100)
         dutyIncrementAccel = 100;
 
     //--- calculate increment (deceleration) ---
     //- sport mode -
-    if (msFadeDecel == 0){ //no decel limit (immediately reduce to 0)
+    if (config.msFadeDecel == 0){ //no decel limit (immediately reduce to 0)
         dutyIncrementDecel = 100;
     }
     //- brake -
@@ -364,7 +365,7 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
     //- normal deceleration -
     else {
         // normal deceleration according to configured time
-        dutyIncrementDecel = (usPassed / ((float)msFadeDecel * 1000)) * 100;
+        dutyIncrementDecel = (usPassed / ((float)config.msFadeDecel * 1000)) * 100;
     }
 
     // reset braking state when start condition is no longer met (stick below threshold again)
@@ -402,7 +403,7 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
 			float dutyOld = dutyNow;
 			//adaptive decrement:
 			//Note current exceeded twice -> twice as much decrement: TODO: decrement calc needs finetuning, currently random values
-			dutyIncrementDecel = (currentNow/config.currentMax) * ( usPassed / ((float)msFadeDecel * 1500) ) * 100; 
+			dutyIncrementDecel = (currentNow/config.currentMax) * ( usPassed / ((float)config.msFadeDecel * 1500) ) * 100; 
 			float currentLimitDecrement = ( (float)usPassed / ((float)1000 * 1000) ) * 100; //1000ms from 100 to 0
 			if (dutyNow < -currentLimitDecrement) {
 				dutyNow += currentLimitDecrement;
@@ -471,7 +472,7 @@ if ( dutyNow != 0 && esp_log_timestamp() - timestamp_commandReceived > TIMEOUT_I
                 tcs_usExceeded = esp_timer_get_time() - tcs_timestampBeginExceeded; //time too fast already
                 if(log) ESP_LOGI("TESTING", "[%s] TCS: faster than expected since %dms, current ratioDiff=%.2f  -> slowing down", config.name, tcs_usExceeded/1000, ratioDiff);
                 // calculate amount duty gets decreased
-                float dutyDecrement = (tcs_usPassed / ((float)msFadeDecel * 1000)) * 100; //TODO optimize dynamic increment: P:scale with ratio-difference, I: scale with duration exceeded
+                float dutyDecrement = (tcs_usPassed / ((float)config.msFadeDecel * 1000)) * 100; //TODO optimize dynamic increment: P:scale with ratio-difference, I: scale with duration exceeded
                 // decrease duty
                 if(log) ESP_LOGI("TESTING", "[%s] TCS: msPassed=%.3f, reducing duty by %.3f%%", config.name, (float)tcs_usPassed/1000, dutyDecrement);
                 fade(&dutyNow, 0, -dutyDecrement); //reduce duty but not less than 0
@@ -586,10 +587,10 @@ motorCommand_t controlledMotor::getStatus(){
 uint32_t controlledMotor::getFade(fadeType_t fadeType){
     switch(fadeType){
         case fadeType_t::ACCEL:
-            return msFadeAccel;
+            return config.msFadeAccel;
             break;
         case fadeType_t::DECEL:
-            return msFadeDecel;
+            return config.msFadeDecel;
             break;
     }
     return 0;
@@ -602,10 +603,10 @@ uint32_t controlledMotor::getFade(fadeType_t fadeType){
 uint32_t controlledMotor::getFadeDefault(fadeType_t fadeType){
     switch(fadeType){
         case fadeType_t::ACCEL:
-            return config.msFadeAccel;
+            return configDefault.msFadeAccel;
             break;
         case fadeType_t::DECEL:
-            return config.msFadeDecel;
+            return configDefault.msFadeDecel;
             break;
     }
     return 0;
@@ -623,11 +624,11 @@ void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew){
     //TODO: mutex for msFade variable also used in handle function
     switch(fadeType){
         case fadeType_t::ACCEL:
-            ESP_LOGW(TAG, "[%s] changed fade-up time from %d to %d", config.name, msFadeAccel, msFadeNew);
+            ESP_LOGW(TAG, "[%s] changed fade-up time from %d to %d", config.name, config.msFadeAccel, msFadeNew);
             writeAccelDuration(msFadeNew);
             break;
         case fadeType_t::DECEL:
-            ESP_LOGW(TAG, "[%s] changed fade-down time from %d to %d",config.name, msFadeDecel, msFadeNew);
+            ESP_LOGW(TAG, "[%s] changed fade-down time from %d to %d",config.name, config.msFadeDecel, msFadeNew);
             // write new value to nvs and update the variable
             writeDecelDuration(msFadeNew);
             break;
@@ -663,16 +664,16 @@ bool controlledMotor::toggleFade(fadeType_t fadeType){
     bool enabled = false;
     switch(fadeType){
         case fadeType_t::ACCEL:
-            if (msFadeAccel == 0){
-                msFadeNew = config.msFadeAccel;
+            if (config.msFadeAccel == 0){
+                msFadeNew = configDefault.msFadeAccel;
                 enabled = true;
             } else {
                 msFadeNew = 0;
             }
             break;
         case fadeType_t::DECEL:
-            if (msFadeDecel == 0){
-                msFadeNew = config.msFadeAccel;
+            if (config.msFadeDecel == 0){
+                msFadeNew = configDefault.msFadeAccel;
                 enabled = true;
             } else {
                 msFadeNew = 0;
@@ -695,8 +696,6 @@ bool controlledMotor::toggleFade(fadeType_t fadeType){
 // load stored value from nvs if not successfull uses config default value
 void controlledMotor::loadAccelDuration(void)
 {
-    // load default value
-    msFadeAccel = config.msFadeAccel;
     // read from nvs
     uint32_t valueNew;
     char key[15];
@@ -705,11 +704,11 @@ void controlledMotor::loadAccelDuration(void)
     switch (err)
     {
     case ESP_OK:
-        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %d with %d", key, config.msFadeAccel, valueNew);
-        msFadeAccel = valueNew;
+        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %d with %d", key, configDefault.msFadeAccel, valueNew);
+        config.msFadeAccel = valueNew;
         break;
     case ESP_ERR_NVS_NOT_FOUND:
-        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %d", key, msFadeAccel);
+        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %d", key, config.msFadeAccel);
         break;
     default:
         ESP_LOGE(TAG, "Error (%s) reading nvs!", esp_err_to_name(err));
@@ -721,8 +720,6 @@ void controlledMotor::loadAccelDuration(void)
 //-----------------------------
 void controlledMotor::loadDecelDuration(void)
 {
-    // load default value
-    msFadeDecel = config.msFadeDecel;
     // read from nvs
     uint32_t valueNew;
     char key[15];
@@ -732,10 +729,10 @@ void controlledMotor::loadDecelDuration(void)
     {
     case ESP_OK:
         ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %d with %d", key, config.msFadeDecel, valueNew);
-        msFadeDecel = valueNew;
+        config.msFadeDecel = valueNew;
         break;
     case ESP_ERR_NVS_NOT_FOUND:
-        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %d", key, msFadeDecel);
+        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, keeping default value %d", key, config.msFadeDecel);
         break;
     default:
         ESP_LOGE(TAG, "Error (%s) reading nvs!", esp_err_to_name(err));
@@ -748,11 +745,11 @@ void controlledMotor::loadDecelDuration(void)
 //------------------------------
 //----- writeAccelDuration -----
 //------------------------------
-// write provided value to nvs to be persistent and update the local variable msFadeAccel
+// write provided value to nvs to be persistent and update the local config
 void controlledMotor::writeAccelDuration(uint32_t newValue)
 {
     // check if unchanged
-    if(msFadeAccel == newValue){
+    if(config.msFadeAccel == newValue){
         ESP_LOGW(TAG, "value unchanged at %d, not writing to nvs", newValue);
         return;
     }
@@ -760,7 +757,7 @@ void controlledMotor::writeAccelDuration(uint32_t newValue)
     char key[15];
     snprintf(key, 15, "m-%s-accel", config.name);
     // update nvs value
-    ESP_LOGW(TAG, "[%s] updating nvs value '%s' from %d to %d", config.name, key, msFadeAccel, newValue);
+    ESP_LOGW(TAG, "[%s] updating nvs value '%s' from %d to %d", config.name, key, config.msFadeAccel, newValue);
     esp_err_t err = nvs_set_u32(*nvsHandle, key, newValue);
     if (err != ESP_OK)
         ESP_LOGE(TAG, "nvs: failed writing");
@@ -770,18 +767,18 @@ void controlledMotor::writeAccelDuration(uint32_t newValue)
     else
         ESP_LOGI(TAG, "nvs: successfully committed updates");
     // update variable
-    msFadeAccel = newValue;
+    config.msFadeAccel = newValue;
 }
 
 //------------------------------
 //----- writeDecelDuration -----
 //------------------------------
-// write provided value to nvs to be persistent and update the local variable msFadeDecel
+// write provided value to nvs to be persistent and update the local config 
 // TODO: reduce duplicate code
 void controlledMotor::writeDecelDuration(uint32_t newValue)
 {
     // check if unchanged
-    if(msFadeDecel == newValue){
+    if(config.msFadeDecel == newValue){
         ESP_LOGW(TAG, "value unchanged at %d, not writing to nvs", newValue);
         return;
     }
@@ -789,7 +786,7 @@ void controlledMotor::writeDecelDuration(uint32_t newValue)
     char key[15];
     snprintf(key, 15, "m-%s-decel", config.name);
     // update nvs value
-    ESP_LOGW(TAG, "[%s] updating nvs value '%s' from %d to %d", config.name, key, msFadeDecel, newValue);
+    ESP_LOGW(TAG, "[%s] updating nvs value '%s' from %d to %d", config.name, key, config.msFadeDecel, newValue);
     esp_err_t err = nvs_set_u32(*nvsHandle, key, newValue);
     if (err != ESP_OK)
         ESP_LOGE(TAG, "nvs: failed writing");
@@ -799,5 +796,5 @@ void controlledMotor::writeDecelDuration(uint32_t newValue)
     else
         ESP_LOGI(TAG, "nvs: successfully committed updates");
     // update variable
-    msFadeDecel = newValue;
+    config.msFadeDecel = newValue;
 }

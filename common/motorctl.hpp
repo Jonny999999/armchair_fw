@@ -47,6 +47,9 @@ class controlledMotor {
         bool getTractionControlSystemStatus() {return config.tractionControlSystemEnabled;};
         void setControlMode(motorControlMode_t newMode) {mode = newMode;};
         void setBrakeStartThresholdDuty(float duty) {brakeStartThreshold = duty;};
+        void setBrakeDecel(uint32_t msFadeBrake) {config.brakeDecel = msFadeBrake;};
+        uint32_t getBrakeDecel() {return config.brakeDecel;}; //todo store and load from nvs
+        uint32_t getBrakeDecelDefault() {return configDefault.brakeDecel;};
 
         uint32_t getFade(fadeType_t fadeType); //get currently set acceleration or deceleration fading time
         uint32_t getFadeDefault(fadeType_t fadeType); //get acceleration or deceleration fading time from config
@@ -85,6 +88,7 @@ class controlledMotor {
         //TODO add name for logging?
         //struct for storing control specific parameters
         motorctl_config_t config;
+        const motorctl_config_t configDefault; //backup default configuration (unchanged)
         bool log = false;
         motorstate_t state = motorstate_t::IDLE;
         motorControlMode_t mode = motorControlMode_t::DUTY; //default control mode
@@ -107,9 +111,6 @@ class controlledMotor {
         float dutyIncrementDecel;
         float dutyDelta;
         uint32_t timeoutWaitForCommand = 0;
-
-        uint32_t msFadeAccel;
-        uint32_t msFadeDecel;
 
         uint32_t ramp;
         int64_t timestampLastRunUs = 0;
