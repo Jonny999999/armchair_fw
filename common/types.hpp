@@ -53,6 +53,8 @@ typedef struct motorctl_config_t {
     bool currentInverted;
     float currentSnapToZeroThreshold;
 	uint32_t deadTimeMs; //time motor stays in IDLE before direction change
+    uint32_t brakePauseBeforeResume;
+    uint32_t brakeDecel;
 } motorctl_config_t;
 
 //enum fade type (acceleration, deceleration)
