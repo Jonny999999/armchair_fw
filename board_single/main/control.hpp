@@ -20,9 +20,10 @@ extern "C"
 //---- struct, enum, variable declarations ---
 //--------------------------------------------
 //enum that decides how the motors get controlled
-enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO, ADJUST_CHAIR, MENU};
+enum class controlMode_t {IDLE, JOYSTICK, MASSAGE, HTTP, MQTT, BLUETOOTH, AUTO, ADJUST_CHAIR, MENU_SETTINGS, MENU_MODE_SELECT};
 //string array representing the mode enum (for printing the state as string)
-extern const char* controlModeStr[9];
+extern const char* controlModeStr[10];
+extern const uint8_t controlModeMaxCount;
 
 //--- control_config_t ---
 //struct with config parameters
@@ -32,6 +33,14 @@ typedef struct control_config_t {
     uint32_t timeoutSwitchToIdleMs;         //time of inactivity after which the mode gets switched to IDLE
     uint32_t timeoutNotifyPowerStillOnMs;
 } control_config_t;
+
+
+//==========================
+//==== controlModeToStr ====
+//==========================
+// convert controlMode enum or index to string for logging
+const char * controlModeToStr(controlMode_t mode);
+const char * controlModeToStr(int modeIndex);
 
 
 //=======================================
@@ -84,8 +93,9 @@ class controlledArmchair {
         //function that restarts timer which initiates the automatic timeout (switch to IDLE) after certain time of inactivity
         void resetTimeout();
 
-        //methods to get the current control mode
+        //methods to get the current or previous control mode
         controlMode_t getCurrentMode() const {return mode;};
+        controlMode_t getPreviousMode() const {return modePrevious;};
         const char *getCurrentModeStr() const { return controlModeStr[(int)mode]; };
 
         //--- mode specific ---

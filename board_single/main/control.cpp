@@ -21,7 +21,28 @@ extern "C"
 
 //tag for logging
 static const char * TAG = "control";
-const char* controlModeStr[9] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", "BLUETOOTH", "AUTO", "ADJUST_CHAIR", "MENU"};
+static const char * ERROR_STR = "ERR";
+
+const char* controlModeStr[10] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", "BLUETOOTH", "AUTO", "ADJUST_CHAIR", "MENU_SETTINGS", "MENU_MODE_SELECT"};
+const uint8_t controlModeMaxCount = sizeof(controlModeStr) / sizeof(char *);
+
+
+//==========================
+//==== controlModeToStr ====
+//==========================
+// convert controlMode enum or mode index to string for logging, returns "ERR" when index is out of range of existing modes
+const char * controlModeToStr(int modeIndex){
+    // return string when in allowed range
+    if (modeIndex >= 0 && modeIndex < controlModeMaxCount)
+        return controlModeStr[modeIndex];
+    else
+        // log and return error when not in range
+        ESP_LOGE(TAG, "controlModeToStr: mode index '%d' is not in valid range - max 0-%d", modeIndex, controlModeMaxCount);
+        return ERROR_STR;
+}
+const char * controlModeToStr(controlMode_t mode){
+    return controlModeToStr((int)mode);
+}
 
 
 //-----------------------------
@@ -271,8 +292,9 @@ void controlledArmchair::handle()
         }
         break;
 
-    //------- handle MENU mode -------
-    case controlMode_t::MENU:
+    //------- handle MENU modes -------
+    case controlMode_t::MENU_SETTINGS:
+    case controlMode_t::MENU_MODE_SELECT:
         // nothing to do here, display task handles the menu
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;
@@ -507,7 +529,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
             buzzer->beep(3, 100, 50);
             break;
 
-        case controlMode_t::MENU:
+        case controlMode_t::MENU_SETTINGS:
             idleBothMotors();
             break;
 

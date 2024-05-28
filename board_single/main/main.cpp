@@ -265,7 +265,7 @@ extern "C" void app_main(void) {
 	//------------------------------
 	//--- create task for button ---
 	//------------------------------
-	//task that handles button/encoder events in any mode except 'MENU' (e.g. switch modes by pressing certain count)
+	//task that handles button/encoder events in any mode except 'MENU_SETTINGS' and 'MENU_MODE_SELECT' (e.g. switch modes by pressing certain count)
 	task_button_parameters_t button_param = {control, joystick, encoderQueue, motorLeft, motorRight, buzzer};
 	xTaskCreate(&task_button, "task_button", 4096, &button_param, 3, NULL);
 
@@ -279,7 +279,7 @@ extern "C" void app_main(void) {
 	//-----------------------------------
 	//----- create task for display -----
 	//-----------------------------------
-	//task that handles the display (show stats, handle menu in 'MENU' mode)
+	//task that handles the display (show stats, handle menu in 'MENU_SETTINGS' and 'MENU_MODE_SELECT' mode)
 	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer, &nvsHandle};
 	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 3, NULL);
 
@@ -303,7 +303,7 @@ extern "C" void app_main(void) {
 
 
 	//--- testing force specific mode after startup ---
-	//control->changeMode(controlMode_t::MENU);
+	//control->changeMode(controlMode_t::MENU_SETTINGS);
 
 
 
