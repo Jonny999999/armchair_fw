@@ -663,8 +663,8 @@ void showItemList(SSD1306_t *display, int selectedItem)
 //--- getNextSelectableModeIndex ---
 //----------------------------------
 // local function that returns index of the next (or previous) selectable control-mode index
-// used for mode select menu
-int getNextSelectableModeIndex(int modeIndex, bool reverseDirection = false)
+// used for mode select menu. offset defines the step size (e.g. get 3rd next menu index)
+int getNextSelectableModeIndex(int modeIndex, bool reverseDirection = false, uint8_t offset = 1)
 {
     // those modes are selectable via mode-select menu - NOTE: Add other new modes here
     static const controlMode_t selectableModes[] = {controlMode_t::IDLE,
@@ -675,11 +675,10 @@ int getNextSelectableModeIndex(int modeIndex, bool reverseDirection = false)
                                              controlMode_t::MENU_SETTINGS};
     static const int selectableModesCount = sizeof(selectableModes) / sizeof(controlMode_t);
 
-    //// verify range
-    // if (modeIndex < 0 || modeIndex > controlModeMaxCount) {
-    //     ESP_LOGE(TAG, "getSelectableModeItem - index '%d' is out of range! There are max %d modes.", modeIndex, controlModeMaxCount);
-    //     return 0;
-    // }
+    // when step size is greater than 1  define new modeIndex by recursively calling the function first
+    if (offset > 1){
+        modeIndex = getNextSelectableModeIndex(modeIndex, reverseDirection, offset - 1);
+    }
 
     // search next mode that is present in selectableModes
     bool rotatedAlready = false;
@@ -714,7 +713,7 @@ int getNextSelectableModeIndex(int modeIndex, bool reverseDirection = false)
                 // index matches one in the selectable modes -> success
                 return modeIndex;
         }
-        ESP_LOGD(TAG, "mode index %d is no selectable mode -> trying next", modeIndex);
+        ESP_LOGV(TAG, "mode index %d is no selectable mode -> trying next", modeIndex);
     }
 }
 
@@ -729,23 +728,28 @@ void showModeList(SSD1306_t *display, int selectedMode)
     // TODO add blinking of a line to indicate selecting
 
     // line 1 " - select mode -"
-    // line 2 "    prev mode   "
-    // line 3 "SEL MODE LARGE 1/3"
-    // line 4 "SEL MODE LARGE 2/3"
-    // line 5 "SEL MODE LARGE 4/3"
-    // line 6 "    next mode   "
-    // line 7 "click to confirm"
+    // line 2 "  2nd prev mode "
+    // line 3 "    prev mode   "
+    // line 4 "SEL MODE LARGE 1/3"
+    // line 5 "SEL MODE LARGE 2/3"
+    // line 6 "SEL MODE LARGE 4/3"
+    // line 7 "    next mode   "
+    // line 8 "  2nd next mode "
 
     // print title (0)
     displayTextLine(display, 0, false, true, "- select mode -"); // inverted
-    // print mode before (1)
-    displayTextLineCentered(display, 1, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode, true)));
-    // print selected mode large (2-4)
-    displayTextLineCentered(display, 2, true, false, "%s", controlModeToStr(selectedMode));
-    // print mode after (5)
-    displayTextLineCentered(display, 5, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode)));
+    // print 2nd mode before (1)
+    displayTextLineCentered(display, 1, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode, true, 2)));
+    // print mode before (2)
+    displayTextLineCentered(display, 2, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode, true)));
+    // print selected mode large (3-5)
+    displayTextLineCentered(display, 3, true, false, "%s", controlModeToStr(selectedMode));
+    // print mode after (6)
+    displayTextLineCentered(display, 6, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode)));
+    // print mode after (7)
+    displayTextLineCentered(display, 7, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode, false, 2)));
     // print message (6)
-    displayTextLineCentered(display, 6, false, true, "click to confirm");
+    //displayTextLineCentered(display, 7, false, true, "click to confirm");
 }
 
 
@@ -1031,7 +1035,6 @@ void handleMenu_modeSelect(display_task_parameters_t *objects, SSD1306_t *displa
             {
                 selectedMode = getNextSelectableModeIndex(selectedMode, true);
                 objects->buzzer->beep(1, 20, 0);
-                objects->buzzer->beep(1, 20, 0);
                 ESP_LOGD(TAG, "showing previous item: %d '%s'", selectedMode, controlModeToStr(selectedMode));
                 // note: display will update at start of next run
             }
@@ -1041,7 +1044,7 @@ void handleMenu_modeSelect(display_task_parameters_t *objects, SSD1306_t *displa
             //--- confirm mode and exit ---
             objects->buzzer->beep(1, 50, 10);
             ESP_LOGI(TAG, "Button pressed - confirming selected mode '%s'", controlModeToStr(selectedMode));
-            objects->control->changeMode((controlMode_t)selectedMode);
+            objects->control->changeMode((controlMode_t)selectedMode); //note: changeMode may take some time since it waits for control-handle loop iteration to finish which has quite large delay in menu state
             // clear display
             ssd1306_clear_screen(display, false);
             // reset first run

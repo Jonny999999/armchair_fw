@@ -296,7 +296,7 @@ void controlledArmchair::handle()
     case controlMode_t::MENU_SETTINGS:
     case controlMode_t::MENU_MODE_SELECT:
         // nothing to do here, display task handles the menu
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
         break;
 
         // TODO: add other modes here
@@ -535,7 +535,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
 
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching to MASSAGE mode -> reducing fading");
-            uint32_t shake_msFadeAccel = 500; // TODO: move this to config
+            uint32_t shake_msFadeAccel = 200; // TODO: move this to config
 
             // disable downfading (max. deceleration)
             motorLeft->setFade(fadeType_t::DECEL, false);

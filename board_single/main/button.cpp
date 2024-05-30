@@ -75,13 +75,14 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         // ## switch to MENU_SETTINGS state ##
         if (lastPressLong)
         {
-            control->changeMode(controlMode_t::MENU_MODE_SELECT);
             ESP_LOGW(TAG, "1x long press -> clear encoder queue and change to mode 'menu mode select'");
+            buzzer->beep(5, 50, 30);
             // clear encoder event queue (prevent menu from exiting immediately due to long press event just happend)
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+            //TODO move encoder queue clear to changeMode() method?
             rotary_encoder_event_t ev;
             while (xQueueReceive(encoderQueue, &ev, 0) == pdPASS);
-            buzzer->beep(5, 50, 30);
-            vTaskDelay(200 / portTICK_PERIOD_MS);
+            control->changeMode(controlMode_t::MENU_MODE_SELECT);
         }
         // ## toggle joystick freeze ##
         else if (control->getCurrentMode() == controlMode_t::MASSAGE)
@@ -125,13 +126,14 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
         
         case 5:
         // ## switch to MENU_SETTINGS state ##
-            control->changeMode(controlMode_t::MENU_SETTINGS);
             ESP_LOGW(TAG, "5x press -> clear encoder queue and change to mode 'menu settings'");
-            // clear encoder event queue (prevent menu from exiting immediately due to long press event just happend)
-            rotary_encoder_event_t ev;
-            while (xQueueReceive(encoderQueue, &ev, 0) == pdPASS);
             buzzer->beep(20, 20, 10);
             vTaskDelay(200 / portTICK_PERIOD_MS);
+            // clear encoder event queue (prevent menu from using previous events)
+            rotary_encoder_event_t ev;
+            while (xQueueReceive(encoderQueue, &ev, 0) == pdPASS);
+            control->changeMode(controlMode_t::MENU_SETTINGS);
+            break;
 
         case 6:
         // ## switch to MASSAGE mode ##
