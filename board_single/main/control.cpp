@@ -431,6 +431,8 @@ void controlledArmchair::handleTimeout()
 //function to change to a specified control mode
 void controlledArmchair::changeMode(controlMode_t modeNew)
 {
+    // variable to store configured accel limit before entering massage mode, to restore it later
+    static uint32_t massagePreviousAccel = motorLeft->getFade(fadeType_t::ACCEL);
 
     // exit if target mode is already active
     if (mode == modeNew)
@@ -478,9 +480,9 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
             // enable downfading (set to default value)
             motorLeft->setFade(fadeType_t::DECEL, true);
             motorRight->setFade(fadeType_t::DECEL, true);
-            // set upfading to default value
-            motorLeft->setFade(fadeType_t::ACCEL, true);
-            motorRight->setFade(fadeType_t::ACCEL, true);
+            // restore previously set acceleration limit 
+            motorLeft->setFade(fadeType_t::ACCEL, massagePreviousAccel);
+            motorRight->setFade(fadeType_t::ACCEL, massagePreviousAccel);
             // reset frozen input state
             freezeInput = false;
             break;
@@ -537,12 +539,14 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
             ESP_LOGW(TAG, "switching to MASSAGE mode -> reducing fading");
             uint32_t shake_msFadeAccel = 200; // TODO: move this to config
 
+            // save currently set normal acceleration config (for restore when leavinge MASSAGE again)
+            massagePreviousAccel = motorLeft->getFade(fadeType_t::ACCEL);
             // disable downfading (max. deceleration)
             motorLeft->setFade(fadeType_t::DECEL, false);
             motorRight->setFade(fadeType_t::DECEL, false);
-            // reduce upfading (increase acceleration)
-            motorLeft->setFade(fadeType_t::ACCEL, shake_msFadeAccel);
-            motorRight->setFade(fadeType_t::ACCEL, shake_msFadeAccel);
+            // reduce upfading (increase acceleration) but do not update nvs
+            motorLeft->setFade(fadeType_t::ACCEL, shake_msFadeAccel, false);
+            motorRight->setFade(fadeType_t::ACCEL, shake_msFadeAccel, false);
             break;
         }
 

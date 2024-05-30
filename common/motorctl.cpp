@@ -620,17 +620,19 @@ uint32_t controlledMotor::getFadeDefault(fadeType_t fadeType){
 //function for editing or enabling the fading/ramp of the motor control
 
 //set/update fading duration/amount
-void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew){
+void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew, bool writeToNvs){
     //TODO: mutex for msFade variable also used in handle function
     switch(fadeType){
         case fadeType_t::ACCEL:
             ESP_LOGW(TAG, "[%s] changed fade-up time from %d to %d", config.name, config.msFadeAccel, msFadeNew);
-            writeAccelDuration(msFadeNew);
+            if (writeToNvs)
+                writeAccelDuration(msFadeNew);
             break;
         case fadeType_t::DECEL:
             ESP_LOGW(TAG, "[%s] changed fade-down time from %d to %d",config.name, config.msFadeDecel, msFadeNew);
             // write new value to nvs and update the variable
-            writeDecelDuration(msFadeNew);
+            if (writeToNvs)
+                writeDecelDuration(msFadeNew);
             break;
     }
 }

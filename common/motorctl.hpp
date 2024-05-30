@@ -54,7 +54,7 @@ class controlledMotor {
         uint32_t getFade(fadeType_t fadeType); //get currently set acceleration or deceleration fading time
         uint32_t getFadeDefault(fadeType_t fadeType); //get acceleration or deceleration fading time from config
         void setFade(fadeType_t fadeType, bool enabled); //enable/disable acceleration or deceleration fading
-        void setFade(fadeType_t fadeType, uint32_t msFadeNew); //set acceleration or deceleration fade time
+        void setFade(fadeType_t fadeType, uint32_t msFadeNew, bool writeToNvs = true); //set acceleration or deceleration fade time and write it to nvs by default
         bool toggleFade(fadeType_t fadeType); //toggle acceleration or deceleration on/off
 
         float getCurrentA() {return cSensor.read();}; //read current-sensor of this motor (Ampere)
