@@ -25,6 +25,7 @@ static const char * ERROR_STR = "ERR";
 
 const char* controlModeStr[10] = {"IDLE", "JOYSTICK", "MASSAGE", "HTTP", "MQTT", "BLUETOOTH", "AUTO", "ADJUST_CHAIR", "MENU_SETTINGS", "MENU_MODE_SELECT"};
 const uint8_t controlModeMaxCount = sizeof(controlModeStr) / sizeof(char *);
+#define MUTEX_TIMEOUT 10000 // restart when stuck waiting for handle() mutex
 
 
 //==========================
@@ -113,7 +114,7 @@ void controlledArmchair::startHandleLoop()
     while (1)
     {
         // mutex to prevent race condition with actions beeing run at mode change and previous mode still beeing executed
-        if (xSemaphoreTake(handleIteration_mutex, portMAX_DELAY) == pdTRUE)
+        if (xSemaphoreTake(handleIteration_mutex, MUTEX_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE)
         {
             //--- handle current mode ---
             ESP_LOGV(TAG, "control loop executing... mode='%s'", controlModeStr[(int)mode]);
@@ -121,6 +122,10 @@ void controlledArmchair::startHandleLoop()
 
             xSemaphoreGive(handleIteration_mutex);
         } // end mutex
+        else {
+            ESP_LOGE(TAG, "mutex timeout - stuck in changeMode? -> RESTART");
+            esp_restart();
+        }
 
         //--- slow loop ---
         // this section is run approx every 5s (+500ms)
@@ -433,6 +438,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
 {
     // variable to store configured accel limit before entering massage mode, to restore it later
     static uint32_t massagePreviousAccel = motorLeft->getFade(fadeType_t::ACCEL);
+    static uint32_t massagePreviousDecel = motorLeft->getFade(fadeType_t::DECEL);
 
     // exit if target mode is already active
     if (mode == modeNew)
@@ -444,7 +450,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
     // mutex to wait for current handle iteration (control-task) to finish
     // prevents race conditions where operations when changing mode are run but old mode gets handled still
     ESP_LOGI(TAG, "changeMode: waiting for current handle() iteration to finish...");
-    if (xSemaphoreTake(handleIteration_mutex, portMAX_DELAY) == pdTRUE)
+    if (xSemaphoreTake(handleIteration_mutex, MUTEX_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE)
     {
         // copy previous mode
         modePrevious = mode;
@@ -478,8 +484,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
             ESP_LOGW(TAG, "switching from MASSAGE mode -> restoring fading, reset frozen input");
             // TODO: fix issue when downfading was disabled before switching to massage mode - currently it gets enabled again here...
             // enable downfading (set to default value)
-            motorLeft->setFade(fadeType_t::DECEL, true);
-            motorRight->setFade(fadeType_t::DECEL, true);
+            motorLeft->setFade(fadeType_t::DECEL, massagePreviousDecel);
+            motorRight->setFade(fadeType_t::DECEL, massagePreviousDecel);
             // restore previously set acceleration limit 
             motorLeft->setFade(fadeType_t::ACCEL, massagePreviousAccel);
             motorRight->setFade(fadeType_t::ACCEL, massagePreviousAccel);
@@ -538,12 +544,14 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching to MASSAGE mode -> reducing fading");
             uint32_t shake_msFadeAccel = 200; // TODO: move this to config
+            uint32_t shake_msFadeDecel = 0; // TODO: move this to config
 
             // save currently set normal acceleration config (for restore when leavinge MASSAGE again)
             massagePreviousAccel = motorLeft->getFade(fadeType_t::ACCEL);
+            massagePreviousDecel = motorLeft->getFade(fadeType_t::DECEL);
             // disable downfading (max. deceleration)
-            motorLeft->setFade(fadeType_t::DECEL, false);
-            motorRight->setFade(fadeType_t::DECEL, false);
+            motorLeft->setFade(fadeType_t::DECEL, shake_msFadeDecel, false);
+            motorRight->setFade(fadeType_t::DECEL, shake_msFadeDecel, false);
             // reduce upfading (increase acceleration) but do not update nvs
             motorLeft->setFade(fadeType_t::ACCEL, shake_msFadeAccel, false);
             motorRight->setFade(fadeType_t::ACCEL, shake_msFadeAccel, false);
@@ -556,6 +564,11 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
         // unlock mutex for control task to continue handling modes
         xSemaphoreGive(handleIteration_mutex);
     } // end mutex
+    else
+    {
+        ESP_LOGE(TAG, "mutex timeout - stuck in handle() loop? -> RESTART");
+        esp_restart();
+    }
 }
 
 //TODO simplify the following 3 functions? can be replaced by one?

@@ -498,6 +498,7 @@ void display_rotateStatusPage(bool reverseDirection, bool noRotate)
 		else
 			// select next screen
 			display_selectStatusPage((displayStatusPage_t)((int)selectedStatusPage + 1));
+		ssd1306_clear_screen(&dev, false); // clear screen when switching
 	}
 	else // rotate back
 	{
@@ -510,6 +511,7 @@ void display_rotateStatusPage(bool reverseDirection, bool noRotate)
 		else
 			// select previous screen
 			display_selectStatusPage((displayStatusPage_t)((int)selectedStatusPage - 1));
+		ssd1306_clear_screen(&dev, false); // clear screen when switching
 	}
 }
 

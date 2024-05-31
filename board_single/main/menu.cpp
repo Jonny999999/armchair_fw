@@ -1008,6 +1008,7 @@ void handleMenu_modeSelect(display_task_parameters_t *objects, SSD1306_t *displa
     if (firstRun)
     {
         firstRun = false;
+        ssd1306_clear_screen(display, false);                       // clear screen initially (no artefacts of previous content)
         selectedMode = (int)objects->control->getPreviousMode(); // store previous mode (since current mode is MENU)
         ESP_LOGI(TAG, "started mode-select menu, previous active is %s", controlModeStr[(int)selectedMode]);
     }
