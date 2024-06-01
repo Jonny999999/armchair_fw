@@ -543,7 +543,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
 
         case controlMode_t::MASSAGE:
             ESP_LOGW(TAG, "switching to MASSAGE mode -> reducing fading");
-            uint32_t shake_msFadeAccel = 200; // TODO: move this to config
+            uint32_t shake_msFadeAccel = 350; // TODO: move this to config
             uint32_t shake_msFadeDecel = 0; // TODO: move this to config
 
             // save currently set normal acceleration config (for restore when leavinge MASSAGE again)

@@ -627,12 +627,16 @@ void controlledMotor::setFade(fadeType_t fadeType, uint32_t msFadeNew, bool writ
             ESP_LOGW(TAG, "[%s] changed fade-up time from %d to %d", config.name, config.msFadeAccel, msFadeNew);
             if (writeToNvs)
                 writeAccelDuration(msFadeNew);
+            else
+                config.msFadeAccel = msFadeNew;
             break;
         case fadeType_t::DECEL:
             ESP_LOGW(TAG, "[%s] changed fade-down time from %d to %d",config.name, config.msFadeDecel, msFadeNew);
             // write new value to nvs and update the variable
             if (writeToNvs)
                 writeDecelDuration(msFadeNew);
+            else
+                config.msFadeDecel = msFadeNew;
             break;
     }
 }
