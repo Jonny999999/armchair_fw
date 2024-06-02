@@ -30,4 +30,8 @@ typedef struct
     const char line7[17];  // below value
 } menuItem_t;
 
-void handleMenu(display_task_parameters_t * objects, SSD1306_t *display);
+//controls menu for changing settings with encoder input and displays the text on oled display (has to be repeatedly called by display task)
+void handleMenu_settings(display_task_parameters_t * objects, SSD1306_t *display);
+
+//controls menu for selecting the control mode with encoder input and displays the text on oled display (has to be repeatedly called by display task)
+void handleMenu_modeSelect(display_task_parameters_t * objects, SSD1306_t *display);

@@ -9,7 +9,7 @@ extern "C"{
 
 
 //=== content config ===
-#define STARTUP_MSG_TIMEOUT 2000
+#define STARTUP_MSG_TIMEOUT 2600
 #define ADC_BATT_VOLTAGE ADC1_CHANNEL_6
 #define BAT_CELL_COUNT 7
 // continously vary display contrast from 0 to 250 in OVERVIEW status screen
@@ -49,7 +49,7 @@ int readAdc(adc1_channel_t adc, uint32_t samples){
 SSD1306_t dev;
 //tag for logging
 static const char * TAG = "display";
-//define currently shown status page (continously displayed content when not in MENU mode)
+//define currently shown status page (continously displayed content when not in MENU_SETTINGS mode)
 static displayStatusPage_t selectedStatusPage = STATUS_SCREEN_OVERVIEW;
 
 
@@ -441,6 +441,13 @@ void showStartupMsg(){
 //============================
 void display_selectStatusPage(displayStatusPage_t newStatusPage)
 {
+	// get number of available screens
+	const displayStatusPage_t max = STATUS_SCREEN_SCREENSAVER;
+	const uint8_t maxItems = (uint8_t)max;
+	// limit to available pages
+	if (newStatusPage > maxItems) newStatusPage = (displayStatusPage_t)(maxItems);
+	else if (newStatusPage < 0) newStatusPage = (displayStatusPage_t)0;
+
 	//-- run commands when switching FROM certain mode --
 	switch (selectedStatusPage)
 	{
@@ -470,13 +477,117 @@ void display_selectStatusPage(displayStatusPage_t newStatusPage)
 	}
 }
 
+//============================
+//===== rotateStatusPage =====
+//============================
+// select next/previous status screen and rotate to start/end (uses all available in struct)
+void display_rotateStatusPage(bool reverseDirection, bool noRotate)
+{
+	// get number of available screens
+	const displayStatusPage_t max = STATUS_SCREEN_SCREENSAVER;
+	const uint8_t maxItems = (uint8_t)max - 1; // screensaver is not relevant
+
+	if (reverseDirection == false) // rotate next
+	{
+		if (selectedStatusPage >= maxItems) // already at last item
+		{
+			if (noRotate)
+				return;										  // stay at last item when rotating disabled
+			display_selectStatusPage((displayStatusPage_t)0); // rotate to first item
+		}
+		else
+			// select next screen
+			display_selectStatusPage((displayStatusPage_t)((int)selectedStatusPage + 1));
+		ssd1306_clear_screen(&dev, false); // clear screen when switching
+	}
+	else // rotate back
+	{
+		if (selectedStatusPage <= 0) // already at first item
+		{
+			if (noRotate)
+				return;												   // stay at first item when rotating disabled
+			display_selectStatusPage((displayStatusPage_t)(maxItems)); // rotate to last item
+		}
+		else
+			// select previous screen
+			display_selectStatusPage((displayStatusPage_t)((int)selectedStatusPage - 1));
+		ssd1306_clear_screen(&dev, false); // clear screen when switching
+	}
+}
+
+
+//==========================
+//=== handleStatusScreen ===
+//==========================
+//show currently selected status screen on display
+//function is repeatedly called by display task when not in MENU mode
+void handleStatusScreen(display_task_parameters_t *objects)
+{
+	switch (selectedStatusPage)
+	{
+	default:
+	case STATUS_SCREEN_OVERVIEW:
+		showStatusScreenOverview(objects);
+		break;
+	case STATUS_SCREEN_SPEED:
+		showStatusScreenSpeed(objects);
+		break;
+	case STATUS_SCREEN_JOYSTICK:
+		showStatusScreenJoystick(objects);
+		break;
+	case STATUS_SCREEN_MOTORS:
+		showStatusScreenMotors(objects);
+		break;
+	case STATUS_SCREEN_SCREENSAVER:
+		showStatusScreenScreensaver(objects);
+		break;
+	}
+
+	//--- handle timeouts ---
+	uint32_t inactiveMs = objects->control->getInactivityDurationMs();
+	//-- screensaver --
+	// handle switch to screensaver when no user input for a long time
+	if (inactiveMs > displayConfig.timeoutSwitchToScreensaverMs) // timeout - switch to screensaver is due
+	{
+		if (selectedStatusPage != STATUS_SCREEN_SCREENSAVER)
+		{ // switch/log only once at change
+			ESP_LOGW(TAG, "no activity for more than %d min, switching to screensaver", inactiveMs / 1000 / 60);
+			display_selectStatusPage(STATUS_SCREEN_SCREENSAVER);
+		}
+	}
+	else if (selectedStatusPage == STATUS_SCREEN_SCREENSAVER) // exit screensaver when there was recent activity
+	{
+		ESP_LOGW(TAG, "recent activity detected, disabling screensaver");
+		display_selectStatusPage(STATUS_SCREEN_OVERVIEW);
+	}
+
+	//-- reduce brightness --
+	// handle brightness reduction when no user input for some time
+	static bool brightnessIsReduced = false;
+	if (inactiveMs > displayConfig.timeoutReduceContrastMs) // threshold exceeded - reduction of brightness is due
+	{
+		if (!brightnessIsReduced) // change / log only once at change
+		{
+			// reduce display brightness (less burn in)
+			ESP_LOGW(TAG, "no activity for more than %d min, reducing display brightness to %d/255", inactiveMs / 1000 / 60, displayConfig.contrastReduced);
+			ssd1306_contrast(&dev, displayConfig.contrastReduced);
+			brightnessIsReduced = true;
+		}
+	}
+	else if (brightnessIsReduced) // threshold not exceeded anymore, but still reduced
+	{
+		// increase display brighness again
+		ESP_LOGW(TAG, "recent activity detected, increasing brightness again");
+		ssd1306_contrast(&dev, displayConfig.contrastNormal);
+		brightnessIsReduced = false;
+	}
+}
 
 
 //============================
 //======= display task =======
 //============================
 // TODO: separate task for each loop?
-
 void display_task(void *pvParameters)
 {
 	ESP_LOGW(TAG, "Initializing display and starting handle loop");
@@ -492,77 +603,31 @@ void display_task(void *pvParameters)
 	vTaskDelay(STARTUP_MSG_TIMEOUT / portTICK_PERIOD_MS);
 	ssd1306_clear_screen(&dev, false);
 
-	// repeatedly update display with content
+	// repeatedly update display with content depending on current mode
 	while (1)
 	{
-		if (objects->control->getCurrentMode() == controlMode_t::MENU)
+		switch (objects->control->getCurrentMode())
 		{
-			//uses encoder events to control menu and updates display
-			handleMenu(objects, &dev);
-		}
-		else //show selected status screen in any other mode
-		{
-			switch (selectedStatusPage)
-			{
-			default:
-			case STATUS_SCREEN_OVERVIEW:
-				showStatusScreenOverview(objects);
-				break;
-			case STATUS_SCREEN_SPEED:
-				showStatusScreenSpeed(objects);
-				break;
-			case STATUS_SCREEN_JOYSTICK:
-				showStatusScreenJoystick(objects);
-				break;
-			case STATUS_SCREEN_MOTORS:
-				showStatusScreenMotors(objects);
-				break;
-			case STATUS_SCREEN_SCREENSAVER:
-				showStatusScreenScreensaver(objects);
-				break;
-			}
+		case controlMode_t::MENU_SETTINGS:
+			// uses encoder events to control menu (settings) and updates display
+			handleMenu_settings(objects, &dev);
+			break;
+		case controlMode_t::MENU_MODE_SELECT:
+			// uses encoder events to control menu (mode select) and updates display
+			handleMenu_modeSelect(objects, &dev);
+			break;
+		default: 
+			// show selected status screen in any other mode
+			handleStatusScreen(objects);
+			break;
+		} // end mode switch-case
+		// TODO add pages and menus here
+	} // end while(1)
+} // end display-task
 
-			//--- handle timeouts ---
-			uint32_t inactiveMs = objects->control->getInactivityDurationMs();
-			//-- screensaver --
-			// handle switch to screensaver when no user input for a long time
-			if (inactiveMs > displayConfig.timeoutSwitchToScreensaverMs) // timeout - switch to screensaver is due
-			{
-				if (selectedStatusPage != STATUS_SCREEN_SCREENSAVER){ // switch/log only once at change
-					ESP_LOGW(TAG, "no activity for more than %d min, switching to screensaver", inactiveMs / 1000 / 60);
-					display_selectStatusPage(STATUS_SCREEN_SCREENSAVER);
-				}
-			}
-			else if (selectedStatusPage == STATUS_SCREEN_SCREENSAVER) // exit screensaver when there was recent activity
-			{
-				ESP_LOGW(TAG, "recent activity detected, disabling screensaver");
-				display_selectStatusPage(STATUS_SCREEN_OVERVIEW);
-			}
 
-			//-- reduce brightness --
-			// handle brightness reduction when no user input for some time
-			static bool brightnessIsReduced = false;
-			if (inactiveMs > displayConfig.timeoutReduceContrastMs) // threshold exceeded - reduction of brightness is due
-			{
-				if (!brightnessIsReduced) //change / log only once at change
-				{
-					// reduce display brightness (less burn in)
-					ESP_LOGW(TAG, "no activity for more than %d min, reducing display brightness to %d/255", inactiveMs / 1000 / 60, displayConfig.contrastReduced);
-					ssd1306_contrast(&dev, displayConfig.contrastReduced);
-					brightnessIsReduced = true;
-				}
-			}
-			else if (brightnessIsReduced) // threshold not exceeded anymore, but still reduced
-			{
-				// increase display brighness again
-				ESP_LOGW(TAG, "recent activity detected, increasing brightness again");
-				ssd1306_contrast(&dev, displayConfig.contrastNormal);
-				brightnessIsReduced = false;
-			}
-		}
-		// TODO add pages and menus
-	}
-}
+
+
 
 	//-----------------------------------
 	//---- text-related example code ----

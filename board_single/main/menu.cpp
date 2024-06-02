@@ -79,7 +79,7 @@ void item_calibrateJoystick_action(display_task_parameters_t *objects, SSD1306_t
     displayTextLineCentered(display, 1, true, false, "%s", "X-min");
 
     //-- loop until all positions are defined --
-    while (running && objects->control->getCurrentMode() == controlMode_t::MENU)
+    while (running && objects->control->getCurrentMode() == controlMode_t::MENU_SETTINGS)
     {
         // repeatedly print adc value depending on currently selected axis
         switch (mode)
@@ -201,7 +201,7 @@ void item_debugJoystick_action(display_task_parameters_t * objects, SSD1306_t * 
 
     //-- show/update values --
     // stop when button pressed or control state changes (timeouts to IDLE)
-    while (running && objects->control->getCurrentMode() == controlMode_t::MENU)
+    while (running && objects->control->getCurrentMode() == controlMode_t::MENU_SETTINGS)
     {
         // repeatedly print all joystick data
         joystickData_t data = objects->joystick->getData();
@@ -658,6 +658,102 @@ void showItemList(SSD1306_t *display, int selectedItem)
 }
 
 
+
+//----------------------------------
+//--- getNextSelectableModeIndex ---
+//----------------------------------
+// local function that returns index of the next (or previous) selectable control-mode index
+// used for mode select menu. offset defines the step size (e.g. get 3rd next menu index)
+int getNextSelectableModeIndex(int modeIndex, bool reverseDirection = false, uint8_t offset = 1)
+{
+    // those modes are selectable via mode-select menu - NOTE: Add other new modes here
+    static const controlMode_t selectableModes[] = {controlMode_t::IDLE,
+                                             controlMode_t::JOYSTICK,
+                                             controlMode_t::MASSAGE,
+                                             controlMode_t::HTTP,
+                                             controlMode_t::ADJUST_CHAIR,
+                                             controlMode_t::MENU_SETTINGS};
+    static const int selectableModesCount = sizeof(selectableModes) / sizeof(controlMode_t);
+
+    // when step size is greater than 1  define new modeIndex by recursively calling the function first
+    if (offset > 1){
+        modeIndex = getNextSelectableModeIndex(modeIndex, reverseDirection, offset - 1);
+    }
+
+    // search next mode that is present in selectableModes
+    bool rotatedAlready = false;
+    while (1)
+    {
+        // try next/previous item
+        if (reverseDirection)
+            modeIndex--;
+        else
+            modeIndex++;
+
+        // go back to start/end if last/first possible mode reached
+        if ((!reverseDirection && modeIndex >= controlModeMaxCount) || (reverseDirection && modeIndex < 0))
+        {
+            // prevent deadlock when no match was found for some reason
+            if (rotatedAlready)
+            {
+                ESP_LOGE(TAG, "search for selectable mode failed - no matching mode found");
+                return 0;
+            }
+            // go to start/end
+            if (reverseDirection)
+                modeIndex = controlModeMaxCount - 1;
+            else
+                modeIndex = 0;
+            rotatedAlready = true;
+        }
+        // check if current mode index is present in allowed / selectable modes
+        for (int j = 0; j < selectableModesCount; j++)
+        {
+            if (modeIndex == (int)selectableModes[j])
+                // index matches one in the selectable modes -> success
+                return modeIndex;
+        }
+        ESP_LOGV(TAG, "mode index %d is no selectable mode -> trying next", modeIndex);
+    }
+}
+
+
+
+//--------------------------
+//------ showModeList ------
+//--------------------------
+//function that renders mode-select menu (one update)
+void showModeList(SSD1306_t *display, int selectedMode)
+{
+    // TODO add blinking of a line to indicate selecting
+
+    // line 1 " - select mode -"
+    // line 2 "  2nd prev mode "
+    // line 3 "    prev mode   "
+    // line 4 "SEL MODE LARGE 1/3"
+    // line 5 "SEL MODE LARGE 2/3"
+    // line 6 "SEL MODE LARGE 4/3"
+    // line 7 "    next mode   "
+    // line 8 "  2nd next mode "
+
+    // print title (0)
+    displayTextLine(display, 0, false, true, "- select mode -"); // inverted
+    // print 2nd mode before (1)
+    displayTextLineCentered(display, 1, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode, true, 2)));
+    // print mode before (2)
+    displayTextLineCentered(display, 2, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode, true)));
+    // print selected mode large (3-5)
+    displayTextLineCentered(display, 3, true, false, "%s", controlModeToStr(selectedMode));
+    // print mode after (6)
+    displayTextLineCentered(display, 6, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode)));
+    // print mode after (7)
+    displayTextLineCentered(display, 7, false, false, "%s", controlModeToStr(getNextSelectableModeIndex(selectedMode, false, 2)));
+    // print message (6)
+    //displayTextLineCentered(display, 7, false, true, "click to confirm");
+}
+
+
+
 //-----------------------------
 //--- showValueSelectStatic ---
 //-----------------------------
@@ -732,14 +828,14 @@ void updateValueSelect(SSD1306_t *display, int selectedItem)
 
 
 
-//========================
-//====== handleMenu ======
-//========================
+//===========================
+//=== handleMenu_settings ===
+//===========================
 //controls menu with encoder input and displays the text on oled display
 //function is repeatedly called by display task when in menu state
 #define QUEUE_TIMEOUT 3000 //timeout no encoder event - to not block the display loop and actually handle menu-timeout
 #define MENU_TIMEOUT 60000 //inactivity timeout (switch to IDLE mode) note: should be smaller than IDLE timeout in control task
-void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
+void handleMenu_settings(display_task_parameters_t * objects, SSD1306_t *display)
 {
     static uint32_t lastActivity = 0;
     static int selectedItem = 0;
@@ -749,7 +845,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
     switch (menuState)
     {
         //-------------------------
-        //---- State MAIN MENU ----
+        //---- State MAIN MENU_SETTINGS ----
         //-------------------------
     case MAIN_MENU:
         // update display
@@ -807,7 +903,7 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
                 //--- exit menu mode ---
                 // change to previous mode (e.g. JOYSTICK)
                 objects->buzzer->beep(12, 15, 8);
-                objects->control->toggleMode(controlMode_t::MENU); //currently already in MENU -> changes to previous mode
+                objects->control->toggleMode(controlMode_t::MENU_SETTINGS); //currently already in MENU_SETTINGS -> changes to previous mode
                 ssd1306_clear_screen(display, false);
                 break;
 
@@ -890,5 +986,101 @@ void handleMenu(display_task_parameters_t * objects, SSD1306_t *display)
         // change control mode
         objects->control->changeMode(controlMode_t::IDLE);
         return;
+    }
+}
+
+
+
+//=============================
+//=== handleMenu_modeSelect ===
+//=============================
+//controls menu for selecting the control mode with encoder input and displays the text on oled display
+//function is repeatedly called by display task when in menu state
+#define MENU_MODE_SEL_TIMEOUT 10000 // inactivity timeout (switch to IDLE mode) note: should be smaller than IDLE timeout in control task
+void handleMenu_modeSelect(display_task_parameters_t *objects, SSD1306_t *display)
+{
+    static uint32_t lastActivity = 0;
+    static bool firstRun = true; // track if last mode was already obtained when menu got opened
+    static int selectedMode = (int)controlMode_t::IDLE;
+    rotary_encoder_event_t event; // store encoder event data
+
+    // get current mode when run for first time since last select
+    if (firstRun)
+    {
+        firstRun = false;
+        ssd1306_clear_screen(display, false);                       // clear screen initially (no artefacts of previous content)
+        selectedMode = (int)objects->control->getPreviousMode(); // store previous mode (since current mode is MENU)
+        ESP_LOGI(TAG, "started mode-select menu, previous active is %s", controlModeStr[(int)selectedMode]);
+    }
+
+    // renders list of modes with currently selected one on display
+    showModeList(display, selectedMode);
+    // wait for encoder event
+    if (xQueueReceive(objects->encoderQueue, &event, QUEUE_TIMEOUT / portTICK_PERIOD_MS))
+    {
+        // reset menu- and control-timeout on any encoder event
+        lastActivity = esp_log_timestamp();
+        objects->control->resetTimeout(); // user input -> reset switch to IDLE timeout
+        switch (event.type)
+        {
+        case RE_ET_CHANGED:
+            //--- scroll in list ---
+            if (event.diff < 0)
+            {
+                selectedMode = getNextSelectableModeIndex(selectedMode);
+                objects->buzzer->beep(1, 20, 0);
+                ESP_LOGD(TAG, "showing next item: %d '%s'", selectedMode, controlModeToStr(selectedMode));
+            }
+            // note: display will update at start of next run
+            else
+            {
+                selectedMode = getNextSelectableModeIndex(selectedMode, true);
+                objects->buzzer->beep(1, 20, 0);
+                ESP_LOGD(TAG, "showing previous item: %d '%s'", selectedMode, controlModeToStr(selectedMode));
+                // note: display will update at start of next run
+            }
+            break;
+
+        case RE_ET_BTN_CLICKED:
+            //--- confirm mode and exit ---
+            objects->buzzer->beep(1, 50, 10);
+            ESP_LOGI(TAG, "Button pressed - confirming selected mode '%s'", controlModeToStr(selectedMode));
+            objects->control->changeMode((controlMode_t)selectedMode); //note: changeMode may take some time since it waits for control-handle loop iteration to finish which has quite large delay in menu state
+            // clear display
+            ssd1306_clear_screen(display, false);
+            // reset first run
+            firstRun = true;
+            return; // function wont be called again due to mode change
+
+        case RE_ET_BTN_LONG_PRESSED:
+            //--- exit to previous mode ---
+            // change to previous mode (e.g. JOYSTICK)
+            objects->buzzer->beep(12, 15, 8);
+            objects->control->changeMode(objects->control->getPreviousMode());
+            // clear display
+            ssd1306_clear_screen(display, false);
+            // reset first run
+            firstRun = true;
+            return; // function wont be called again due to mode change
+            break;
+
+        case RE_ET_BTN_RELEASED:
+        case RE_ET_BTN_PRESSED:
+            break;
+        }
+    }
+
+    //--- menu timeout ---
+    // close menu and switch to IDLE mode when no encoder event occured within MENU_TIMEOUT
+    if (esp_log_timestamp() - lastActivity > MENU_MODE_SEL_TIMEOUT)
+    {
+        ESP_LOGW(TAG, "TIMEOUT - no activity for more than %ds -> closing menu, switching to IDLE", MENU_TIMEOUT / 1000);
+        // clear display
+        ssd1306_clear_screen(display, false);
+        // change control mode
+        objects->control->changeMode(controlMode_t::IDLE);
+        // reset first run
+        firstRun = true;
+        return; // function wont be called again due to mode change
     }
 }

@@ -53,8 +53,8 @@ typedef struct display_task_parameters_t {
 } display_task_parameters_t;
 
 
-// enum for selecting the currently shown status page (display content when not in MENU mode)
-typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED, STATUS_SCREEN_JOYSTICK, STATUS_SCREEN_MOTORS, STATUS_SCREEN_SCREENSAVER} displayStatusPage_t;
+// enum for selecting the currently shown status page (display content when not in MENU_SETTINGS mode)
+typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED, STATUS_SCREEN_JOYSTICK, STATUS_SCREEN_MOTORS, STATUS_SCREEN_SCREENSAVER, __NUMBER_OF_AVAILABLE_SCREENS} displayStatusPage_t; //note: SCREENSAVER has to be last one since it is ignored by rotate and used to determine count
 
 // get precise battery voltage (using lookup table)
 float getBatteryVoltage();
@@ -62,8 +62,10 @@ float getBatteryVoltage();
 // get battery charge level in percent (using lookup table as discharge curve)
 float getBatteryPercent();
 
-// function to select one of the defined status screens which are shown on display when not in MENU mode
+// function to select one of the defined status screens which are shown on display when not in MENU_SETTINGS or MENU_SELECT_MODE mode
 void display_selectStatusPage(displayStatusPage_t newStatusPage);
+// select next/previous status screen to be shown, when noRotate is set is stays at first/last screen
+void display_rotateStatusPage(bool reverseDirection = false, bool noRotate = false);
 
 //task that inititialized the display, displays welcome message 
 //and releatedly updates the display with certain content

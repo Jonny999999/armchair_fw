@@ -99,8 +99,8 @@ sabertooth2x60_config_t sabertoothConfig = {
 motorctl_config_t configMotorControlLeft = {
     .name = "left",
     .loggingEnabled = true,
-    .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
+    .msFadeAccel = 1800, // acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 1600, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
     .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_4, // GPIO32
@@ -117,8 +117,8 @@ motorctl_config_t configMotorControlLeft = {
 motorctl_config_t configMotorControlRight = {
     .name = "right",
     .loggingEnabled = false,
-    .msFadeAccel = 1500, // acceleration of the motor (ms it takes from 0% to 100%)
-    .msFadeDecel = 1000, // deceleration of the motor (ms it takes from 100% to 0%)
+    .msFadeAccel = 1800, // acceleration of the motor (ms it takes from 0% to 100%)
+    .msFadeDecel = 1600, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
     .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_5, // GPIO33
@@ -179,10 +179,10 @@ joystick_config_t configJoystick = {
 //----------------------------
 fan_config_t configFans = {
     .gpio_fan = GPIO_NUM_13,
-    .dutyThreshold = 40,
-    .minOnMs = 1500,
-    .minOffMs = 3000,
-    .turnOffDelayMs = 5000,
+    .dutyThreshold = 50,
+    .minOnMs = 3500, // time motor duty has to be above the threshold for fans to turn on
+    .minOffMs = 5000, // min time fans have to be off to be able to turn on again
+    .turnOffDelayMs = 3000, // time fans continue to be on after duty is below threshold 
 };
 
 
@@ -258,7 +258,7 @@ joystickGenerateCommands_config_t joystickGenerateCommands_config{
     //-- maxDuty --
     // max duty when both motors are at equal ratio e.g. driving straight forward
     // better to be set less than 100% to have some reserve for boosting the outer tire when turning
-    .maxDutyStraight = 75,
+    .maxDutyStraight = 65,
     //-- maxBoost --
     // boost is amount of duty added to maxDutyStraight to outer tire while turning
     // => turning: inner tire gets slower, outer tire gets faster

@@ -438,13 +438,21 @@ uint32_t shake_timestamp_turnedOn = 0;
 uint32_t shake_timestamp_turnedOff = 0;
 bool shake_state = false;
 joystickPos_t lastStickPos = joystickPos_t::CENTER;
-//stick position quadrant only with "X_AXIS and Y_AXIS" as hysteresis
-joystickPos_t stickQuadrant = joystickPos_t::CENTER;
 
 //--- configure shake mode --- TODO: move this to config
-uint32_t shake_msOffMax = 80;
+uint32_t shake_msOffMax = 60;
 uint32_t shake_msOnMax = 120;
-float dutyShake = 60;
+uint32_t shake_minDelay = 20; //min time in ms motor stays on/off
+float dutyShakeMax = 30;
+float dutyShakeMin = 5;
+
+inline void invertMotorDirection(motorstate_t *state)
+{
+    if (*state == motorstate_t::FWD)
+        *state = motorstate_t::REV;
+    else
+        *state = motorstate_t::FWD;
+}
 
 //function that generates commands for both motors from the joystick data
 motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
@@ -452,25 +460,29 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
     //--- handle pulsing shake variable ---
     //TODO remove this, make individual per mode?
     //TODO only run this when not CENTER anyways?
-    motorCommands_t commands;
+    static motorCommands_t commands;
     float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
+    static uint32_t cycleCount = 0;
 
     //calculate on/off duration
-    uint32_t msOn = shake_msOnMax * data.radius;
-    uint32_t msOff = shake_msOffMax * data.radius;
+    float msOn = (shake_msOnMax - shake_minDelay) * data.radius + shake_minDelay;
+    float msOff = (shake_msOffMax - shake_minDelay) * data.radius + shake_minDelay;
+    float dutyShake = (dutyShakeMax - dutyShakeMin) * ratio + dutyShakeMin;
 
-    //evaluate state (on/off)
+    //evaluate state (motors on/off)
     if (data.radius > 0 ){
-        //currently off
+        //currently off:
         if (shake_state == false){
             //off long enough
             if (esp_log_timestamp() - shake_timestamp_turnedOff > msOff) {
                 //turn on
+                cycleCount++;
                 shake_state = true;
                 shake_timestamp_turnedOn = esp_log_timestamp();
+                ESP_LOGD(TAG_CMD, "shake: cycleCount=%d, msOn=%f, msOff=%f, radius=%f, shakeDuty=%f", cycleCount, msOn, msOff, data.radius, dutyShake);
             }
         } 
-        //currently on
+        //currently on:
         else {
             //on long enough
             if (esp_log_timestamp() - shake_timestamp_turnedOn > msOn) {
@@ -495,79 +507,49 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
     //    float angle;
     //} joystickData_t;
 
-    //--- evaluate stick position --- 
-    //4 quadrants and center only - with X and Y axis as hysteresis
-    switch (data.position){
-
-        case joystickPos_t::CENTER:
-            //immediately set to center at center
-            stickQuadrant = joystickPos_t::CENTER;
-            break;
-
-        case joystickPos_t::Y_AXIS:
-            //when moving from center to axis initially start in a certain quadrant
-            if (stickQuadrant == joystickPos_t::CENTER) {
-                if (data.y > 0){
-                    stickQuadrant = joystickPos_t::TOP_RIGHT;
-                } else {
-                    stickQuadrant = joystickPos_t::BOTTOM_RIGHT;
-                }
-            }
-            break;
-
-        case joystickPos_t::X_AXIS:
-            //when moving from center to axis initially start in a certain quadrant
-            if (stickQuadrant == joystickPos_t::CENTER) {
-                if (data.x > 0){
-                    stickQuadrant = joystickPos_t::TOP_RIGHT;
-                } else {
-                    stickQuadrant = joystickPos_t::TOP_LEFT;
-                }
-            }
-            break;
-
-        case joystickPos_t::TOP_RIGHT:
-        case joystickPos_t::TOP_LEFT:
-        case joystickPos_t::BOTTOM_LEFT:
-        case joystickPos_t::BOTTOM_RIGHT:
-            //update/change evaluated pos when in one of the 4 quadrants
-            stickQuadrant = data.position;
-            //TODO: maybe beep when switching mode? (difficult because beep object has to be passed to function)
-            break;
+    // force off when stick pos changes - TODO: is this necessary?
+    static joystickPos_t stickPosPrev = joystickPos_t::CENTER;
+    if (data.position != stickPosPrev) {
+        ESP_LOGW(TAG, "massage: stick quadrant changed, stopping for one cycle");
+        shake_state = false;
+        shake_timestamp_turnedOff = esp_log_timestamp();
     }
-
+    stickPosPrev = data.position; // update last position
 
     //--- handle different modes (joystick in any of 4 quadrants) ---
-    switch (stickQuadrant){
+    switch (data.position){
+        // idle
         case joystickPos_t::CENTER:
-        case joystickPos_t::X_AXIS: //never true
-        case joystickPos_t::Y_AXIS: //never true
             commands.left.state = motorstate_t::IDLE;
             commands.right.state = motorstate_t::IDLE;
             commands.left.duty = 0;
             commands.right.duty = 0;
-            ESP_LOGI(TAG_CMD, "generate shake commands: CENTER -> idle");
+            ESP_LOGD(TAG_CMD, "generate shake commands: CENTER -> idle");
             return commands;
             break;
-            //4 different modes
+        // shake forward/reverse
+        case joystickPos_t::X_AXIS:
+        case joystickPos_t::Y_AXIS:
         case joystickPos_t::TOP_RIGHT:
+        case joystickPos_t::TOP_LEFT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::FWD;
             break;
-        case joystickPos_t::TOP_LEFT:
-            commands.left.state = motorstate_t::REV;
-            commands.right.state = motorstate_t::REV;
-            break;
+        // shake left right
         case joystickPos_t::BOTTOM_LEFT:
-            commands.left.state = motorstate_t::REV;
-            commands.right.state = motorstate_t::FWD;
-            break;
         case joystickPos_t::BOTTOM_RIGHT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::REV;
             break;
     }
 
+    // change direction every second on cycle in any mode
+    //(to not start driving on average)
+    if (cycleCount % 2 == 0)
+    {
+        invertMotorDirection(&commands.left.state);
+        invertMotorDirection(&commands.right.state);
+    }
 
     //--- turn motors on/off depending on pulsing shake variable ---
     if (shake_state == true){
@@ -582,11 +564,7 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
         commands.right.duty = 0;
     }
 
-
-    ESP_LOGI(TAG_CMD, "generated commands from data: state=%s, angle=%.3f, ratio=%.3f/%.3f, radius=%.2f, x=%.2f, y=%.2f",
-            joystickPosStr[(int)data.position], data.angle, ratio, (1-ratio), data.radius, data.x, data.y);
-    ESP_LOGI(TAG_CMD, "motor left: state=%s, duty=%.3f", motorstateStr[(int)commands.left.state], commands.left.duty);
-    ESP_LOGI(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
+    ESP_LOGD(TAG_CMD, "motor left: state=%s, duty=%.3f, cycleCount=%d, msOn=%f, msOff=%f", motorstateStr[(int)commands.left.state], commands.left.duty, cycleCount, msOn, msOff);
 
     return commands;
 }
