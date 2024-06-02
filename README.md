@@ -1,12 +1,15 @@
 # Overview
 Firmware for a homemade automated electric armchair.  
-Extensive details about this project can be found here:  
+Extensive details about this project can be found on the website:
 - ~~V1: [Electric Armchair V1](https://pfusch.zone/electric-armchair)~~
 - V2: [Electric Armchair V2](https://pfusch.zone/electric-armchair-v2)
 
-In the current version V2.2, only the esp-project in the [board_single/](board_single) folder plus the custom libraries in [common/](common) are used.  
-Note: The projects in the folders `board_control/` and `board_motorctl/` are no longer compatible and legacy from V2.1.
+Note: In the current version V2.2, only the esp-project in the [board_single/](board_single) folder and the custom libraries in [common/](common) are used.  
+The projects in the folders `board_control/` and `board_motorctl/` are no longer compatible and legacy from V2.1.
 
+<img src="doc/2023.09.09_armchair-frame.jpg" alt="Photo machine" style="width:60%;">
+
+*Photo of the built frame that carries the armchair*
 
 ## Hardware Setup / Electrical
 ### PCB
@@ -35,9 +38,10 @@ For more details refer to the documentation on the website.
 - Current Measurement: Monitors current of each motor
 - Battery Capacity: Measures battery voltage and calculates percentage according to discharge curve
 - Fan Control: Cooling fan for motor driver activated only when needed
-- Display:
+- Display + Rotary encoder:
   - Various status screens showing battery status, speed, RPM, motor current, mode, power, duty cycle, stick data
-  - Menu for setting various options using encoder
+  - Menu for setting various options using encoder (options are stored persistently in nvs flash)
+  - Menu for selecting the control mode
 - Buzzer: Provides acoustic feedback when switching modes or interacting with menu
 
 ## Planned Features
@@ -136,25 +140,25 @@ idf.py monitor
 
 | Count | Type          | Action               | Description                                                                                 |
 |-------|---------------|----------------------|---------------------------------------------------------------------------------------------|
-| 1x long | switch mode | **MENU**             | Open menu to set various options, controlled via display and rotary encoder.                |
-| 1x      | control      | [MASSAGE] **freeze** input | When in massage mode: lock or unlock joystick input at current position.             |
-| 1x short, 1x long | switch mode | **ADJUST-CHAIR**     | Switch to mode where the armchair leg and backrest are controlled via joystick.   |
-| 2x      | toggle mode  | **IDLE** <=> previous | Enable/disable chair armchair (e.g., enable after startup or switch to previous mode after timeout). |
-| 3x      | switch mode  | **JOYSTICK**         | Switch to JOYSTICK mode, to control armchair using joystick (default).                     |
-| 4x      | switch mode  | **HTTP**             | Switch to **remote control** via web-app `http://191.168.4.1` in wifi `armchair`.                           |
-| 5x      |              |                      |                                                                                            |
-| 6x      | switch mode   | **MASSAGE**         | Switch to MASSAGE mode where armchair shakes differently, depending on joystick position.  |
-| 7x      |               |                     |                                                                                            |
+| 1x long | switch mode | **MENU_MODE_SELECT** | Open menu for selecting the current control mode                                            |
+| 1x      | control     | [MASSAGE] **freeze** input  | When in massage mode: lock or unlock joystick input at current position.             |
+| 1x short, 1x long | switch mode | **ADJUST-CHAIR**  | Switch to mode where the armchair leg and backrest are controlled via joystick.      |
+| 2x      | toggle mode | **IDLE** <=> previous| Enable/disable chair armchair (e.g., enable after startup or switch to previous mode after timeout). |
+| 3x      | switch mode | **JOYSTICK**         | Switch to JOYSTICK mode, to control armchair using joystick (default).                      |
+| 4x      | switch mode | **HTTP**             | Switch to **remote control** via web-app `http://191.168.4.1` in wifi `armchair`.           |
+| 5x      | switch mode | **MENU_SETTINGS**    | Open menu to set various options, controlled via display and rotary encoder.                |
+| 6x      | switch mode | **MASSAGE**          | Switch to MASSAGE mode where armchair shakes differently, depending on joystick position.   |
+| 7x      |             |                      |                                                                                             |
 | 8x      | toggle option| **deceleration limit** | Disable/enable deceleration limit (default on) => more responsive.                       |
 | 12x     | toggle option| **alt stick mapping** | Toggle between default and alternative stick mapping (reverse direction swapped).         |
 
-**When in MENU mode** (1x long press), the encoder controls the menu:
+**When in MENU_SETTINGS mode** (5x click), the encoder controls the settings menu: (similar in MENU_MODE_SELECT)
 
 | Encoder Event | Current Menu | Action                                                       |
 |---------------|--------------|--------------------------------------------------------------|
 | long press    | main-menu    | Exit MENU mode to previous control mode (e.g., JOYSTICK).    |
 | long press    | value-select | Exit to main-menu without changing the value.                |
-| click         | main-menu    | Select currently highlighted menu item -> enter value-select screen.               |
+| click         | main-menu    | Select currently highlighted menu item -> enter value-select screen. |
 | click         | value-select | Confirm value / run action.                                  |
 | rotate        | main-menu    | Scroll through menu items.                                   |
 | rotate        | value-select | Change value.                                                |
