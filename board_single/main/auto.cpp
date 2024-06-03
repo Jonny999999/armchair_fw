@@ -1,5 +1,4 @@
 #include "auto.hpp"
-#include "config.hpp"
 
 //tag for logging
 static const char * TAG = "automatedArmchair";
@@ -8,9 +7,12 @@ static const char * TAG = "automatedArmchair";
 //=============================
 //======== constructor ========
 //=============================
-automatedArmchair::automatedArmchair(void) {
-    //create command queue
-    commandQueue = xQueueCreate( 32, sizeof( commandSimple_t ) ); //TODO add max size to config?
+automatedArmchair_c::automatedArmchair_c(controlledMotor *motorLeft_f, controlledMotor *motorRight_f)
+{
+    motorLeft = motorLeft_f;
+    motorRight = motorRight_f;
+    // create command queue
+    commandQueue = xQueueCreate(32, sizeof(commandSimple_t)); // TODO add max size to config?
 }
 
 
@@ -18,7 +20,7 @@ automatedArmchair::automatedArmchair(void) {
 //==============================
 //====== generateCommands ======
 //==============================
-motorCommands_t automatedArmchair::generateCommands(auto_instruction_t * instruction) {
+motorCommands_t automatedArmchair_c::generateCommands(auto_instruction_t * instruction) {
     //reset instruction
     *instruction = auto_instruction_t::NONE;
     //check if previous command is finished
@@ -29,10 +31,10 @@ motorCommands_t automatedArmchair::generateCommands(auto_instruction_t * instruc
             //copy instruction to be provided to control task
             *instruction = cmdCurrent.instruction;
             //set acceleration / fading parameters according to command
-            motorLeft.setFade(fadeType_t::DECEL, cmdCurrent.fadeDecel);
-            motorRight.setFade(fadeType_t::DECEL, cmdCurrent.fadeDecel);
-            motorLeft.setFade(fadeType_t::ACCEL, cmdCurrent.fadeAccel);
-            motorRight.setFade(fadeType_t::ACCEL, cmdCurrent.fadeAccel);
+            motorLeft->setFade(fadeType_t::DECEL, cmdCurrent.fadeDecel);
+            motorRight->setFade(fadeType_t::DECEL, cmdCurrent.fadeDecel);
+            motorLeft->setFade(fadeType_t::ACCEL, cmdCurrent.fadeAccel);
+            motorRight->setFade(fadeType_t::ACCEL, cmdCurrent.fadeAccel);
             //calculate timestamp the command is finished
             timestampCmdFinished = esp_log_timestamp() + cmdCurrent.msDuration;
             //copy the new commands
@@ -55,7 +57,7 @@ motorCommands_t automatedArmchair::generateCommands(auto_instruction_t * instruc
 //======== addCommand ========
 //============================
 //function that adds a basic command to the queue
-void automatedArmchair::addCommand(commandSimple_t command) {
+void automatedArmchair_c::addCommand(commandSimple_t command) {
     //add command to queue
      if ( xQueueSend( commandQueue, ( void * )&command, ( TickType_t ) 0 ) ){
          ESP_LOGI(TAG, "Successfully inserted command to queue");
@@ -64,7 +66,7 @@ void automatedArmchair::addCommand(commandSimple_t command) {
      }
 }
 
-void automatedArmchair::addCommands(commandSimple_t commands[], size_t count) {
+void automatedArmchair_c::addCommands(commandSimple_t commands[], size_t count) {
     for (int i = 0; i < count; i++) {
          ESP_LOGI(TAG, "Reading command no. %d from provided array", i);
         addCommand(commands[i]);
@@ -77,7 +79,7 @@ void automatedArmchair::addCommands(commandSimple_t commands[], size_t count) {
 //===============================
 //function that deletes all pending/queued commands
 //e.g. when switching modes
-motorCommands_t automatedArmchair::clearCommands() {
+motorCommands_t automatedArmchair_c::clearCommands() {
     //clear command queue
     xQueueReset( commandQueue );
     ESP_LOGW(TAG, "command queue was successfully emptied");

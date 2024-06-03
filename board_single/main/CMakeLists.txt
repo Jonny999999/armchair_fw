@@ -1,12 +1,13 @@
 idf_component_register(
     SRCS 
         "main.cpp"
-        "config.cpp"
         "control.cpp"
         "button.cpp"
         "fan.cpp"
         "auto.cpp"
 		"display.cpp"
+        "menu.cpp"
+        "encoder.cpp"
     INCLUDE_DIRS 
         "."
     )

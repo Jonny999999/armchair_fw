@@ -17,8 +17,10 @@ typedef union out_column_t {
 	uint8_t  u8[4];
 } PACK8 out_column_t;
 
-void ssd1306_init(SSD1306_t * dev, int width, int height)
+//void ssd1306_init(SSD1306_t * dev, int width, int height, int offsetX) //original
+void ssd1306_init(SSD1306_t * dev, int width, int height, int offsetX)
 {
+	dev->_offsetX = offsetX;
 	if (dev->_address == SPIAddress) {
 		spi_init(dev, width, height);
 	} else {

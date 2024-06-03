@@ -12,6 +12,28 @@ extern "C"
 static const char * TAG = "fan-control";
 
 
+//=======================================
+//============== fan task ===============
+//=======================================
+//task that controlls fans for cooling the drivers
+//turns fan on/off depending on motor duty history
+void task_fans( void * task_fans_parameters ){
+	//get configuration struct from task parameter
+	task_fans_parameters_t *objects = (task_fans_parameters_t *)task_fans_parameters;
+
+    //create fan instances with config defined in config.cpp
+    ESP_LOGI(TAG, "Initializing fans and starting fan handle loop");
+    controlledFan fan(objects->fan_config, objects->motorLeft, objects->motorRight);
+
+    //repeatedly run fan handle function in a slow loop
+    while(1){
+        fan.handle();
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+}
+
+
+
 //-----------------------------
 //-------- constructor --------
 //-----------------------------

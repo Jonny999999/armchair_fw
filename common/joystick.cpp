@@ -19,8 +19,9 @@ static const char * TAG_CMD = "joystickCommands";
 //-------- constructor --------
 //-----------------------------
 //copy provided struct with all configuration and run init function
-evaluatedJoystick::evaluatedJoystick(joystick_config_t config_f){
+evaluatedJoystick::evaluatedJoystick(joystick_config_t config_f, nvs_handle_t * nvsHandle_f){
     config = config_f;
+    nvsHandle = nvsHandle_f;
     init();
 }
 
@@ -30,7 +31,7 @@ evaluatedJoystick::evaluatedJoystick(joystick_config_t config_f){
 //---------- init ------------
 //----------------------------
 void evaluatedJoystick::init(){
-    ESP_LOGI(TAG, "initializing joystick");
+    ESP_LOGW(TAG, "initializing ADC's and loading calibration...");
     //initialize adc
     adc1_config_width(ADC_WIDTH_BIT_12); //=> max resolution 4096
                                          
@@ -40,6 +41,12 @@ void evaluatedJoystick::init(){
     //when run in main function that does not happen -> move init from constructor to be called in main
     adc1_config_channel_atten(config.adc_x, ADC_ATTEN_DB_11); //max voltage
     adc1_config_channel_atten(config.adc_y, ADC_ATTEN_DB_11); //max voltage
+
+    //load stored calibration values (if not found loads defaults from config)
+    loadCalibration(X_MIN);
+    loadCalibration(X_MAX);
+    loadCalibration(Y_MIN);
+    loadCalibration(Y_MAX);
 
     //define joystick center from current position
     defineCenter(); //define joystick center from current position
@@ -81,17 +88,17 @@ joystickData_t evaluatedJoystick::getData() {
     ESP_LOGV(TAG, "getting X coodrdinate...");
 	uint32_t adcRead;
 	adcRead = readAdc(config.adc_x, config.x_inverted);
-    float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), config.x_min, config.x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
+    float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), x_min, x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
     data.x = x;
 	ESP_LOGD(TAG, "X: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => x=%.3f",
-        adc1_get_raw(config.adc_x), adcRead,  config.x_min, config.x_max, x_center, config.x_inverted, x);
+        adc1_get_raw(config.adc_x), adcRead,  x_min, x_max, x_center, config.x_inverted, x);
 
     ESP_LOGV(TAG, "getting Y coodrinate...");
 	adcRead = readAdc(config.adc_y, config.y_inverted);
-    float y = scaleCoordinate(adcRead, config.y_min, config.y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
+    float y = scaleCoordinate(adcRead, y_min, y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
     data.y = y;
 	ESP_LOGD(TAG, "Y: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => y=%.3lf",
-        adc1_get_raw(config.adc_y), adcRead,  config.y_min, config.y_max, y_center, config.y_inverted, y);
+        adc1_get_raw(config.adc_y), adcRead,  y_min, y_max, y_center, config.y_inverted, y);
 
     //calculate radius
     data.radius = sqrt(pow(data.x,2) + pow(data.y,2));
@@ -297,37 +304,43 @@ joystickPos_t joystick_evaluatePosition(float x, float y){
 //========= joystick_CommandsDriving =========
 //============================================
 //function that generates commands for both motors from the joystick data
-motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altStickMapping){
+motorCommands_t joystick_generateCommandsDriving(joystickData_t data, joystickGenerateCommands_config_t * config){
 
-    //struct with current data of the joystick
-    //typedef struct joystickData_t {
-    //    joystickPos_t position;
-    //    float x;
-    //    float y;
-    //    float radius;
-    //    float angle;
-    //} joystickData_t;
-
-	//--- variables ---
-    motorCommands_t commands;
-    float dutyMax = 100; //TODO add this to config, make changeable during runtime
-
-    float dutyOffset = 5; //immediately starts with this duty, TODO add this to config
-    float dutyRange = dutyMax - dutyOffset;
-    float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
+	//--- interpret config parameters ---
+    float dutyOffset = config->dutyOffset; // immediately starts with this duty
+    float dutyRange = config->maxDutyStraight - config->dutyOffset; //duty at max radius
+    // calculate configured boost duty (added when turning)
+    float dutyBoost = config->maxDutyStraight * config->maxRelativeBoostPercentOfMaxDuty/100;
+    // limit to maximum possible duty
+    float dutyAvailable = 100 - config->maxDutyStraight;
+    if (dutyBoost > dutyAvailable) dutyBoost = dutyAvailable;
 	
-	//--- snap ratio to max at angle threshold --- 
-	//(-> more joystick area where inner wheel is off when turning)
-	/*
-	//FIXME works, but armchair unsusable because of current bug with motor driver (inner motor freezes after turn)
-	float ratioClipThreshold = 0.3;
-	if (ratio < ratioClipThreshold) ratio = 0;
-	else if (ratio > 1-ratioClipThreshold) ratio = 1;
-	//TODO subtract this clip threshold from available joystick range at ratio usage
-	*/
+
+    //--- calculate paramaters with current data ---
+    motorCommands_t commands; // store new motor commands
+
+    // -- calculate ratio --
+    // get current ratio from stick angle
+    float ratioActual = fabs(data.angle) / 90; //x=0 -> 90deg -> ratio=1 || y=0 -> 0deg -> ratio=0
+    ratioActual = 1 - ratioActual; // invert ratio
+    // scale and clip ratio according to configured tolerance 
+    // to have some joystick area at max ratio before reaching X-Axis-full-turn-mode
+    float ratio = ratioActual / (config->ratioSnapToOneThreshold); //0->0  threshold->1
+    // limit to 1 when above threshold (inside area max ratio)
+    if (ratio > 1) ratio = 1; // >threshold -> 1
+
+    // -- calculate outer tire boost --
+    #define BOOST_RATIO_MANIPULATION_SCALE 1.05 // >1 to apply boost slightly faster, this slightly compensates that available boost is most times less than reduction of inner duty, so for small turns the total speed feels more equal
+    float boostAmountOuter = data.radius*dutyBoost* ratio *BOOST_RATIO_MANIPULATION_SCALE;
+    // limit to max amount
+    if (boostAmountOuter > dutyBoost) boostAmountOuter = dutyBoost;
+
+    // -- calculate inner tire reduction --
+    float reductionAmountInner = (data.radius * dutyRange + dutyOffset) * ratio;
+
 
     //--- experimental alternative control mode ---
-    if (altStickMapping == true){
+    if (config->altStickMapping == true){
         //swap BOTTOM_LEFT and BOTTOM_RIGHT
         if (data.position == joystickPos_t::BOTTOM_LEFT){
             data.position = joystickPos_t::BOTTOM_RIGHT;
@@ -375,36 +388,43 @@ motorCommands_t joystick_generateCommandsDriving(joystickData_t data, bool altSt
         case joystickPos_t::TOP_RIGHT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::FWD;
-            commands.left.duty = data.radius * dutyRange + dutyOffset;
-            commands.right.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
+            commands.left.duty = data.radius * dutyRange + boostAmountOuter + dutyOffset;
+            commands.right.duty = data.radius * dutyRange - reductionAmountInner + dutyOffset;
             break;
 
         case joystickPos_t::TOP_LEFT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::FWD;
-            commands.left.duty =  data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
-            commands.right.duty = data.radius * dutyRange + dutyOffset;
+            commands.left.duty = data.radius * dutyRange - reductionAmountInner + dutyOffset;
+            commands.right.duty = data.radius * dutyRange + boostAmountOuter + dutyOffset;
             break;
 
         case joystickPos_t::BOTTOM_LEFT:
             commands.left.state = motorstate_t::REV;
             commands.right.state = motorstate_t::REV;
-            commands.left.duty = data.radius * dutyRange + dutyOffset;
-            commands.right.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
+            commands.left.duty = data.radius * dutyRange + boostAmountOuter + dutyOffset;
+            commands.right.duty = data.radius * dutyRange - reductionAmountInner + dutyOffset;
             break;
 
         case joystickPos_t::BOTTOM_RIGHT:
             commands.left.state = motorstate_t::REV;
             commands.right.state = motorstate_t::REV;
-            commands.left.duty = data.radius * dutyRange - (data.radius*dutyRange + dutyOffset)*(1-ratio) + dutyOffset;
-            commands.right.duty =  data.radius * dutyRange + dutyOffset;
+            commands.left.duty = data.radius * dutyRange - reductionAmountInner + dutyOffset;
+            commands.right.duty = data.radius * dutyRange + boostAmountOuter + dutyOffset;
             break;
     }
 
-    ESP_LOGI(TAG_CMD, "generated commands from data: state=%s, angle=%.3f, ratio=%.3f/%.3f, radius=%.2f, x=%.2f, y=%.2f",
-            joystickPosStr[(int)data.position], data.angle, ratio, (1-ratio), data.radius, data.x, data.y);
-    ESP_LOGI(TAG_CMD, "motor left: state=%s, duty=%.3f", motorstateStr[(int)commands.left.state], commands.left.duty);
-    ESP_LOGI(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
+    // log input data
+    ESP_LOGD(TAG_CMD, "in: pos='%s', angle=%.3f, ratioActual/Scaled=%.2f/%.2f, r=%.2f, x=%.2f, y=%.2f",
+            joystickPosStr[(int)data.position], data.angle, ratioActual, ratio, data.radius, data.x, data.y);
+    // log generation details
+    ESP_LOGI(TAG_CMD, "left=%.2f, right=%.2f -- BoostOuter=%.1f, ReductionInner=%.1f, maxDuty=%.0f, maxBoost=%.0f, dutyOffset=%.0f",
+             commands.left.duty, commands.right.duty, 
+             boostAmountOuter, reductionAmountInner, 
+             config->maxDutyStraight, dutyBoost, dutyOffset);
+    // log generated motor commands
+    ESP_LOGD(TAG_CMD, "motor left: state=%s, duty=%.3f", motorstateStr[(int)commands.left.state], commands.left.duty);
+    ESP_LOGD(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
     return commands;
 }
 
@@ -418,13 +438,21 @@ uint32_t shake_timestamp_turnedOn = 0;
 uint32_t shake_timestamp_turnedOff = 0;
 bool shake_state = false;
 joystickPos_t lastStickPos = joystickPos_t::CENTER;
-//stick position quadrant only with "X_AXIS and Y_AXIS" as hysteresis
-joystickPos_t stickQuadrant = joystickPos_t::CENTER;
 
 //--- configure shake mode --- TODO: move this to config
-uint32_t shake_msOffMax = 80;
+uint32_t shake_msOffMax = 60;
 uint32_t shake_msOnMax = 120;
-float dutyShake = 60;
+uint32_t shake_minDelay = 20; //min time in ms motor stays on/off
+float dutyShakeMax = 30;
+float dutyShakeMin = 5;
+
+inline void invertMotorDirection(motorstate_t *state)
+{
+    if (*state == motorstate_t::FWD)
+        *state = motorstate_t::REV;
+    else
+        *state = motorstate_t::FWD;
+}
 
 //function that generates commands for both motors from the joystick data
 motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
@@ -432,25 +460,29 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
     //--- handle pulsing shake variable ---
     //TODO remove this, make individual per mode?
     //TODO only run this when not CENTER anyways?
-    motorCommands_t commands;
+    static motorCommands_t commands;
     float ratio = fabs(data.angle) / 90; //90degree = x=0 || 0degree = y=0
+    static uint32_t cycleCount = 0;
 
     //calculate on/off duration
-    uint32_t msOn = shake_msOnMax * data.radius;
-    uint32_t msOff = shake_msOffMax * data.radius;
+    float msOn = (shake_msOnMax - shake_minDelay) * data.radius + shake_minDelay;
+    float msOff = (shake_msOffMax - shake_minDelay) * data.radius + shake_minDelay;
+    float dutyShake = (dutyShakeMax - dutyShakeMin) * ratio + dutyShakeMin;
 
-    //evaluate state (on/off)
+    //evaluate state (motors on/off)
     if (data.radius > 0 ){
-        //currently off
+        //currently off:
         if (shake_state == false){
             //off long enough
             if (esp_log_timestamp() - shake_timestamp_turnedOff > msOff) {
                 //turn on
+                cycleCount++;
                 shake_state = true;
                 shake_timestamp_turnedOn = esp_log_timestamp();
+                ESP_LOGD(TAG_CMD, "shake: cycleCount=%d, msOn=%f, msOff=%f, radius=%f, shakeDuty=%f", cycleCount, msOn, msOff, data.radius, dutyShake);
             }
         } 
-        //currently on
+        //currently on:
         else {
             //on long enough
             if (esp_log_timestamp() - shake_timestamp_turnedOn > msOn) {
@@ -475,79 +507,49 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
     //    float angle;
     //} joystickData_t;
 
-    //--- evaluate stick position --- 
-    //4 quadrants and center only - with X and Y axis as hysteresis
-    switch (data.position){
-
-        case joystickPos_t::CENTER:
-            //immediately set to center at center
-            stickQuadrant = joystickPos_t::CENTER;
-            break;
-
-        case joystickPos_t::Y_AXIS:
-            //when moving from center to axis initially start in a certain quadrant
-            if (stickQuadrant == joystickPos_t::CENTER) {
-                if (data.y > 0){
-                    stickQuadrant = joystickPos_t::TOP_RIGHT;
-                } else {
-                    stickQuadrant = joystickPos_t::BOTTOM_RIGHT;
-                }
-            }
-            break;
-
-        case joystickPos_t::X_AXIS:
-            //when moving from center to axis initially start in a certain quadrant
-            if (stickQuadrant == joystickPos_t::CENTER) {
-                if (data.x > 0){
-                    stickQuadrant = joystickPos_t::TOP_RIGHT;
-                } else {
-                    stickQuadrant = joystickPos_t::TOP_LEFT;
-                }
-            }
-            break;
-
-        case joystickPos_t::TOP_RIGHT:
-        case joystickPos_t::TOP_LEFT:
-        case joystickPos_t::BOTTOM_LEFT:
-        case joystickPos_t::BOTTOM_RIGHT:
-            //update/change evaluated pos when in one of the 4 quadrants
-            stickQuadrant = data.position;
-            //TODO: maybe beep when switching mode? (difficult because beep object has to be passed to function)
-            break;
+    // force off when stick pos changes - TODO: is this necessary?
+    static joystickPos_t stickPosPrev = joystickPos_t::CENTER;
+    if (data.position != stickPosPrev) {
+        ESP_LOGW(TAG, "massage: stick quadrant changed, stopping for one cycle");
+        shake_state = false;
+        shake_timestamp_turnedOff = esp_log_timestamp();
     }
-
+    stickPosPrev = data.position; // update last position
 
     //--- handle different modes (joystick in any of 4 quadrants) ---
-    switch (stickQuadrant){
+    switch (data.position){
+        // idle
         case joystickPos_t::CENTER:
-        case joystickPos_t::X_AXIS: //never true
-        case joystickPos_t::Y_AXIS: //never true
             commands.left.state = motorstate_t::IDLE;
             commands.right.state = motorstate_t::IDLE;
             commands.left.duty = 0;
             commands.right.duty = 0;
-            ESP_LOGI(TAG_CMD, "generate shake commands: CENTER -> idle");
+            ESP_LOGD(TAG_CMD, "generate shake commands: CENTER -> idle");
             return commands;
             break;
-            //4 different modes
+        // shake forward/reverse
+        case joystickPos_t::X_AXIS:
+        case joystickPos_t::Y_AXIS:
         case joystickPos_t::TOP_RIGHT:
+        case joystickPos_t::TOP_LEFT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::FWD;
             break;
-        case joystickPos_t::TOP_LEFT:
-            commands.left.state = motorstate_t::REV;
-            commands.right.state = motorstate_t::REV;
-            break;
+        // shake left right
         case joystickPos_t::BOTTOM_LEFT:
-            commands.left.state = motorstate_t::REV;
-            commands.right.state = motorstate_t::FWD;
-            break;
         case joystickPos_t::BOTTOM_RIGHT:
             commands.left.state = motorstate_t::FWD;
             commands.right.state = motorstate_t::REV;
             break;
     }
 
+    // change direction every second on cycle in any mode
+    //(to not start driving on average)
+    if (cycleCount % 2 == 0)
+    {
+        invertMotorDirection(&commands.left.state);
+        invertMotorDirection(&commands.right.state);
+    }
 
     //--- turn motors on/off depending on pulsing shake variable ---
     if (shake_state == true){
@@ -562,11 +564,127 @@ motorCommands_t joystick_generateCommandsShaking(joystickData_t data){
         commands.right.duty = 0;
     }
 
-
-    ESP_LOGI(TAG_CMD, "generated commands from data: state=%s, angle=%.3f, ratio=%.3f/%.3f, radius=%.2f, x=%.2f, y=%.2f",
-            joystickPosStr[(int)data.position], data.angle, ratio, (1-ratio), data.radius, data.x, data.y);
-    ESP_LOGI(TAG_CMD, "motor left: state=%s, duty=%.3f", motorstateStr[(int)commands.left.state], commands.left.duty);
-    ESP_LOGI(TAG_CMD, "motor right: state=%s, duty=%.3f", motorstateStr[(int)commands.right.state], commands.right.duty);
+    ESP_LOGD(TAG_CMD, "motor left: state=%s, duty=%.3f, cycleCount=%d, msOn=%f, msOff=%f", motorstateStr[(int)commands.left.state], commands.left.duty, cycleCount, msOn, msOff);
 
     return commands;
+}
+
+
+
+
+// corresponding storage key strings to each joystickCalibratenMode variable
+const char *calibrationStorageKeys[] = {"stick_x-min", "stick_x-max", "stick_y-min", "stick_y-max", "", ""};
+
+//-------------------------------
+//------- loadCalibration -------
+//-------------------------------
+// loads selected calibration value from nvs or default values from config if no data stored
+void evaluatedJoystick::loadCalibration(joystickCalibrationMode_t mode)
+{
+    // determine desired variables
+    int *configValue, *usedValue;
+    switch (mode)
+    {
+    case X_MIN:
+        configValue = &(config.x_min);
+        usedValue = &x_min;
+        break;
+    case X_MAX:
+        configValue = &(config.x_max);
+        usedValue = &x_max;
+        break;
+    case Y_MIN:
+        configValue = &(config.y_min);
+        usedValue = &y_min;
+        break;
+    case Y_MAX:
+        configValue = &(config.y_max);
+        usedValue = &y_max;
+        break;
+    case X_CENTER:
+    case Y_CENTER:
+    default:
+        // center position is not stored in nvs, it gets defined at startup or during calibration
+        ESP_LOGE(TAG, "loadCalibration: 'center_x' and 'center_y' are not stored in nvs -> not assigning anything");
+        // defineCenter();
+        return; 
+    }
+
+    // read from nvs
+    int16_t valueRead;
+    esp_err_t err = nvs_get_i16(*nvsHandle, calibrationStorageKeys[(int)mode], &valueRead);
+    switch (err)
+    {
+    case ESP_OK:
+        ESP_LOGW(TAG, "Successfully read value '%s' from nvs. Overriding default value %d with %d", calibrationStorageKeys[(int)mode], *configValue, valueRead);
+        *usedValue = (int)valueRead;
+        break;
+    case ESP_ERR_NVS_NOT_FOUND:
+        ESP_LOGW(TAG, "nvs: the value '%s' is not initialized yet, loading default value %d", calibrationStorageKeys[(int)mode], *configValue);
+        *usedValue = *configValue;
+        break;
+    default:
+        ESP_LOGE(TAG, "Error (%s) reading nvs!", esp_err_to_name(err));
+        *usedValue = *configValue;
+    }
+}
+
+
+
+//-------------------------------
+//------- loadCalibration -------
+//-------------------------------
+// loads selected calibration value from nvs or default values from config if no data stored
+void evaluatedJoystick::writeCalibration(joystickCalibrationMode_t mode, int newValue)
+{
+    // determine desired variables
+    int *configValue, *usedValue;
+    switch (mode)
+    {
+    case X_MIN:
+        configValue = &(config.x_min);
+        usedValue = &x_min;
+        break;
+    case X_MAX:
+        configValue = &(config.x_max);
+        usedValue = &x_max;
+        break;
+    case Y_MIN:
+        configValue = &(config.y_min);
+        usedValue = &y_min;
+        break;
+    case Y_MAX:
+        configValue = &(config.y_max);
+        usedValue = &y_max;
+        break;
+    case X_CENTER:
+        x_center = newValue;
+        ESP_LOGW(TAG, "writeCalibration: 'center_x' or 'center_y' are not stored in nvs -> loading only");
+        return;
+    case Y_CENTER:
+        y_center = newValue;
+        ESP_LOGW(TAG, "writeCalibration: 'center_x' or 'center_y' are not stored in nvs -> loading only");
+    default:
+        return;
+    }
+
+    // check if unchanged
+    if (*usedValue == newValue)
+    {
+        ESP_LOGW(TAG, "writeCalibration: value '%s' unchanged at %d, not writing to nvs", calibrationStorageKeys[(int)mode], newValue);
+        return;
+    }
+
+    // update nvs value
+    ESP_LOGW(TAG, "writeCalibration: updating nvs value '%s' from %d to %d", calibrationStorageKeys[(int)mode], *usedValue, newValue);
+    esp_err_t err = nvs_set_i16(*nvsHandle, calibrationStorageKeys[(int)mode], newValue);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed writing");
+    err = nvs_commit(*nvsHandle);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "nvs: failed committing updates");
+    else
+        ESP_LOGI(TAG, "nvs: successfully committed updates");
+    // update variable
+    *usedValue = newValue;
 }

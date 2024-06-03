@@ -12,8 +12,9 @@ extern "C" {
 typedef struct {
     gpio_num_t gpioPin;
 	float degreePerGroup;	//360 / [count of short,medium,long groups on encoder disk]
+	uint32_t minPulseDurationUs; //smallest possible pulse duration (time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
 	float tireCircumferenceMeter;
-	//positive direction is pulse order "short, medium, long"
+	//default positive direction is pulse order "short, medium, long"
 	bool directionInverted;
 	char* logName;
 } speedSensor_config_t;
@@ -24,30 +25,31 @@ class speedSensor {
 public:
 	//constructor
     speedSensor(speedSensor_config_t config);
- //initializes gpio pin and configures interrupt
-    void init();
+	// initializes gpio pin, configures and starts interrupt
+	void init();
 	
 	//negative values = reverse direction
 	//positive values = forward direction
 	float getKmph(); //kilometers per hour
 	float getMps(); //meters per second
 	float getRpm();  //rotations per minute
+	uint32_t getTimeLastUpdate() {return timeLastUpdate;};
 
-	//1=forward, -1=reverse
-    int direction;
-
-	//variables for handling the encoder
+	//variables for handling the encoder (public because ISR needs access)
 	speedSensor_config_t config;
-    int prevState = 0;
-	uint64_t pulseDurations[3] = {};
-	uint64_t lastEdgeTime = 0;
+	uint32_t pulseDurations[3] = {};
+	uint32_t pulse1, pulse2, pulse3;
+	uint32_t shortestPulse = 0;
+	uint32_t shortestPulsePrev = 0;
+	uint32_t lastEdgeTime = 0;
 	uint8_t pulseCounter = 0;
 	int debugCount = 0;
+	uint32_t debug_countIgnoredSequencesTooShort = 0;
 	double currentRpm = 0;
-	bool isInitialized = false;
+	uint32_t timeLastUpdate = 0;
 
 private:
-
+	static bool isrIsInitialized; // default false due to static
 };
 
 
