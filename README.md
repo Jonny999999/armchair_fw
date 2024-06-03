@@ -1,91 +1,110 @@
 # Overview
-Firmware for a homemade automated electric armchair.  
-Extensive details about this project can be found on the website:
+This repository contains the firmware for a custom-built automated electric armchair.  
+Detailed project information and documentation is available on the website:
 - ~~V1: [Electric Armchair V1](https://pfusch.zone/electric-armchair)~~
 - V2: [Electric Armchair V2](https://pfusch.zone/electric-armchair-v2)
 
-Note: In the current version V2.2, only the esp-project in the [board_single/](board_single) folder and the custom libraries in [common/](common) are used.  
-The projects in the folders `board_control/` and `board_motorctl/` are no longer compatible and legacy from V2.1.
+**Note:** In the current version _V2.2_, only the esp-project in the [board_single/](board_single) folder and the custom libraries in [common/](common) are used.  
+The projects in the folders `board_control/` and `board_motorctl/` are no longer compatible and are legacy from _V2.1_.
 
-<img src="doc/2023.09.09_armchair-frame.jpg" alt="Photo machine" style="width:60%;">
-
+<img src="doc/2023.09.09_armchair-frame.jpg" alt="Photo machine" style="width:60%;"><br>
 *Photo of the built frame that carries the armchair*
 
-## Hardware Setup / Electrical
-### PCB
-The firmware in this repository is designed for an ESP32 microcontroller integrated into a custom PCB developed here: [Project Work 2020](https://pfusch.zone/project-work-2020)
 
-### Connection Plan
-A detailed diagram illustrating all components and wiring can be found in the file [connection-plan.drawio.pdf](connection-plan.drawio.pdf)
-
-For more details refer to the documentation on the website.
-
-
+# Overview
 ## Current Features
-- Control Modes:
-  - Joystick: Control via hardware joystick mounted on the right armrest
-  - HTTP: Control via virtual joystick on a web interface
-  - Massage: Armchair shaking depending on stick position
-  - Auto: Execute stored driving commands sequentially
-- Electric Chair Adjustment: Leg and backrest control via joystick
-- Advanced Motor Control: Configurable motor fading (acceleration, deceleration limit), current limit, braking; compatible with different hardware
-- Wi-Fi:
+- **Control Modes:**
+  - **Joystick:** Control movement via hardware joystick mounted on the right armrest
+  - **HTTP:** Control movement via virtual joystick on a web interface
+  - **Massage:** Armchair shaking depending on stick position
+  - **Adjust:** Control leg and backrest position via joystick
+  - **Auto:** Execute stored driving commands sequentially
+- **Advanced Motor Control:**
+  - Deceleration limit
+  - Acceleration limit
+  - Current limit
+  - Braking
+  - Compatible with different motor drivers:
+    - 3 pins: A, B, PWM - e.g. various common H-Bridges
+    - 1 pin: UART/RS232 - e.g. Sabertooth
+- **Input/Sensors:**
+  - **Speed Measurement:** Measures speed and direction of each tire individually using custom built encoders
+  - **Current Measurement:** Monitors current of each motor
+  - **Battery Voltage:** Measures battery voltage and calculates percentage according to discharge curve
+  - **Analog Joystick:** 
+    - Evaluate two analog signals to get coordinates, radius and angle
+    - Calibration wizard/sequence
+    - Calibration stored persistently in nvs
+- **Fan Control:** Cooling fan for motor driver are activated when needed only
+- **Buzzer:** Provides acoustic feedback when switching modes or interacting with menu
+- **OLED-Display + Rotary-encoder:**
+  - Various status screens showing battery status, speed, RPM, motor current, mode, power, duty cycle, stick data
+  - Menu for setting various options using encoder
+  - Changed settings are stored persistently in NVS flash
+  - Menu for selecting the control mode
+- **UART Communication between 2 Boards (V2.1)**
+- **Electric Chair Adjustment:** Control 4 Relays powering motors that adjust the chair rest positions
+- **Wi-Fi:**
   - Hosts wireless network
   - Webserver with webroot in SPIFFS
-  - HTTP API for controlling the chair
-- UART Communication between 2 boards (V2.1)
-- Speed Measurement: Measures speed and direction of each tire individually using custom encoders
-- Current Measurement: Monitors current of each motor
-- Battery Capacity: Measures battery voltage and calculates percentage according to discharge curve
-- Fan Control: Cooling fan for motor driver activated only when needed
-- Display + Rotary encoder:
-  - Various status screens showing battery status, speed, RPM, motor current, mode, power, duty cycle, stick data
-  - Menu for setting various options using encoder (options are stored persistently in nvs flash)
-  - Menu for selecting the control mode
-- Buzzer: Provides acoustic feedback when switching modes or interacting with menu
+  - HTTP API for controlling the chair (remote control)
+- **React web-app:** Virtual joystick sending data to http-API (placed in SPIFFS)
+
 
 ## Planned Features
+#### Hardware
 - More Sensors:
   - Accelerometer
   - Lidar sensor / collision detection
   - GPS receiver
   - Temperature sensors
+- Lights
+- Camera
+#### Algorithms
 - Anti-Slip Regulation
 - Self-Driving Algorithm
-- Lights
+#### UI
 - Improved Web Interface
-- App
-- Camera
+  - Settings
+  - Chair adjustment
+- Simple App
+
+
+## Hardware Setup / Electrical
+### PCB
+The firmware is designed for an ESP32 microcontroller integrated into a custom PCB developed here: [Project Work 2020](https://pfusch.zone/project-work-2020)
+
+### Connection Plan
+A detailed diagram illustrating all components and wiring can be found in the file [connection-plan.drawio.pdf](connection-plan.drawio.pdf).   
+For more details refer to the documentation on the [website](https://pfusch.zone/electric-armchair-v2).
 
 
 
 # Installation
-### Install esp-idf
-For this project **ESP-IDF v4.4.4** is required (with other versions it might not compile)
+### Install ESP-IDF
+For this project **ESP-IDF v4.4.4** is required
 ```bash
 #download esp-idf
 yay -S esp-idf #alternatively clone the esp-idf repository from github
 #run installation script in installed folder
 /opt/esp-idf/install.sh
 ```
-### Clone this repo
+### Clone Repository
 ```
 git clone git@github.com:Jonny999999/armchair_fw
 ```
-### Instal node packages
-For the react app packages have to be installed using npm. TODO: add this to cmake?
+### Install Node Packages
+Navigate to the react-app directory and install required packages using npm:
 ```
 cd react-app
 npm install
 ```
 
 
-
 # Building the Project
 ## React-webapp
 When flashing to the ESP32, the files in the `react-app/build/` folder are written to a SPIFFS partition.  
 These files are then served via HTTP in the Wi-Fi network "armchair" created by the ESP32.  
-In HTTP control mode, you can control the armchair using a joystick on the provided website.  
 
 Initially, or when changing the React code, you need to manually build the React app:
 ```bash
@@ -95,31 +114,31 @@ npm run build
 #remove unwanted license file (filename too long for spiffs)
 rm build/static/js/main.8f9aec76.js.LICENSE.txt
 ```
-Note: Use `npm start` for starting the webapp locally for testing
+**Note:** For testing the app locally, use `npm start`
 
 
 ## Firmware
-### Set up environment
+### Environment Setup
 ```bash
 source /opt/esp-idf/export.sh
 ```
-(run once per terminal)
+Run once per terminal
 
-### Compile
+### Compilation
 ```bash
 cd board_single
 idf.py build
 ```
 
 ### Upload
-- connect FTDI programmer to board (VCC to VCC; TX to RX; RX to TX)
-- press REST and BOOT button
-- release RESET button (keep pressing boot)
-- run flash command:
+- Connect FTDI programmer to board (GND to GND, TX to RX, RX to TX)
+- Press RESET and BOOT button
+- Release RESET button (keep pressing boot)
+- Release boot button
+- Run flash command:
 ```bash
 idf.py flash
 ```
-- once "connecting...' was successfully, BOOT button can be released
 
 
 ### Monitor
@@ -127,8 +146,6 @@ To view log output for debugging, follow the same steps as in the Upload section
 ```bash
 idf.py monitor
 ```
-
-
 
 
 
@@ -167,6 +184,6 @@ idf.py monitor
 Control the armchair via a virtual joystick on the web interface.
 
 **Usage:**
-- Switch to HTTP mode (4 button presses).
-- Connect to WiFi `armchar`, no password.
+- Switch to HTTP mode (4 button presses or via mode-select menu).
+- Connect to WiFi `armchair`, no password.
 - Access http://192.168.4.1 (note: **http** NOT https, some browsers automatically add https!).
