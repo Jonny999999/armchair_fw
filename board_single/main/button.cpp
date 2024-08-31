@@ -178,6 +178,7 @@ void buttonCommands::startHandleLoop()
     //-- variables --
     bool isPressed = false;
     static rotary_encoder_event_t event; // store event data
+    int rotateCount = 0; // temporary count clicks encoder was rotated
     // int count = 0; (from class)
 
     while (1)
@@ -211,16 +212,18 @@ void buttonCommands::startHandleLoop()
                 isPressed = false; // rest stored state
                 break;
             case RE_ET_CHANGED: // scroll through status pages when simply rotating encoder
-                if (event.diff > 0)
+                rotateCount++;
+                if (rotateCount >= 2) // at least two rotate-clicks necessary for one page switch
                 {
-                    display_rotateStatusPage(true, true); //select NEXT status screen, stau at last element (dont rotate to first)
-                    buzzer->beep(1, 65, 0);
+                    if (event.diff > 0)
+                        display_rotateStatusPage(true, true); // select NEXT status screen, stay at last element (dont rotate to first)
+                    else
+                        display_rotateStatusPage(false, true); // select PREVIOUS status screen, stay at first element (dont rotate to last)
+                    rotateCount = 0;
+                    buzzer->beep(1, 90, 0);
                 }
                 else
-                {
-                    display_rotateStatusPage(false, true); //select PREVIOUS status screen, stay at first element (dont rotate to last)
                     buzzer->beep(1, 65, 0);
-                }
                 break;
             case RE_ET_BTN_LONG_PRESSED:
             case RE_ET_BTN_CLICKED:
@@ -230,6 +233,16 @@ void buttonCommands::startHandleLoop()
         }
         else // timeout (no event received within TIMEOUT)
         {
+            // switch back to default status screen in case less than 2 rotate-clicks received
+            if (rotateCount != 0)
+            {
+                rotateCount = 0;
+                display_selectStatusPage(STATUS_SCREEN_OVERVIEW);
+                //TODO only change/beep if not already at STATUS_SCREEN_OVERVIEW
+                //buzzer->beep(1, 100, 0);
+            }
+
+            // encoder was pressed
             if (count > 0)
             {
                 //-- run action with count of presses --
