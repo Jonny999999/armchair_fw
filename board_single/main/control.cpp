@@ -88,6 +88,13 @@ controlledArmchair::controlledArmchair(
 
     // create semaphore for preventing race condition: mode-change operations while currently still executing certain mode
     handleIteration_mutex = xSemaphoreCreateMutex();
+
+    //switch to default active mode if configured
+    if (config.idleAfterStartup == false)
+    {
+        ESP_LOGI(TAG, "idleAfterStartup is disabled -> switching to configured default mode...");
+        changeMode(config.defaultMode, true); //switch to default mode without beeping
+    }
 }
 
 
@@ -434,7 +441,7 @@ void controlledArmchair::handleTimeout()
 //----------- changeMode ------------
 //-----------------------------------
 //function to change to a specified control mode
-void controlledArmchair::changeMode(controlMode_t modeNew)
+void controlledArmchair::changeMode(controlMode_t modeNew, bool noBeep)
 {
     // variable to store configured accel limit before entering massage mode, to restore it later
     static uint32_t massagePreviousAccel = motorLeft->getFade(fadeType_t::ACCEL);
@@ -472,7 +479,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
             ESP_LOGI(TAG, "disabling debug output for 'evaluatedJoystick'");
             esp_log_level_set("evaluatedJoystick", ESP_LOG_WARN); // FIXME: loglevel from config
 #endif
-            buzzer->beep(1, 200, 100);
+            if (!noBeep) buzzer->beep(1, 200, 100);
             break;
 
         case controlMode_t::HTTP:
@@ -523,7 +530,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
         case controlMode_t::IDLE:
             ESP_LOGW(TAG, "switching to IDLE mode: turning both motors off, beep");
             idleBothMotors();
-            buzzer->beep(1, 900, 0);
+            if (!noBeep) buzzer->beep(1, 900, 0);
             break;
 
         case controlMode_t::HTTP:
@@ -534,7 +541,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
         case controlMode_t::ADJUST_CHAIR:
             ESP_LOGW(TAG, "switching to ADJUST_CHAIR mode: turning both motors off, beep");
             idleBothMotors();
-            buzzer->beep(3, 100, 50);
+            if (!noBeep) buzzer->beep(3, 100, 50);
             break;
 
         case controlMode_t::MENU_SETTINGS:
