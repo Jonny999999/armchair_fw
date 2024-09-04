@@ -20,6 +20,9 @@ class cControlledRest {
 public:
     cControlledRest(gpio_num_t gpio_up, gpio_num_t gpio_down, const char *name);
     void setState(restState_t targetState);
+    float getPercent();
+    void setTargetPercent(float targetPercent);
+    void handle();
     void stop();
 
 private:

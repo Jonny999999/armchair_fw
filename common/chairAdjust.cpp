@@ -85,6 +85,10 @@ void cControlledRest::setState(restState_t targetState)
     }
 }
 
+    void setTargetPercent(float targetPercent);
+    void handle(){
+        
+    }
 
 
 //====================================
