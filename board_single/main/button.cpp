@@ -224,9 +224,10 @@ void buttonCommands::startHandleLoop()
             case RE_ET_CHANGED: // scroll through status pages when simply rotating encoder
 
                 if (event.diff > 0)
-                    legRest->setTargetPercent(legRest->getTargetPercent() + 10);
+                    legRest->setTargetPercent(legRest->getTargetPercent() - 5);
+                    //TODO display notification
                 else
-                    legRest->setTargetPercent(legRest->getTargetPercent() - 10);
+                    legRest->setTargetPercent(legRest->getTargetPercent() + 5);
 
                 //## switch status page with rotate - disabled
                 ///rotateCount++;

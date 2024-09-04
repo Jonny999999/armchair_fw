@@ -67,13 +67,14 @@ void cControlledRest::updatePosition(){
         switch (state)
         {
         case REST_UP:
-            positionNow += timeRan / travelDuration * 100;
+            positionNow += (float)timeRan / travelDuration * 100;
             break;
         case REST_DOWN:
-            positionNow -= timeRan / travelDuration * 100;
+            positionNow -= (float)timeRan / travelDuration * 100;
             break;
         case REST_OFF:
             //no change
+            ESP_LOGW(TAG, "updatePosition() unknown direction - cant update position when state is REST_OFF");
             break;
         }
 
@@ -97,7 +98,7 @@ void cControlledRest::setState(restState_t targetState)
 {
     //check if actually changed
     if (targetState == state){
-        ESP_LOGD(TAG, "[%s] state already at '%s', nothing to do", name, restStateStr[state]);
+        ESP_LOGV(TAG, "[%s] state already at '%s', nothing to do", name, restStateStr[state]);
         return;
     }
 
@@ -107,8 +108,7 @@ void cControlledRest::setState(restState_t targetState)
 
     //apply new state
     ESP_LOGI(TAG, "[%s] switching from state '%s' to '%s'", name, restStateStr[state], restStateStr[targetState]);
-    state = targetState;
-    switch (state)
+    switch (targetState)
     {
     case REST_UP:
         gpio_set_level(gpio_down, 0);
@@ -124,8 +124,10 @@ void cControlledRest::setState(restState_t targetState)
         gpio_set_level(gpio_down, 0);
         gpio_set_level(gpio_up, 0);
         updatePosition();
+        positionTarget = positionNow; //disable resuming - no unexpected pos when incrementing
         break;
     }
+    state = targetState;
 }
 
 
@@ -134,7 +136,17 @@ void cControlledRest::setState(restState_t targetState)
 //==== setTargetPercent ====
 //==========================
 void cControlledRest::setTargetPercent(float targetPercent){
+    float positionTargetPrev = positionTarget;
     positionTarget = targetPercent;
+
+    // limit to 0-100
+    if (positionTarget > 100)
+        positionTarget = 100;
+    else if (positionTarget < 0)
+        positionTarget = 0;
+        
+        ESP_LOGI(TAG, "[%s] changed Target position from %.2f%% to %.2f%%", name, positionTargetPrev, positionTarget);
+
     // start rest in required direction
     // TODO always run this check in handle()?
     // note: when already at 0/100 start anyways (runs for certain threshold in case tracked position out of sync)
@@ -152,7 +164,7 @@ void cControlledRest::setTargetPercent(float targetPercent){
 //======= handle =======
 //======================
 // handle automatic stop when target position is reached, should be run repeatedly in a task
-#define TRAVEL_TIME_LIMIT_ADDITION_MS 3000 // traveling longer into limit compensates inaccuracies in time based position tracking
+#define TRAVEL_TIME_LIMIT_ADDITION_MS 2000 // traveling longer into limit compensates inaccuracies in time based position tracking
 void cControlledRest::handle(){
 
     // nothing to do when not running atm
@@ -170,7 +182,7 @@ void cControlledRest::handle(){
 
     // target reached
     if (timeRan >= timeTarget){
-        ESP_LOGI(TAG, "[%s] reached target run-time (%dms/%dms) for position %.2f%% -> stopping", name, timeRan, timeTarget, positionTarget);
+        ESP_LOGW(TAG, "[%s] reached target run-time (%dms/%dms) for position %.2f%% -> stopping", name, timeRan, timeTarget, positionTarget);
         setState(REST_OFF);
     }
 }
@@ -180,7 +192,7 @@ void cControlledRest::handle(){
 //============================
 //===== chairAdjust_task =====
 //============================
-#define CHAIR_ADJUST_HANDLE_TASK_DELAY 500
+#define CHAIR_ADJUST_HANDLE_TASK_DELAY 300
 void chairAdjust_task( void * pvParameters )
 {
 	ESP_LOGW(TAG, "Starting chairAdjust task...");
@@ -217,12 +229,12 @@ void controlChairAdjustment(joystickData_t data, cControlledRest * legRest, cCon
 
     //--- control rest motors ---
     //leg rest (x-axis)
-    if (data.x > stickThreshold) legRest->setState(REST_UP);
-    else if (data.x < -stickThreshold) legRest->setState(REST_DOWN);
+    if (data.x > stickThreshold) legRest->setTargetPercent(100);
+    else if (data.x < -stickThreshold) legRest->setTargetPercent(0);
     else legRest->setState(REST_OFF);
 
     //back rest (y-axis)
-    if (data.y > stickThreshold) backRest->setState(REST_UP);
-    else if (data.y < -stickThreshold) backRest->setState(REST_DOWN);
+    if (data.y > stickThreshold) backRest->setTargetPercent(100);
+    else if (data.y < -stickThreshold) backRest->setTargetPercent(0);
     else backRest->setState(REST_OFF);
 }
