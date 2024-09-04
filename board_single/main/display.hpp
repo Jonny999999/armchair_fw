@@ -67,6 +67,9 @@ void display_selectStatusPage(displayStatusPage_t newStatusPage);
 // select next/previous status screen to be shown, when noRotate is set is stays at first/last screen
 void display_rotateStatusPage(bool reverseDirection = false, bool noRotate = false);
 
+// show content for certain time in any mode
+void display_showNotification(uint32_t showDurationMs, const char *line1, const char * line2Large, const char * line3Large );
+
 //task that inititialized the display, displays welcome message 
 //and releatedly updates the display with certain content
 void display_task( void * pvParameters );

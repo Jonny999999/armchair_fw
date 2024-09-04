@@ -18,7 +18,7 @@ extern const char* restStateStr[];
 //2 instances will be created one for back and one for leg rest
 class cControlledRest {
 public:
-    cControlledRest(gpio_num_t gpio_up, gpio_num_t gpio_down, uint32_t travelDurationMs, const char *name);
+    cControlledRest(gpio_num_t gpio_up, gpio_num_t gpio_down, uint32_t travelDurationMs, const char *name, float defaultPosition = 0);
     void setState(restState_t targetState);
     float getPercent(); //TODO update position first
     void setTargetPercent(float targetPercent);

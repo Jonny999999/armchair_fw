@@ -186,7 +186,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 void buttonCommands::startHandleLoop()
 {
     //-- variables --
-    bool isPressed = false;
+    static bool isPressed = false;
     static rotary_encoder_event_t event; // store event data
     int rotateCount = 0; // temporary count clicks encoder was rotated
     // int count = 0; (from class)
@@ -221,27 +221,39 @@ void buttonCommands::startHandleLoop()
                 ESP_LOGD(TAG, "Button released");
                 isPressed = false; // rest stored state
                 break;
-            case RE_ET_CHANGED: // scroll through status pages when simply rotating encoder
-
-                if (event.diff > 0)
-                    legRest->setTargetPercent(legRest->getTargetPercent() - 5);
-                    //TODO display notification
+            case RE_ET_CHANGED:
+                if (isPressed){
+                    /////### scroll through status pages when PRESSED + ROTATED ###
+                    ///if (event.diff > 0)
+                    ///    display_rotateStatusPage(true, true); // select NEXT status screen, stay at last element (dont rotate to first)
+                    ///else
+                    ///    display_rotateStatusPage(false, true); // select PREVIOUS status screen, stay at first element (dont rotate to last)
+                //### adjust back support when PRESSED + ROTATED ###
+                    if (event.diff > 0)
+                        backRest->setTargetPercent(backRest->getTargetPercent() - 5);
+                    else
+                        backRest->setTargetPercent(backRest->getTargetPercent() + 5);
+                    // show temporary notification on display
+                    char buf[8];
+                    snprintf(buf, 8, "%.1f%%", backRest->getTargetPercent());
+                    display_showNotification(1000, "moving Rest:", "LEG", buf);
+                }
+                //### adjust leg support when ROTATED ###
                 else
-                    legRest->setTargetPercent(legRest->getTargetPercent() + 5);
-
-                //## switch status page with rotate - disabled
-                ///rotateCount++;
-                ///if (rotateCount >= 2) // at least two rotate-clicks necessary for one page switch
-                ///{
-                ///    if (event.diff > 0)
-                ///        display_rotateStatusPage(true, true); // select NEXT status screen, stay at last element (dont rotate to first)
-                ///    else
-                ///        display_rotateStatusPage(false, true); // select PREVIOUS status screen, stay at first element (dont rotate to last)
-                ///    rotateCount = 0;
-                ///    buzzer->beep(1, 90, 0);
-                ///}
-                ///else
-                ///    buzzer->beep(1, 65, 0);
+                {
+                    // increment target position each click
+                    // TODO: ignore first 2 clicks
+                    // TODO: control back rest too?
+                    if (event.diff > 0)
+                        legRest->setTargetPercent(legRest->getTargetPercent() - 5);
+                    else
+                        legRest->setTargetPercent(legRest->getTargetPercent() + 5);
+                    // show temporary notification on display
+                    char buf[8];
+                    snprintf(buf, 8, "%.1f%%", legRest->getTargetPercent());
+                    display_showNotification(1000, "moving Rest:", "LEG", buf);
+                }
+                buzzer->beep(1, 90, 0);
                 break;
             case RE_ET_BTN_LONG_PRESSED:
             case RE_ET_BTN_CLICKED:
@@ -251,16 +263,6 @@ void buttonCommands::startHandleLoop()
         }
         else // timeout (no event received within TIMEOUT)
         {
-                //## switch status page with rotate - disabled
-            // switch back to default status screen in case less than 2 rotate-clicks received
-            ///if (rotateCount != 0)
-            ///{
-            ///    rotateCount = 0;
-            ///    display_selectStatusPage(STATUS_SCREEN_OVERVIEW);
-            ///    //TODO only change/beep if not already at STATUS_SCREEN_OVERVIEW
-            ///    //buzzer->beep(1, 100, 0);
-            ///}
-
             // encoder was pressed
             if (count > 0)
             {

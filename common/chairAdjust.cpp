@@ -24,10 +24,12 @@ static const char * TAG = "chair-adjustment";
 //=============================
 //======== constructor ========
 //=============================
-cControlledRest::cControlledRest(gpio_num_t gpio_up_f, gpio_num_t gpio_down_f, uint32_t travelDurationMs, const char * name_f):travelDuration(travelDurationMs){
+cControlledRest::cControlledRest(gpio_num_t gpio_up_f, gpio_num_t gpio_down_f, uint32_t travelDurationMs, const char * name_f, float defaultPosition):travelDuration(travelDurationMs){
     strcpy(name, name_f);
     gpio_up = gpio_up_f;
     gpio_down = gpio_down_f;
+    positionNow = defaultPosition;
+    positionTarget = positionNow;
     init();
 }
 

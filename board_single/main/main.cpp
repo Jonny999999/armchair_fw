@@ -161,9 +161,9 @@ void createObjects()
     buzzer = new buzzer_t(GPIO_NUM_12, 1);
 
     // create objects for controlling the chair position
-    //                       gpio_up, gpio_down, name
+    //                       gpio_up, gpio_down, travelDuration, name, defaultPosition
     legRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, 12000, "legRest");
-    backRest = new cControlledRest(GPIO_NUM_16, GPIO_NUM_4, 12000, "backRest");
+    backRest = new cControlledRest(GPIO_NUM_16, GPIO_NUM_4, 12000, "backRest", 100); //default position "100% up"
 
     // create control object (control.hpp)
     // with configuration from config.cpp
