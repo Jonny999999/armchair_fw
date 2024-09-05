@@ -1,8 +1,5 @@
 extern "C"
 {
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/gpio.h"
 #include "esp_log.h"
 #include <string.h>
 }
@@ -108,6 +105,10 @@ void cControlledRest::setState(restState_t targetState)
     if (state != REST_OFF)
         updatePosition();
 
+    // activate handle task when turning on (previous state is off)
+    if (state == REST_OFF)
+        xTaskNotifyGive(taskHandle); //activate handle task that stops the rest-motor again
+
     //apply new state
     ESP_LOGI(TAG, "[%s] switching from state '%s' to '%s'", name, restStateStr[state], restStateStr[targetState]);
     switch (targetState)
@@ -194,21 +195,22 @@ void cControlledRest::handle(){
 //============================
 //===== chairAdjust_task =====
 //============================
-#define CHAIR_ADJUST_HANDLE_TASK_DELAY 300
-void chairAdjust_task( void * pvParameters )
+#define CHAIR_ADJUST_HANDLE_TASK_DELAY 100
+void chairAdjust_task( void * pvParameter )
 {
-	ESP_LOGW(TAG, "Starting chairAdjust task...");
-	//get struct with pointers to all needed global objects from task parameter
-	chairAdjust_task_parameters_t *objects = (chairAdjust_task_parameters_t *)pvParameters;
+    cControlledRest * rest = (cControlledRest *)pvParameter;
+	ESP_LOGW(TAG, "Starting task for controlling %s...", rest->getName());
+    rest->taskHandle = xTaskGetCurrentTaskHandle();
 
-	// repeatedly update display with content depending on current mode
 	while (1)
 	{
-        //TODO mutex
-        //TODO add queue so task only runs when at least one rest is actually moving
-        objects->legRest->handle();
-        objects->backRest->handle();
-        vTaskDelay(CHAIR_ADJUST_HANDLE_TASK_DELAY / portTICK_PERIOD_MS);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait for wakeup by setState() (rest-motor turned on)
+        ESP_LOGW(TAG, "task %s: received notification -> activating task!", rest->getName());
+        while (rest->getState() != REST_OFF){
+            rest->handle();
+            vTaskDelay(CHAIR_ADJUST_HANDLE_TASK_DELAY / portTICK_PERIOD_MS);
+        }
+        ESP_LOGW(TAG, "task %s: rest turned off -> sleeping task", rest->getName());
     }
 }
 

@@ -1,4 +1,10 @@
 #pragma once
+extern "C"
+{
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+}
 
 #include "joystick.hpp"
 
@@ -20,10 +26,13 @@ class cControlledRest {
 public:
     cControlledRest(gpio_num_t gpio_up, gpio_num_t gpio_down, uint32_t travelDurationMs, const char *name, float defaultPosition = 0);
     void setState(restState_t targetState);
+    restState_t getState() const {return state;};
     float getPercent(); //TODO update position first
     void setTargetPercent(float targetPercent);
     float getTargetPercent() const {return positionTarget;};
     void handle();
+    const char * getName() const {return name;};
+    TaskHandle_t taskHandle = NULL; //task that repeatedly runs the handle() method
 
 private:
     void init();
@@ -40,19 +49,13 @@ private:
 
 };
 
-// struct with variables passed to task from main()
-typedef struct chairAdjust_task_parameters_t {
-    cControlledRest * legRest;
-    cControlledRest * backRest;
-    //buzzer_t *buzzer;
-} chairAdjust_task_parameters_t;
-
 
 
 //===========================
 //==== chairAdjust_task =====
 //===========================
-void chairAdjust_task( void * chairAdjust_task_parameters_t );
+// repeatedly runs handle method of specified ControlledRest object to turn of the rest, when activated by setState()
+void chairAdjust_task( void * cControlledRest );
 
 
 

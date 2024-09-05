@@ -286,9 +286,9 @@ extern "C" void app_main(void) {
 	//-------------------------------------
 	//-- create task for chairAdjustment --
 	//-------------------------------------
-	//task that stops chair-rest motors when they reach target
-	chairAdjust_task_parameters_t chairAdjust_param = {legRest, backRest};
-	xTaskCreate(&chairAdjust_task, "chairAdjust_task", 2048, &chairAdjust_param, 1, NULL);
+	//tasks that stop chair-rest motors when they reach target (note: they sleep when motors not running)
+	xTaskCreate(&chairAdjust_task, "chairAdjustLeg_task", 2048, legRest, 1, NULL);
+	xTaskCreate(&chairAdjust_task, "chairAdjustBack_task", 2048, backRest, 1, NULL);
 
 	vTaskDelay(200 / portTICK_PERIOD_MS); //wait for all tasks to finish initializing
 	printf("\n");
