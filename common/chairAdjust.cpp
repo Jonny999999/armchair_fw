@@ -95,10 +95,18 @@ void cControlledRest::updatePosition(){
 //============================
 void cControlledRest::setState(restState_t targetState)
 {
-    //check if actually changed
-    if (targetState == state){
-        ESP_LOGV(TAG, "[%s] state already at '%s', nothing to do", name, restStateStr[state]);
-        return;
+    // TODO: drop this section?
+    // check if actually changed
+    if (targetState == state)
+    {
+    // update anyways when target is 0 or 100, to trigger movement threshold in case of position tracking is out of sync
+        if (positionTarget == 0 || positionTarget == 100)
+            ESP_LOGD(TAG, "[%s] state already at '%s', but updating anyway to trigger move to limit addition", name, restStateStr[state]);
+        else
+        {
+            ESP_LOGV(TAG, "[%s] state already at '%s', nothing to do", name, restStateStr[state]);
+            return;
+        }
     }
 
     // when switching direction without stop: update position first
@@ -147,8 +155,14 @@ void cControlledRest::setTargetPercent(float targetPercent){
         positionTarget = 100;
     else if (positionTarget < 0)
         positionTarget = 0;
-        
-        ESP_LOGI(TAG, "[%s] changed Target position from %.2f%% to %.2f%%", name, positionTargetPrev, positionTarget);
+
+    // ignore if unchanged
+    //if (positionTarget == positionTargetPrev){
+    //    ESP_LOGI(TAG, "[%s] Target position unchanged at %.2f%%", name, positionTarget);
+    //    return;
+    //}
+
+    ESP_LOGI(TAG, "[%s] changed Target position from %.2f%% to %.2f%%", name, positionTargetPrev, positionTarget);
 
     // start rest in required direction
     // TODO always run this check in handle()?
@@ -185,7 +199,7 @@ void cControlledRest::handle(){
 
     // target reached
     if (timeRan >= timeTarget){
-        ESP_LOGW(TAG, "[%s] reached target run-time (%dms/%dms) for position %.2f%% -> stopping", name, timeRan, timeTarget, positionTarget);
+        ESP_LOGW(TAG, "[%s] handle: reached target run-time (%dms/%dms) for position %.2f%% -> stopping", name, timeRan, timeTarget, positionTarget);
         setState(REST_OFF);
     }
 }

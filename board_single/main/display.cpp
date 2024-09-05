@@ -596,6 +596,10 @@ void handleStatusScreen(display_task_parameters_t *objects)
 // trigger custom notification that is shown in any mode for set amount of time
 void display_showNotification(uint32_t showDurationMs, const char *line1, const char *line2Large, const char *line3Large)
 {
+	// clear display when notification initially shown
+	if (notificationIsActive == false)
+		ssd1306_clear_screen(&dev, false);
+	// update state and timestamp for auto exit
 	timestampNotificationStop = esp_log_timestamp() + showDurationMs;
 	notificationIsActive = true;
 	// void displayTextLineCentered(SSD1306_t *display, int line, bool isLarge, bool inverted, const char *format, ...);

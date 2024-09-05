@@ -182,9 +182,9 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 // when not in MENU_SETTINGS mode, repeatedly receives events from encoder button
 // and takes the corresponding action
 // this function has to be started once in a separate task
-#define INPUT_TIMEOUT 500 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
+#define INPUT_TIMEOUT 600 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
 #define IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE 800 // time that has to be passed since last encoder rotate click for button count command to be accepted (e.g. prevent long press action after PRESS+ROTATE was used)
-#define IGNORE_ROTATE_COUNT 2 //amount of ignored clicks before action is actually taken (ignore accidental touches)
+#define IGNORE_ROTATE_COUNT 1 //amount of ignored clicks before action is actually taken (ignore accidental touches)
 void buttonCommands::startHandleLoop()
 {
     //-- variables --
@@ -226,7 +226,7 @@ void buttonCommands::startHandleLoop()
                 break;
             case RE_ET_CHANGED:
                 // ignore first clicks
-                if (++rotateCount < IGNORE_ROTATE_COUNT)
+                if (rotateCount++ < IGNORE_ROTATE_COUNT)
                     {
                         buzzer->beep(1, 60, 0);
                         break;
@@ -245,8 +245,8 @@ void buttonCommands::startHandleLoop()
                         backRest->setTargetPercent(backRest->getTargetPercent() + 5);
                     // show temporary notification on display
                     char buf[8];
-                    snprintf(buf, 8, "%.1f%%", backRest->getTargetPercent());
-                    display_showNotification(1000, "moving Rest:", "LEG", buf);
+                    snprintf(buf, 8, "%.0f%%", backRest->getTargetPercent());
+                    display_showNotification(2500, "moving Rest:", "BACK", buf);
                 }
                 //### adjust leg support when ROTATED ###
                 else
@@ -258,8 +258,8 @@ void buttonCommands::startHandleLoop()
                         legRest->setTargetPercent(legRest->getTargetPercent() + 5);
                     // show temporary notification on display
                     char buf[8];
-                    snprintf(buf, 8, "%.1f%%", legRest->getTargetPercent());
-                    display_showNotification(1000, "moving Rest:", "LEG", buf);
+                    snprintf(buf, 8, "%.0f%%", legRest->getTargetPercent());
+                    display_showNotification(2500, "moving Rest:", "LEG", buf);
                 }
                 buzzer->beep(1, 90, 0);
                 break;
