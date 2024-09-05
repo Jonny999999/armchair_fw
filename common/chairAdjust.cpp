@@ -7,7 +7,10 @@ extern "C"
 #include "chairAdjust.hpp"
 
 
-#define MUTEX_TIMEOUT (10000 / portTICK_PERIOD_MS)
+#define MUTEX_TIMEOUT (5000 / portTICK_PERIOD_MS)
+#define MIN_OFF_TIME_DIR_CHANGE 400 // time off between direction change
+//TODO: #define MIN_OFF_TIME dont allow instant resume in same diretion (apparently relays short and fuse blows)
+#define MIN_ON_TIME 200
 
 //--- gloabl variables ---
 // strings for logging the rest state
@@ -96,6 +99,7 @@ void cControlledRest::updatePosition(){
 //============================
 void cControlledRest::setState(restState_t targetState)
 {
+    ESP_LOGV(TAG, "setState START");
     // lock the mutex before accessing shared variables
     if (xSemaphoreTakeRecursive(mutex, MUTEX_TIMEOUT) == pdTRUE)
     {
@@ -104,22 +108,52 @@ void cControlledRest::setState(restState_t targetState)
         if (targetState == state)
         {
             // update anyways when target is 0 or 100, to trigger movement threshold in case of position tracking is out of sync
-            if (positionTarget == 0 || positionTarget == 100)
+            if (state != REST_OFF && (positionTarget == 0 || positionTarget == 100))
                 ESP_LOGD(TAG, "[%s] state already at '%s', but updating anyway to trigger move to limit addition", name, restStateStr[state]);
             else
             {
                 ESP_LOGV(TAG, "[%s] state already at '%s', nothing to do", name, restStateStr[state]);
+                // Release the mutex
+                xSemaphoreGiveRecursive(mutex);
                 return;
             }
         }
 
-        // when switching direction without stop: update position first
-        if (state != REST_OFF)
+        // previous state
+        switch (state)
+        {
+        case REST_UP:
             updatePosition();
+            timestampLastUp = esp_log_timestamp();
+            break;
+        case REST_DOWN:
+            updatePosition();
+            timestampLastDown = esp_log_timestamp();
+            break;
+        case REST_OFF:
+            break;
+        }
 
-        // activate handle task when turning on (previous state is off)
-        if (state == REST_OFF)
-            xTaskNotifyGive(taskHandle); // activate handle task that stops the rest-motor again
+
+        // ensure certain time off between different directions
+        // TODO move this delay to adjust-task to not block other tasks with setPercentage()
+        uint32_t msSinceOtherDir = 0;
+        if (targetState == REST_UP)
+            msSinceOtherDir = esp_log_timestamp() - timestampLastDown;
+        else if (targetState == REST_DOWN)
+            msSinceOtherDir = esp_log_timestamp() - timestampLastUp;
+        if ((msSinceOtherDir < MIN_OFF_TIME_DIR_CHANGE) && targetState != REST_OFF)
+        {
+            // turn off and wait for remaining time
+            ESP_LOGW(TAG, "[%s] too fast direction change detected, waiting %d ms in REST_OFF before switching to '%s'", name, MIN_OFF_TIME_DIR_CHANGE - msSinceOtherDir, restStateStr[targetState]);
+            ESP_LOGV(TAG, "TURN-OFF-until-dir-change");
+            // note: can not recursively use setState(REST_OFF) here, results in blown relay/fuse because turns briefly off (on/off/on) by task within 50ms due to positionTarget = positionNow
+            gpio_set_level(gpio_down, 0);
+            gpio_set_level(gpio_up, 0);
+            if (state != REST_OFF) // no need to update if was turned off already
+                updatePosition();
+            vTaskDelay((MIN_OFF_TIME_DIR_CHANGE - msSinceOtherDir) / portTICK_PERIOD_MS);
+        }
 
         // apply new state
         ESP_LOGI(TAG, "[%s] switching from state '%s' to '%s'", name, restStateStr[state], restStateStr[targetState]);
@@ -129,19 +163,28 @@ void cControlledRest::setState(restState_t targetState)
             gpio_set_level(gpio_down, 0);
             gpio_set_level(gpio_up, 1);
             timestamp_lastPosUpdate = esp_log_timestamp();
+            ESP_LOGV(TAG, "TURN-UP");
             break;
         case REST_DOWN:
             gpio_set_level(gpio_down, 1);
             gpio_set_level(gpio_up, 0);
+            ESP_LOGV(TAG, "TURN-DOWN");
             timestamp_lastPosUpdate = esp_log_timestamp();
             break;
         case REST_OFF:
             gpio_set_level(gpio_down, 0);
             gpio_set_level(gpio_up, 0);
-            updatePosition();
+            ESP_LOGV(TAG, "TURN-OFF");
+            if (state != REST_OFF)
+                updatePosition();
             positionTarget = positionNow; // disable resuming - no unexpected pos when incrementing
             break;
         }
+
+        // activate handle task when turning on (previous state is off)
+        if (state == REST_OFF && targetState != REST_OFF)
+            xTaskNotifyGive(taskHandle); // activate handle task that stops the rest-motor again
+        
         state = targetState;
 
         // Release the mutex
@@ -152,6 +195,7 @@ void cControlledRest::setState(restState_t targetState)
         ESP_LOGE(TAG, "mutex timeout in setState() -> RESTART");
         esp_restart();
     }
+    ESP_LOGV(TAG, "setState END");
 }
 
 //==========================
@@ -159,10 +203,10 @@ void cControlledRest::setState(restState_t targetState)
 //==========================
 void cControlledRest::setTargetPercent(float targetPercent)
 {
+    ESP_LOGV(TAG, "setTargetPercent START");
     // lock the mutex before accessing shared variables
     if (xSemaphoreTakeRecursive(mutex, MUTEX_TIMEOUT) == pdTRUE)
     {
-        positionTarget = targetPercent;
         float positionTargetPrev = positionTarget;
         positionTarget = targetPercent;
 
@@ -175,7 +219,7 @@ void cControlledRest::setTargetPercent(float targetPercent)
         // ignore if unchanged
         // if (positionTarget == positionTargetPrev){
         //    ESP_LOGI(TAG, "[%s] Target position unchanged at %.2f%%", name, positionTarget);
-        //    return;
+        //    return; //FIXME: free mutex
         //}
 
         ESP_LOGI(TAG, "[%s] changed Target position from %.2f%% to %.2f%%", name, positionTargetPrev, positionTarget);
@@ -198,6 +242,7 @@ void cControlledRest::setTargetPercent(float targetPercent)
         ESP_LOGE(TAG, "mutex timeout while waiting in setTargetPercent -> RESTART");
         esp_restart();
     }
+    ESP_LOGV(TAG, "setTargetPercent STOP");
 }
 
 //======================
@@ -207,13 +252,18 @@ void cControlledRest::setTargetPercent(float targetPercent)
 #define TRAVEL_TIME_LIMIT_ADDITION_MS 2000 // traveling longer into limit compensates inaccuracies in time based position tracking
 void cControlledRest::handle()
 {
+    ESP_LOGV(TAG, "handle START");
     // lock the mutex before accessing shared variables
     if (xSemaphoreTakeRecursive(mutex, MUTEX_TIMEOUT) == pdTRUE)
     {
         // nothing to do when not running atm
         // TODO: turn on automatically when position != target?
         if (state == REST_OFF)
+        {
+            // Release the mutex
+            xSemaphoreGiveRecursive(mutex);
             return;
+        }
 
         // calculate time already running and needed time to reach target
         uint32_t timeRan = esp_log_timestamp() - timestamp_lastPosUpdate;
@@ -224,7 +274,7 @@ void cControlledRest::handle()
             timeTarget += TRAVEL_TIME_LIMIT_ADDITION_MS;
 
         // target reached
-        if (timeRan >= timeTarget)
+        if (timeRan >= timeTarget && timeRan >= MIN_ON_TIME)
         {
             ESP_LOGW(TAG, "[%s] handle: reached target run-time (%dms/%dms) for position %.2f%% -> stopping", name, timeRan, timeTarget, positionTarget);
             setState(REST_OFF);
@@ -238,6 +288,8 @@ void cControlledRest::handle()
         ESP_LOGE(TAG, "mutex timeout while waiting in handle() -> RESTART");
         esp_restart();
     }
+    ESP_LOGV(TAG, "handle STOP");
+
 }
 
 //============================
@@ -253,12 +305,12 @@ void chairAdjust_task( void * pvParameter )
 	while (1)
 	{
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait for wakeup by setState() (rest-motor turned on)
-        ESP_LOGW(TAG, "task %s: received notification -> activating task!", rest->getName());
+        ESP_LOGD(TAG, "task %s: received notification -> activating task!", rest->getName());
         while (rest->getState() != REST_OFF){
             rest->handle();
             vTaskDelay(CHAIR_ADJUST_HANDLE_TASK_DELAY / portTICK_PERIOD_MS);
         }
-        ESP_LOGW(TAG, "task %s: rest turned off -> sleeping task", rest->getName());
+        ESP_LOGD(TAG, "task %s: rest turned off -> sleeping task", rest->getName());
     }
 }
 

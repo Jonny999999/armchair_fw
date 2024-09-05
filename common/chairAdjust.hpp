@@ -51,6 +51,9 @@ private:
     float positionTarget = 0;
     float positionNow = 0;
 
+    uint32_t timestampLastUp = 0;
+    uint32_t timestampLastDown = 0;
+
 };
 
 
