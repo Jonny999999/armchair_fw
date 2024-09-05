@@ -7,6 +7,7 @@ extern "C"
 #include "chairAdjust.hpp"
 
 
+#define MUTEX_TIMEOUT (10000 / portTICK_PERIOD_MS)
 
 //--- gloabl variables ---
 // strings for logging the rest state
@@ -21,12 +22,12 @@ static const char * TAG = "chair-adjustment";
 //=============================
 //======== constructor ========
 //=============================
-cControlledRest::cControlledRest(gpio_num_t gpio_up_f, gpio_num_t gpio_down_f, uint32_t travelDurationMs, const char * name_f, float defaultPosition):travelDuration(travelDurationMs){
+cControlledRest::cControlledRest(gpio_num_t gpio_up_f, gpio_num_t gpio_down_f, uint32_t travelDurationMs, const char * name_f, float defaultPosition): gpio_up(gpio_up_f), gpio_down(gpio_down_f), travelDuration(travelDurationMs){
     strcpy(name, name_f);
-    gpio_up = gpio_up_f;
-    gpio_down = gpio_down_f;
     positionNow = defaultPosition;
     positionTarget = positionNow;
+    // recursive mutex necessary, because handle() method calls setState() which both have the same mutex
+    mutex = xSemaphoreCreateRecursiveMutex();
     init();
 }
 
@@ -95,116 +96,149 @@ void cControlledRest::updatePosition(){
 //============================
 void cControlledRest::setState(restState_t targetState)
 {
-    // TODO: drop this section?
-    // check if actually changed
-    if (targetState == state)
+    // lock the mutex before accessing shared variables
+    if (xSemaphoreTakeRecursive(mutex, MUTEX_TIMEOUT) == pdTRUE)
     {
-    // update anyways when target is 0 or 100, to trigger movement threshold in case of position tracking is out of sync
-        if (positionTarget == 0 || positionTarget == 100)
-            ESP_LOGD(TAG, "[%s] state already at '%s', but updating anyway to trigger move to limit addition", name, restStateStr[state]);
-        else
+        // TODO: drop this section?
+        // check if actually changed
+        if (targetState == state)
         {
-            ESP_LOGV(TAG, "[%s] state already at '%s', nothing to do", name, restStateStr[state]);
-            return;
+            // update anyways when target is 0 or 100, to trigger movement threshold in case of position tracking is out of sync
+            if (positionTarget == 0 || positionTarget == 100)
+                ESP_LOGD(TAG, "[%s] state already at '%s', but updating anyway to trigger move to limit addition", name, restStateStr[state]);
+            else
+            {
+                ESP_LOGV(TAG, "[%s] state already at '%s', nothing to do", name, restStateStr[state]);
+                return;
+            }
         }
+
+        // when switching direction without stop: update position first
+        if (state != REST_OFF)
+            updatePosition();
+
+        // activate handle task when turning on (previous state is off)
+        if (state == REST_OFF)
+            xTaskNotifyGive(taskHandle); // activate handle task that stops the rest-motor again
+
+        // apply new state
+        ESP_LOGI(TAG, "[%s] switching from state '%s' to '%s'", name, restStateStr[state], restStateStr[targetState]);
+        switch (targetState)
+        {
+        case REST_UP:
+            gpio_set_level(gpio_down, 0);
+            gpio_set_level(gpio_up, 1);
+            timestamp_lastPosUpdate = esp_log_timestamp();
+            break;
+        case REST_DOWN:
+            gpio_set_level(gpio_down, 1);
+            gpio_set_level(gpio_up, 0);
+            timestamp_lastPosUpdate = esp_log_timestamp();
+            break;
+        case REST_OFF:
+            gpio_set_level(gpio_down, 0);
+            gpio_set_level(gpio_up, 0);
+            updatePosition();
+            positionTarget = positionNow; // disable resuming - no unexpected pos when incrementing
+            break;
+        }
+        state = targetState;
+
+        // Release the mutex
+        xSemaphoreGiveRecursive(mutex);
     }
-
-    // when switching direction without stop: update position first
-    if (state != REST_OFF)
-        updatePosition();
-
-    // activate handle task when turning on (previous state is off)
-    if (state == REST_OFF)
-        xTaskNotifyGive(taskHandle); //activate handle task that stops the rest-motor again
-
-    //apply new state
-    ESP_LOGI(TAG, "[%s] switching from state '%s' to '%s'", name, restStateStr[state], restStateStr[targetState]);
-    switch (targetState)
+    else
     {
-    case REST_UP:
-        gpio_set_level(gpio_down, 0);
-        gpio_set_level(gpio_up, 1);
-        timestamp_lastPosUpdate = esp_log_timestamp();
-        break;
-    case REST_DOWN:
-        gpio_set_level(gpio_down, 1);
-        gpio_set_level(gpio_up, 0);
-        timestamp_lastPosUpdate = esp_log_timestamp();
-        break;
-    case REST_OFF:
-        gpio_set_level(gpio_down, 0);
-        gpio_set_level(gpio_up, 0);
-        updatePosition();
-        positionTarget = positionNow; //disable resuming - no unexpected pos when incrementing
-        break;
+        ESP_LOGE(TAG, "mutex timeout in setState() -> RESTART");
+        esp_restart();
     }
-    state = targetState;
 }
-
-
 
 //==========================
 //==== setTargetPercent ====
 //==========================
-void cControlledRest::setTargetPercent(float targetPercent){
-    float positionTargetPrev = positionTarget;
-    positionTarget = targetPercent;
+void cControlledRest::setTargetPercent(float targetPercent)
+{
+    // lock the mutex before accessing shared variables
+    if (xSemaphoreTakeRecursive(mutex, MUTEX_TIMEOUT) == pdTRUE)
+    {
+        positionTarget = targetPercent;
+        float positionTargetPrev = positionTarget;
+        positionTarget = targetPercent;
 
-    // limit to 0-100
-    if (positionTarget > 100)
-        positionTarget = 100;
-    else if (positionTarget < 0)
-        positionTarget = 0;
+        // limit to 0-100
+        if (positionTarget > 100)
+            positionTarget = 100;
+        else if (positionTarget < 0)
+            positionTarget = 0;
 
-    // ignore if unchanged
-    //if (positionTarget == positionTargetPrev){
-    //    ESP_LOGI(TAG, "[%s] Target position unchanged at %.2f%%", name, positionTarget);
-    //    return;
-    //}
+        // ignore if unchanged
+        // if (positionTarget == positionTargetPrev){
+        //    ESP_LOGI(TAG, "[%s] Target position unchanged at %.2f%%", name, positionTarget);
+        //    return;
+        //}
 
-    ESP_LOGI(TAG, "[%s] changed Target position from %.2f%% to %.2f%%", name, positionTargetPrev, positionTarget);
+        ESP_LOGI(TAG, "[%s] changed Target position from %.2f%% to %.2f%%", name, positionTargetPrev, positionTarget);
 
-    // start rest in required direction
-    // TODO always run this check in handle()?
-    // note: when already at 0/100 start anyways (runs for certain threshold in case tracked position out of sync)
-    if (positionTarget > positionNow || positionTarget >= 100)
-        setState(REST_UP);
-    else if (positionTarget < positionNow || positionTarget <= 0)
-        setState(REST_DOWN);
-    else // already at exact position
-        setState(REST_OFF);
+        // start rest in required direction
+        // TODO always run this check in handle()?
+        // note: when already at 0/100 start anyways (runs for certain threshold in case tracked position out of sync)
+        if (positionTarget > positionNow || positionTarget >= 100)
+            setState(REST_UP);
+        else if (positionTarget < positionNow || positionTarget <= 0)
+            setState(REST_DOWN);
+        else // already at exact position
+            setState(REST_OFF);
+
+        // Release the mutex
+        xSemaphoreGiveRecursive(mutex);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "mutex timeout while waiting in setTargetPercent -> RESTART");
+        esp_restart();
+    }
 }
-
-
 
 //======================
 //======= handle =======
 //======================
 // handle automatic stop when target position is reached, should be run repeatedly in a task
 #define TRAVEL_TIME_LIMIT_ADDITION_MS 2000 // traveling longer into limit compensates inaccuracies in time based position tracking
-void cControlledRest::handle(){
+void cControlledRest::handle()
+{
+    // lock the mutex before accessing shared variables
+    if (xSemaphoreTakeRecursive(mutex, MUTEX_TIMEOUT) == pdTRUE)
+    {
+        // nothing to do when not running atm
+        // TODO: turn on automatically when position != target?
+        if (state == REST_OFF)
+            return;
 
-    // nothing to do when not running atm
-    // TODO: turn on automatically when position != target?
-    if (state == REST_OFF)
-        return;
+        // calculate time already running and needed time to reach target
+        uint32_t timeRan = esp_log_timestamp() - timestamp_lastPosUpdate;
+        uint32_t timeTarget = travelDuration * fabs(positionTarget - positionNow) / 100;
 
-    // calculate time already running and needed time to reach target
-    uint32_t timeRan = esp_log_timestamp() - timestamp_lastPosUpdate;
-    uint32_t timeTarget = travelDuration * fabs(positionTarget - positionNow) / 100;
+        // intentionally travel longer into limit - compensates inaccuracies in time based position tracking
+        if (positionTarget == 0 || positionTarget == 100)
+            timeTarget += TRAVEL_TIME_LIMIT_ADDITION_MS;
 
-    // intentionally travel longer into limit - compensates inaccuracies in time based position tracking
-    if (positionTarget == 0 || positionTarget == 100)
-        timeTarget += TRAVEL_TIME_LIMIT_ADDITION_MS;
+        // target reached
+        if (timeRan >= timeTarget)
+        {
+            ESP_LOGW(TAG, "[%s] handle: reached target run-time (%dms/%dms) for position %.2f%% -> stopping", name, timeRan, timeTarget, positionTarget);
+            setState(REST_OFF);
+        }
 
-    // target reached
-    if (timeRan >= timeTarget){
-        ESP_LOGW(TAG, "[%s] handle: reached target run-time (%dms/%dms) for position %.2f%% -> stopping", name, timeRan, timeTarget, positionTarget);
-        setState(REST_OFF);
+        // Release the mutex
+        xSemaphoreGiveRecursive(mutex);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "mutex timeout while waiting in handle() -> RESTART");
+        esp_restart();
     }
 }
-
-
 
 //============================
 //===== chairAdjust_task =====

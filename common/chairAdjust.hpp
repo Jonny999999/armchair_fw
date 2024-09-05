@@ -3,6 +3,7 @@ extern "C"
 {
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "driver/gpio.h"
 }
 
@@ -38,11 +39,14 @@ private:
     void init();
     void updatePosition();
 
+    SemaphoreHandle_t mutex;
+
     char name[32];
-    gpio_num_t gpio_up;
-    gpio_num_t gpio_down;
-    restState_t state;
+    const gpio_num_t gpio_up;
+    const gpio_num_t gpio_down;
     const uint32_t travelDuration = 12000;
+
+    restState_t state;
     uint32_t timestamp_lastPosUpdate = 0;
     float positionTarget = 0;
     float positionNow = 0;
