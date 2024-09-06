@@ -514,8 +514,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew, bool noBeep)
         case controlMode_t::ADJUST_CHAIR:
             ESP_LOGW(TAG, "switching from ADJUST_CHAIR mode => turning off adjustment motors...");
             // prevent motors from being always on in case of mode switch while joystick is not in center thus motors currently moving
-            legRest->setState(REST_OFF);
-            backRest->setState(REST_OFF);
+            legRest->requestStateChange(REST_OFF);
+            backRest->requestStateChange(REST_OFF);
             break;
         }
 
