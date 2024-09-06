@@ -607,7 +607,7 @@ void display_showNotification(uint32_t showDurationMs, const char *line1, const 
 	displayTextLineCentered(&dev, 1, true, false, "%s", line2Large);
 	displayTextLineCentered(&dev, 4, true, false, "%s", line3Large);
 	displayTextLine(&dev, 7, false, false, "                ");
-	ESP_LOGW(TAG, "start showing notification '%s' '%s' for %d ms", line1, line2Large, showDurationMs);
+	ESP_LOGI(TAG, "start showing notification '%s' '%s' for %d ms", line1, line2Large, showDurationMs);
 }
 
 

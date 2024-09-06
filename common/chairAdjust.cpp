@@ -7,10 +7,15 @@ extern "C"
 #include "chairAdjust.hpp"
 
 
-#define MUTEX_TIMEOUT (10000 / portTICK_PERIOD_MS)
 
-#define MIN_TIME_ON 1000
-#define MIN_TIME_OFF 2000
+//--- config ---
+#define MUTEX_TIMEOUT (8000 / portTICK_PERIOD_MS)
+// thresholds to protect relays from welding stuck
+#define MIN_TIME_ON  600 // minimum time in ms motor has to be ON  before being able to turn off again
+#define MIN_TIME_OFF 800 // minimum time in ms motor has to be OFF before being able to turn on  again (other or same direction)
+#define TRAVEL_TIME_LIMIT_ADDITION_MS 2000 // traveling longer into limit compensates inaccuracies in time based position tracking
+#define CHAIR_ADJUST_HANDLE_TASK_DELAY 100 // interval the stop-condition and state-switching is checked/handled
+
 
 //--- gloabl variables ---
 // strings for logging the rest state
@@ -54,14 +59,19 @@ void cControlledRest::init()
     state = REST_OFF;
 }
 
+
+
 //==========================
 //===== updatePosition =====
 //==========================
 // calculate and update position in percent based of time running in current direction
 void cControlledRest::updatePosition()
 {
+    // calculate time motor was on
     uint32_t now = esp_log_timestamp();
     uint32_t timeRan = now - timestamp_lastPosUpdate;
+    // note: timestamp_lastPosUpdate also gets updated when changing to active mode in changemode
+
     timestamp_lastPosUpdate = now;
     float positionOld = positionNow;
 
@@ -76,7 +86,7 @@ void cControlledRest::updatePosition()
         break;
     case REST_OFF:
         // no change
-        ESP_LOGW(TAG, "updatePosition() unknown direction - cant update position when state is REST_OFF");
+        ESP_LOGW(TAG, "updatePosition: unknown direction - cant update position when state is REST_OFF");
         return;
     }
 
@@ -86,8 +96,10 @@ void cControlledRest::updatePosition()
     else if (positionNow > 100)
         positionNow = 100;
 
-    ESP_LOGD(TAG, "[%s] state='%s' - update pos from %.2f%% to %.2f%% (time ran %dms)", name, restStateStr[state], positionOld, positionNow, timeRan);
+    ESP_LOGD(TAG, "[%s] updatePosition: update pos from %.2f%% to %.2f%% (time ran %dms, prev-state '%s')", name, positionOld, positionNow, timeRan, restStateStr[state] );
 }
+
+
 
 //==========================
 //==== setTargetPercent ====
@@ -140,15 +152,22 @@ void cControlledRest::setTargetPercent(float targetPercent)
 // queue state change that is executed when valid (respecting min thresholds)
 void cControlledRest::requestStateChange(restState_t targetState)
 {
+    // check if task is linked
+    if (taskHandle == NULL)
+    {
+        ESP_LOGE(TAG, "[%s] can not activate task! Task is not running", name);
+        return;
+    }
+
     // lock the mutex before accessing shared variables
     if (xSemaphoreTakeRecursive(mutex, MUTEX_TIMEOUT) == pdTRUE)
     {
-        ESP_LOGV(TAG, "[%s] requesting change to state '%s'", name, restStateStr[targetState]);
+        ESP_LOGD(TAG, "[%s] requesting change to state '%s'", name, restStateStr[targetState]);
         nextState = targetState;
 
-        // activate handle to process the request when on running already
-        if (state == REST_OFF)
-            xTaskNotifyGive(taskHandle); // activate handle task that stops the rest-motor again
+        // activate task to change, when on running already
+        if (taskIsRunning == false)
+            xTaskNotifyGive(taskHandle); // activate handle task that handles state change and stops the rest-motor again 
         // Release the mutex
         xSemaphoreGiveRecursive(mutex);
     }
@@ -177,6 +196,7 @@ void cControlledRest::handleStateChange()
         if (state == nextState)
         {
             // exit, nothing todo
+            ESP_LOGV(TAG, "[%s] handleStateChange: already at target state, nothing to do", name);
             xSemaphoreGiveRecursive(mutex);
             return;
         }
@@ -187,8 +207,7 @@ void cControlledRest::handleStateChange()
             // exit if not on long enough
             if (now - timestamp_lastStateChange < MIN_TIME_ON)
             {
-                positionTarget = positionNow; // disable resuming - no unexpected pos when incrementing
-                ESP_LOGV(TAG, "SC: not on long enough, not turning off yet");
+                ESP_LOGD(TAG, "[%s] handleStateChange: not on long enough, not turning off yet", name);
                 xSemaphoreGiveRecursive(mutex);
                 return;
             }
@@ -200,7 +219,7 @@ void cControlledRest::handleStateChange()
             // exit if not off long enough
             if (now - timestamp_lastStateChange < MIN_TIME_OFF)
             {
-                ESP_LOGV(TAG, "SC: not OFF long enough, not turning on yet");
+                ESP_LOGV(TAG, "[%s] handleStateChange: not OFF long enough, not turning on yet", name);
                 xSemaphoreGiveRecursive(mutex);
                 return;
             }
@@ -212,14 +231,14 @@ void cControlledRest::handleStateChange()
             // exit if not on long enough
             if (now - timestamp_lastStateChange < MIN_TIME_ON)
             {
-                ESP_LOGV(TAG, "SC: dir change detected: not ON long enough, not turning off yet");
+                ESP_LOGD(TAG, "[%s] handleStateChange: dir change detected: not ON long enough, not turning off yet", name);
                 xSemaphoreGiveRecursive(mutex);
                 return;
             }
             // no immediate dir change, turn off first
             else
             {
-                ESP_LOGD(TAG, "SC: dir change detected: turning off first");
+                ESP_LOGW(TAG, "[%s] handleStateChange: dir change detected: turning off first", name );
                 changeState(REST_OFF);
                 xSemaphoreGiveRecursive(mutex);
                 return;
@@ -227,7 +246,7 @@ void cControlledRest::handleStateChange()
         }
 
         // not exited by now = no reason to prevent the state change -> update state!
-        ESP_LOGV(TAG, "SC: change is allowed now -> applying new state '%s'", restStateStr[nextState]);
+        ESP_LOGV(TAG, "[%s] handleStateChange: change is allowed now -> applying new state '%s'", name , restStateStr[nextState]);
         changeState(nextState);
 
         // Release the mutex
@@ -251,12 +270,12 @@ void cControlledRest::changeState(restState_t newState)
     // check if actually changed
     if (newState == state)
     {
-        ESP_LOGV(TAG, "[%s] state already at '%s', nothing to do", name, restStateStr[state]);
+        ESP_LOGV(TAG, "[%s] changeState: Relay state already at '%s', nothing to do", name, restStateStr[state]);
         return;
     }
 
     // apply new state to relays
-    ESP_LOGI(TAG, "[%s] switching Relays from state '%s' to '%s'", name, restStateStr[state], restStateStr[newState]);
+    ESP_LOGI(TAG, "[%s] changeState: switching Relays from state '%s' to '%s'", name, restStateStr[state], restStateStr[newState]);
     switch (newState)
     {
     case REST_UP:
@@ -274,9 +293,17 @@ void cControlledRest::changeState(restState_t newState)
     }
 
     // apply new state to variables
-    timestamp_lastStateChange = esp_log_timestamp();
-    updatePosition();
+    uint32_t now = esp_log_timestamp();
+    if (state != REST_OFF && newState == REST_OFF) // previously on (turning off now)
+    {
+        updatePosition(); // movement finished -> update position
+        positionTarget = positionNow; // disable resuming - no unexpected pos when incrementing
+    }
+    else if (state == REST_OFF && newState != REST_OFF)// previously off (turning on now)
+        timestamp_lastPosUpdate = now; // pos did not change during off time - reset timestamp
+
     state = newState;
+    timestamp_lastStateChange = now;
 }
 
 
@@ -285,7 +312,6 @@ void cControlledRest::changeState(restState_t newState)
 //=== handle StopAtPosReached ===
 //===============================
 // handle automatic stop when target position is reached, should be run repeatedly in a task
-#define TRAVEL_TIME_LIMIT_ADDITION_MS 2000 // traveling longer into limit compensates inaccuracies in time based position tracking
 void cControlledRest::handleStopAtPosReached()
 {
     // lock the mutex before accessing shared variables
@@ -298,8 +324,9 @@ void cControlledRest::handleStopAtPosReached()
             return;
         }
 
-        // calculate time already running and needed time to reach target
+        // calculate time already running
         uint32_t timeRan = esp_log_timestamp() - timestamp_lastPosUpdate;
+        // calculate needed time to reach target
         uint32_t timeTarget = travelDuration * fabs(positionTarget - positionNow) / 100;
 
         // intentionally travel longer into limit - compensates inaccuracies in time based position tracking
@@ -309,9 +336,12 @@ void cControlledRest::handleStopAtPosReached()
         // target reached
         if (timeRan >= timeTarget)
         {
-            ESP_LOGW(TAG, "[%s] reached target! run-time (%dms/%dms) for position %.2f%% -> requesting stop", name, timeRan, timeTarget, positionTarget);
+            ESP_LOGI(TAG, "[%s] TARGET REACHED! run-time (%dms/%dms) for target position %.1f%% -> requesting stop", name, timeRan, timeTarget, positionTarget);
             requestStateChange(REST_OFF);
         }
+        else
+            ESP_LOGV(TAG, "[%s] target not reached yet, run-time (%dms/%dms) for target position %.1f%%", name, timeRan, timeTarget, positionTarget);
+
         // Release the mutex
         xSemaphoreGiveRecursive(mutex);
     }
@@ -322,21 +352,23 @@ void cControlledRest::handleStopAtPosReached()
     }
 }
 
+
+
 //============================
 //===== chairAdjust_task =====
 //============================
-#define CHAIR_ADJUST_HANDLE_TASK_DELAY 100
 void chairAdjust_task(void *pvParameter)
 {
     cControlledRest *rest = (cControlledRest *)pvParameter;
     ESP_LOGW(TAG, "Starting task for controlling %s...", rest->getName());
     // provide taskHandle to rest object for wakeup
-    rest->taskHandle = xTaskGetCurrentTaskHandle();
+    rest->setTaskHandle(xTaskGetCurrentTaskHandle());
 
     while (1)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait for wakeup by changeState() (rest-motor turned on)
-        ESP_LOGW(TAG, "task %s: received notification -> activating task!", rest->getName());
+        rest->setTaskIsRunning();
+        ESP_LOGD(TAG, "task %s: received notification -> activating task!", rest->getName());
         // running while 1. motor running  or  2. not in target state yet
         while ((rest->getState() != REST_OFF) || (rest->getNextState() != rest->getState()))
         {
@@ -344,7 +376,8 @@ void chairAdjust_task(void *pvParameter)
             rest->handleStopAtPosReached();
             vTaskDelay(CHAIR_ADJUST_HANDLE_TASK_DELAY / portTICK_PERIOD_MS);
         }
-        ESP_LOGW(TAG, "task %s: motor-off and at target state -> sleeping task", rest->getName());
+        rest->clearTaskIsRunning();
+        ESP_LOGD(TAG, "task %s: motor-off and at target state -> sleeping task", rest->getName());
     }
 }
 
@@ -354,8 +387,6 @@ void chairAdjust_task(void *pvParameter)
 //====== controlChairAdjustment ======
 //====================================
 //function that controls the two rests according to joystick data (applies threshold, defines direction)
-//TODO:
-//    - control via app
 void controlChairAdjustment(joystickData_t data, cControlledRest * legRest, cControlledRest * backRest){
 	//--- variables ---
     float stickThreshold = 0.3; //min coordinate for motor to start
@@ -364,10 +395,12 @@ void controlChairAdjustment(joystickData_t data, cControlledRest * legRest, cCon
     //leg rest (x-axis)
     if (data.x > stickThreshold) legRest->setTargetPercent(100);
     else if (data.x < -stickThreshold) legRest->setTargetPercent(0);
-    else legRest->requestStateChange(REST_OFF);
+    else
+        legRest->requestStateChange(REST_OFF);
 
     //back rest (y-axis)
     if (data.y > stickThreshold) backRest->setTargetPercent(100);
     else if (data.y < -stickThreshold) backRest->setTargetPercent(0);
-    else backRest->requestStateChange(REST_OFF);
+    else
+        backRest->requestStateChange(REST_OFF);
 }

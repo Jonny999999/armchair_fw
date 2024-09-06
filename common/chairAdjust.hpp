@@ -9,6 +9,7 @@ extern "C"
 
 #include "joystick.hpp"
 
+
 typedef enum {
     REST_OFF = 0,
     REST_DOWN,
@@ -16,6 +17,7 @@ typedef enum {
 } restState_t;
 
 extern const char* restStateStr[];
+
 
 
 //=====================================
@@ -26,30 +28,41 @@ extern const char* restStateStr[];
 class cControlledRest {
 public:
     cControlledRest(gpio_num_t gpio_up, gpio_num_t gpio_down, uint32_t travelDurationMs, const char *name, float defaultPosition = 0);
+
+    // control the rest:
     void requestStateChange(restState_t targetState); //mutex
     restState_t getState() const {return state;};
-    restState_t getNextState() const {return nextState;};
-    float getPercent(); //TODO update position first
+    const char * getName() const {return name;};
     void setTargetPercent(float targetPercent); //mutex
     float getTargetPercent() const {return positionTarget;};
+    float getPercent(); //TODO update position first
 
+    // required for task controlling the rest:
+    void setTaskHandle(TaskHandle_t handle) {taskHandle = handle;};
+    void setTaskIsRunning() {taskIsRunning = true;};
+    void clearTaskIsRunning() {taskIsRunning = false;};
     void handleStopAtPosReached(); //mutex
     void handleStateChange(); //mutex
-    const char * getName() const {return name;};
-    TaskHandle_t taskHandle = NULL; //task that repeatedly runs the handle() method, is assigned at task creation
+    restState_t getNextState() const {return nextState;};
+
 
 private:
     void init();
     void updatePosition();
     void changeState(restState_t newState);
 
+    // task related:
+    TaskHandle_t taskHandle = NULL; //task that repeatedly runs the handle() method, is assigned at task creation
+    bool taskIsRunning = false;
     SemaphoreHandle_t mutex;
 
+    // config:
     char name[32];
     const gpio_num_t gpio_up;
     const gpio_num_t gpio_down;
     const uint32_t travelDuration = 12000;
 
+    // variables:
     restState_t state = REST_OFF;
     restState_t nextState = REST_OFF;
     uint32_t timestamp_lastStateChange = 0;
@@ -64,7 +77,7 @@ private:
 //===========================
 //==== chairAdjust_task =====
 //===========================
-// repeatedly runs handle method of specified ControlledRest object to turn of the rest, when activated by setState()
+// repeatedly runs handle methods of specified ControlledRest object to turn of the rest, when activated by changeState() method
 void chairAdjust_task( void * cControlledRest );
 
 

@@ -228,7 +228,7 @@ void buttonCommands::startHandleLoop()
                 // ignore first clicks
                 if (rotateCount++ < IGNORE_ROTATE_COUNT)
                     {
-                        buzzer->beep(1, 60, 0);
+                        buzzer->beep(1, 20, 0);
                         break;
                     }
                 timestampLastRotate = esp_log_timestamp();
@@ -253,15 +253,15 @@ void buttonCommands::startHandleLoop()
                 {
                     // increment target position each click
                     if (event.diff > 0)
-                        legRest->setTargetPercent(legRest->getTargetPercent() - 5);
+                        legRest->setTargetPercent(legRest->getTargetPercent() - 10);
                     else
-                        legRest->setTargetPercent(legRest->getTargetPercent() + 5);
+                        legRest->setTargetPercent(legRest->getTargetPercent() + 10);
                     // show temporary notification on display
                     char buf[8];
                     snprintf(buf, 8, "%.0f%%", legRest->getTargetPercent());
                     display_showNotification(2500, "moving Rest:", "LEG", buf);
                 }
-                buzzer->beep(1, 90, 0);
+                buzzer->beep(1, 40, 0);
                 break;
             case RE_ET_BTN_LONG_PRESSED:
             case RE_ET_BTN_CLICKED:
