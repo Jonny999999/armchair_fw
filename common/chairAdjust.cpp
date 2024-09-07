@@ -11,9 +11,9 @@ extern "C"
 //--- config ---
 #define MUTEX_TIMEOUT (8000 / portTICK_PERIOD_MS)
 // thresholds to protect relays from welding stuck
-#define MIN_TIME_ON  600 // minimum time in ms motor has to be ON  before being able to turn off again
-#define MIN_TIME_OFF 800 // minimum time in ms motor has to be OFF before being able to turn on  again (other or same direction)
-#define TRAVEL_TIME_LIMIT_ADDITION_MS 2000 // traveling longer into limit compensates inaccuracies in time based position tracking
+#define MIN_TIME_ON  200 // minimum time in ms motor has to be ON  before being able to turn off again
+#define MIN_TIME_OFF 400 // minimum time in ms motor has to be OFF before being able to turn on  again (other or same direction)
+#define TRAVEL_TIME_LIMIT_ADDITION_MS 1300 // traveling longer into limit compensates inaccuracies in time based position tracking
 #define CHAIR_ADJUST_HANDLE_TASK_DELAY 100 // interval the stop-condition and state-switching is checked/handled
 
 
