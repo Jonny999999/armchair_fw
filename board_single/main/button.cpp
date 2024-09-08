@@ -183,7 +183,7 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 // and takes the corresponding action
 // this function has to be started once in a separate task
 #define INPUT_TIMEOUT 600 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
-#define IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE 800 // time that has to be passed since last encoder rotate click for button count command to be accepted (e.g. prevent long press action after PRESS+ROTATE was used)
+#define IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE 2600 // time that has to be passed since last encoder rotate click for button count command to be accepted (e.g. prevent long press action after PRESS+ROTATE was used)
 #define IGNORE_ROTATE_COUNT 1 //amount of ignored clicks before action is actually taken (ignore accidental touches)
 void buttonCommands::startHandleLoop()
 {
@@ -191,7 +191,7 @@ void buttonCommands::startHandleLoop()
     static bool isPressed = false;
     static rotary_encoder_event_t event; // store event data
     int rotateCount = 0; // temporary count clicks encoder was rotated
-    uint32_t timestampLastRotate = 0;
+    uint32_t timestampLastAdjustChange = 0;
     // int count = 0; (from class)
 
     while (1)
@@ -225,13 +225,15 @@ void buttonCommands::startHandleLoop()
                 isPressed = false; // rest stored state
                 break;
             case RE_ET_CHANGED:
-                // ignore first clicks
-                if (rotateCount++ < IGNORE_ROTATE_COUNT)
+                // ignore first clicks (dont ignore when changed position recently)
+                if ((rotateCount++ < IGNORE_ROTATE_COUNT) && ((esp_log_timestamp() - timestampLastAdjustChange) > IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE))
                     {
                         buzzer->beep(1, 20, 0);
                         break;
                     }
-                timestampLastRotate = esp_log_timestamp();
+                    else {
+                        timestampLastAdjustChange = esp_log_timestamp();
+                    }
                 if (isPressed){
                     /////### scroll through status pages when PRESSED + ROTATED ###
                     ///if (event.diff > 0)
@@ -246,7 +248,7 @@ void buttonCommands::startHandleLoop()
                     // show temporary notification on display
                     char buf[8];
                     snprintf(buf, 8, "%.0f%%", backRest->getTargetPercent());
-                    display_showNotification(2500, "moving Rest:", "BACK", buf);
+                    display_showNotification(IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE, "moving Rest:", "BACK", buf);
                 }
                 //### adjust leg support when ROTATED ###
                 else
@@ -273,8 +275,11 @@ void buttonCommands::startHandleLoop()
         {
             rotateCount = 0; // reset rotate count
             // ignore button click events when "ROTATE+PRESSED" was just used
-            if (count > 0 && (esp_log_timestamp() - timestampLastRotate < IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE))
+            if (count > 0 && (esp_log_timestamp() - timestampLastAdjustChange < IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE))
+            {
                 ESP_LOGW(TAG, "ignoring button count %d because encoder was rotated less than %d ms ago", count, IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE);
+                count = 0;
+            }
             // encoder was pressed
             else if (count > 0)
             {

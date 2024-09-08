@@ -399,8 +399,8 @@ void controlChairAdjustment(joystickData_t data, cControlledRest * legRest, cCon
         legRest->requestStateChange(REST_OFF);
 
     //back rest (y-axis)
-    if (data.y > stickThreshold) backRest->setTargetPercent(100);
-    else if (data.y < -stickThreshold) backRest->setTargetPercent(0);
+    if (data.y > stickThreshold) backRest->setTargetPercent(0);
+    else if (data.y < -stickThreshold) backRest->setTargetPercent(100);
     else
         backRest->requestStateChange(REST_OFF);
 }
