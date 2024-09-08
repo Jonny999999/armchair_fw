@@ -8,9 +8,10 @@
 		(title "chairAdjust relay-board")
 		(date "2024-09-07")
 		(rev "V1.0")
-		(comment 1 "in both direction with protection")
-		(comment 2 "2 motors for chair adjust of armchair")
-		(comment 3 "Relay board for controlling ")
+		(comment 1 "https://github.com/Jonny999999/armchair_fw ")
+		(comment 2 "in both direction with protection")
+		(comment 3 "2 motors for chair adjustment of armchair")
+		(comment 4 "Relay board for controlling ")
 	)
 	(lib_symbols
 		(symbol "Connector:Conn_01x04_Pin"
@@ -7380,7 +7381,7 @@
 		)
 		(uuid "3af1cb1d-dde5-4032-bd8b-236a9f2d2f83")
 	)
-	(text "Setup:\n[ control board: ESP32 -> N-Mosfet ] -> [ this board: PNP-BJT -> Relay ]\n-> non inverted: Controller pin high = Relay on"
+	(text "Setup:\n[ control board: ESP32-GPIO-3.3V -> N-Mosfet ]  ->  [ this board: pullup-to-12V -> PNP-BJT -> Relay ]\n-> non inverted: Controller pin high = Relay on"
 		(exclude_from_sim no)
 		(at 13.462 16.51 0)
 		(effects
@@ -7411,7 +7412,7 @@
 		)
 		(uuid "6f0f1c10-d5ac-4427-a5be-61aa76f1081d")
 	)
-	(text "50mA\n"
+	(text "40mA\n"
 		(exclude_from_sim no)
 		(at 90.424 55.118 0)
 		(effects
@@ -7435,7 +7436,7 @@
 	)
 	(text "Todo: \n - Add snubber?\n - Add TVS?"
 		(exclude_from_sim no)
-		(at 170.688 107.95 0)
+		(at 219.71 159.004 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -7444,7 +7445,7 @@
 		)
 		(uuid "9fa71ea2-19d3-4e06-a299-df3e23fff9c4")
 	)
-	(text "Freewheel diode network\nfor motor EMF while switching\n(4 switching cases / combinations)"
+	(text "Freewheel diode network\nfor motor EMF while switching off\n(4 switching cases / combinations)"
 		(exclude_from_sim no)
 		(at 149.86 43.434 0)
 		(effects

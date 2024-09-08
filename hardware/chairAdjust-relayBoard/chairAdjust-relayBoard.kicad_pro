@@ -490,9 +490,9 @@
       "plot": "export/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "chairAdjust-relayBoard.step",
-      "svg": "",
-      "vrml": ""
+      "step": "export/3d-model_low.step",
+      "svg": "export/",
+      "vrml": "export/3d-model.wrl"
     },
     "page_layout_descr_file": ""
   },
