@@ -1,0 +1,23 @@
+%TF.GenerationSoftware,KiCad,Pcbnew,8.0.4*%
+%TF.CreationDate,2024-09-07T09:02:32+02:00*%
+%TF.ProjectId,chairAdjust-relayBoard,63686169-7241-4646-9a75-73742d72656c,rev?*%
+%TF.SameCoordinates,Original*%
+%TF.FileFunction,Profile,NP*%
+%FSLAX46Y46*%
+G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
+G04 Created by KiCad (PCBNEW 8.0.4) date 2024-09-07 09:02:32*
+%MOMM*%
+%LPD*%
+G01*
+G04 APERTURE LIST*
+%TA.AperFunction,Profile*%
+%ADD10C,0.050000*%
+%TD*%
+G04 APERTURE END LIST*
+D10*
+X107315000Y-28575000D02*
+X208280000Y-28575000D01*
+X208280000Y-107315000D01*
+X107315000Y-107315000D01*
+X107315000Y-28575000D01*
+M02*
