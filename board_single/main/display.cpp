@@ -23,6 +23,11 @@ extern "C"{
 // every function can access the display configuration from config.cpp
 static display_config_t displayConfig;
 
+// communicate with display task to block+restore display writing, when a notification was triggered
+uint32_t timestampNotificationStop = 0;
+bool notificationIsActive = false;
+
+
 
 //--------------------------
 //------- getVoltage -------
@@ -584,6 +589,29 @@ void handleStatusScreen(display_task_parameters_t *objects)
 }
 
 
+
+//==============================
+//====== showNotification ======
+//==============================
+// trigger custom notification that is shown in any mode for set amount of time
+void display_showNotification(uint32_t showDurationMs, const char *line1, const char *line2Large, const char *line3Large)
+{
+	// clear display when notification initially shown
+	if (notificationIsActive == false)
+		ssd1306_clear_screen(&dev, false);
+	// update state and timestamp for auto exit
+	timestampNotificationStop = esp_log_timestamp() + showDurationMs;
+	notificationIsActive = true;
+	// void displayTextLineCentered(SSD1306_t *display, int line, bool isLarge, bool inverted, const char *format, ...);
+	displayTextLineCentered(&dev, 0, false, false, "%s", line1);
+	displayTextLineCentered(&dev, 1, true, false, "%s", line2Large);
+	displayTextLineCentered(&dev, 4, true, false, "%s", line3Large);
+	displayTextLine(&dev, 7, false, false, "                ");
+	ESP_LOGI(TAG, "start showing notification '%s' '%s' for %d ms", line1, line2Large, showDurationMs);
+}
+
+
+
 //============================
 //======= display task =======
 //============================
@@ -606,6 +634,15 @@ void display_task(void *pvParameters)
 	// repeatedly update display with content depending on current mode
 	while (1)
 	{
+		// dont update anything when a notification is active + check timeout
+		if (notificationIsActive){
+			if (esp_log_timestamp() >= timestampNotificationStop)
+				notificationIsActive = false;
+			vTaskDelay(100 / portTICK_PERIOD_MS);
+			continue;
+		}
+
+		//update display according to current control mode
 		switch (objects->control->getCurrentMode())
 		{
 		case controlMode_t::MENU_SETTINGS:

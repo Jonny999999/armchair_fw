@@ -161,9 +161,9 @@ void createObjects()
     buzzer = new buzzer_t(GPIO_NUM_12, 1);
 
     // create objects for controlling the chair position
-    //                       gpio_up, gpio_down, name
-    legRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, "legRest");
-    backRest = new cControlledRest(GPIO_NUM_16, GPIO_NUM_4, "backRest");
+    //                       gpio_up, gpio_down, travelDuration, name, defaultPosition
+    legRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, 11000, "legRest");
+    backRest = new cControlledRest(GPIO_NUM_16, GPIO_NUM_4, 12000, "backRest", 5); //default position "100% up"
 
     // create control object (control.hpp)
     // with configuration from config.cpp
@@ -266,7 +266,7 @@ extern "C" void app_main(void) {
 	//--- create task for button ---
 	//------------------------------
 	//task that handles button/encoder events in any mode except 'MENU_SETTINGS' and 'MENU_MODE_SELECT' (e.g. switch modes by pressing certain count)
-	task_button_parameters_t button_param = {control, joystick, encoderQueue, motorLeft, motorRight, buzzer};
+	task_button_parameters_t button_param = {control, joystick, encoderQueue, motorLeft, motorRight, legRest, backRest, buzzer};
 	xTaskCreate(&task_button, "task_button", 4096, &button_param, 3, NULL);
 
 	//-----------------------------------
@@ -282,6 +282,13 @@ extern "C" void app_main(void) {
 	//task that handles the display (show stats, handle menu in 'MENU_SETTINGS' and 'MENU_MODE_SELECT' mode)
 	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer, &nvsHandle};
 	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 3, NULL);
+	
+	//-------------------------------------
+	//-- create task for chairAdjustment --
+	//-------------------------------------
+	//tasks that stop chair-rest motors when they reach target (note: they sleep when motors not running)
+	xTaskCreate(&chairAdjust_task, "chairAdjustLeg_task", 2048, legRest, 1, NULL);
+	xTaskCreate(&chairAdjust_task, "chairAdjustBack_task", 2048, backRest, 1, NULL);
 
 	vTaskDelay(200 / portTICK_PERIOD_MS); //wait for all tasks to finish initializing
 	printf("\n");

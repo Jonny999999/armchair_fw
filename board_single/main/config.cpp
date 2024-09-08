@@ -39,7 +39,7 @@ void setLoglevels(void)
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("http", ESP_LOG_INFO);
     // esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
-    esp_log_level_set("display", ESP_LOG_INFO);
+    esp_log_level_set("display", ESP_LOG_WARN);
     // esp_log_level_set("current-sensors", ESP_LOG_INFO);
     esp_log_level_set("speedSensor", ESP_LOG_WARN);
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);

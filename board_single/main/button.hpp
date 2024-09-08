@@ -6,6 +6,7 @@
 #include "motorctl.hpp"
 #include "auto.hpp"
 #include "joystick.hpp"
+#include "chairAdjust.hpp"
 
 
 
@@ -22,6 +23,8 @@ class buttonCommands {
             QueueHandle_t encoderQueue_f,
             controlledMotor * motorLeft_f,
             controlledMotor *motorRight_f,
+            cControlledRest *legRest_f,
+            cControlledRest *backRest_f,
             buzzer_t *buzzer_f);
 
         //--- functions ---
@@ -40,6 +43,8 @@ class buttonCommands {
         controlledMotor * motorRight;
         buzzer_t* buzzer;
         QueueHandle_t encoderQueue;
+        cControlledRest *legRest;
+        cControlledRest *backRest;
 
         //--- variables ---
         uint8_t count = 0;
@@ -62,6 +67,8 @@ typedef struct task_button_parameters_t
     QueueHandle_t encoderQueue;
     controlledMotor *motorLeft;
     controlledMotor *motorRight;
+    cControlledRest *legRest;
+    cControlledRest *backRest;
     buzzer_t *buzzer;
 } task_button_parameters_t;
 
