@@ -7402,9 +7402,9 @@
 		)
 		(uuid "6e1082d8-c825-4413-b932-ddbe6be3a0f1")
 	)
-	(text "pull to GND\n(n-mos)"
+	(text "pull to GND\n(n-mos, open drain)"
 		(exclude_from_sim no)
-		(at 30.48 47.498 0)
+		(at 32.512 48.006 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -7414,7 +7414,7 @@
 	)
 	(text "40mA\n"
 		(exclude_from_sim no)
-		(at 90.424 55.118 0)
+		(at 91.694 54.864 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -7455,7 +7455,17 @@
 		)
 		(uuid "c9d06a0d-e45c-43d5-8982-e23a9726efe6")
 	)
-	(text "3mA"
+	(text "5.1mA"
+		(exclude_from_sim no)
+		(at 39.878 43.18 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "f08132f1-cb17-40f0-a763-83ed53838013")
+	)
+	(text "3.5mA"
 		(exclude_from_sim no)
 		(at 62.738 47.244 0)
 		(effects
@@ -8079,7 +8089,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "22k"
+		(property "Value" "7k5"
 			(at 48.26 38.0999 0)
 			(effects
 				(font
@@ -8375,7 +8385,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "22k"
+		(property "Value" "7k5"
 			(at 48.26 163.8299 0)
 			(effects
 				(font
@@ -9575,7 +9585,7 @@
 				)
 			)
 		)
-		(property "Value" "4k7"
+		(property "Value" "3k3"
 			(at 55.88 166.37 90)
 			(effects
 				(font
@@ -11602,7 +11612,7 @@
 				)
 			)
 		)
-		(property "Value" "4k7"
+		(property "Value" "3k3"
 			(at 55.88 127 90)
 			(effects
 				(font
@@ -12338,7 +12348,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "22k"
+		(property "Value" "7k5"
 			(at 48.26 124.4599 0)
 			(effects
 				(font
@@ -12913,7 +12923,7 @@
 				)
 			)
 		)
-		(property "Value" "4k7"
+		(property "Value" "3k3"
 			(at 55.88 40.64 90)
 			(effects
 				(font
@@ -13194,7 +13204,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "22k"
+		(property "Value" "7k5"
 			(at 48.26 77.4699 0)
 			(effects
 				(font
@@ -13329,7 +13339,7 @@
 				)
 			)
 		)
-		(property "Value" "4k7"
+		(property "Value" "3k3"
 			(at 55.88 80.01 90)
 			(effects
 				(font

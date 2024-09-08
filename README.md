@@ -10,8 +10,8 @@ The projects in the folders `board_control/` and `board_motorctl/` are no longer
 <img src="doc/2023.09.09_armchair-frame.jpg" alt="Photo machine" style="width:60%;"><br>
 *Photo of the built frame that carries the armchair*
 
+<br>
 
-# Overview
 ## Current Features
 - **Control Modes:**
   - **Joystick:** Control movement via hardware joystick mounted on the right armrest
@@ -69,15 +69,31 @@ The projects in the folders `board_control/` and `board_motorctl/` are no longer
   - Chair adjustment
 - Simple App
 
+<br>
 
 ## Hardware Setup / Electrical
-### PCB
+### Control-PCB
 The firmware is designed for an ESP32 microcontroller integrated into a custom PCB developed here: [Project Work 2020](https://pfusch.zone/project-work-2020)
 
 ### Connection Plan
 A detailed diagram illustrating all components and wiring can be found in the file [connection-plan.drawio.pdf](connection-plan.drawio.pdf).   
 For more details refer to the documentation on the [website](https://pfusch.zone/electric-armchair-v2).
 
+### Chair-Adjust Relay-Board
+A custom pcb with relays and protection for controlling the 2 motors that adjust the rest positions of the armchair was created in this repository as well:
+Date: 2024.09.08  
+Folder: [hardware/chairAdjust-relayBoard](hardware/chairAdjust-relayBoard)  
+Schematic: [hardware/chciairAdjust-relayBoard/export/schematic.pdf](hardware/chairAdjust-relayBoard/export/schematic.pdf)
+<br>
+<br>
+<p align="center">
+<img src="hardware/chairAdjust-relayBoard/export/layout.svg" style="width: 40%;">
+<img src="hardware/chairAdjust-relayBoard/export/layout.jpg" width="36%" />
+</p>
+
+
+<br>
+<br>
 
 
 # Installation
@@ -99,6 +115,10 @@ Navigate to the react-app directory and install required packages using npm:
 cd react-app
 npm install
 ```
+
+
+<br>
+<br>
 
 
 # Building the Project
@@ -147,6 +167,9 @@ To view log output for debugging, follow the same steps as in the Upload section
 idf.py monitor
 ```
 
+
+<br>
+<br>
 
 
 # Usage / User Interface
