@@ -38,5 +38,11 @@ yarn-error.log*
 .env.production.local
 
 
+#kicad
+**/*-backups/*.zip
+\#auto_saved_files\#
+*.lck
+
+
 # other
 octave-workspace

@@ -88,6 +88,13 @@ controlledArmchair::controlledArmchair(
 
     // create semaphore for preventing race condition: mode-change operations while currently still executing certain mode
     handleIteration_mutex = xSemaphoreCreateMutex();
+
+    //switch to default active mode if configured
+    if (config.idleAfterStartup == false)
+    {
+        ESP_LOGI(TAG, "idleAfterStartup is disabled -> switching to configured default mode...");
+        changeMode(config.defaultMode, true); //switch to default mode without beeping
+    }
 }
 
 
@@ -113,21 +120,55 @@ void controlledArmchair::startHandleLoop()
 {
     while (1)
     {
+        // === handle current mode ===
         // mutex to prevent race condition with actions beeing run at mode change and previous mode still beeing executed
+        ESP_LOGV(TAG, "handle(): requesting mutex...");
         if (xSemaphoreTake(handleIteration_mutex, MUTEX_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE)
         {
+            ESP_LOGV(TAG, "handle(): got mutex!");
             //--- handle current mode ---
             ESP_LOGV(TAG, "control loop executing... mode='%s'", controlModeStr[(int)mode]);
             handle();
 
+            ESP_LOGV(TAG, "handle(): releasing mutex");
             xSemaphoreGive(handleIteration_mutex);
         } // end mutex
-        else {
+        else
+        {
             ESP_LOGE(TAG, "mutex timeout - stuck in changeMode? -> RESTART");
             esp_restart();
         }
 
-        //--- slow loop ---
+        // ==== run mode specific delay ===
+        // outsourced here to not block the mutex by just waiting
+        switch (mode)
+        {
+        default:
+        case controlMode_t::IDLE:
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            break;
+            case controlMode_t::JOYSTICK:
+            vTaskDelay(50 / portTICK_PERIOD_MS);
+            break;
+        case controlMode_t::MASSAGE:
+            vTaskDelay(10 / portTICK_PERIOD_MS);
+            break;
+        case controlMode_t::HTTP:
+            // has 500ms timeout waiting for new events, thus blocks mutex...
+            break;
+        case controlMode_t::AUTO:
+            vTaskDelay(20 / portTICK_PERIOD_MS);
+            break;
+        case controlMode_t::ADJUST_CHAIR:
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+            break;
+        case controlMode_t::MENU_SETTINGS:
+        case controlMode_t::MENU_MODE_SELECT:
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            break;
+        }
+
+        //=== slow loop, timeout ===
         // this section is run approx every 5s (+500ms)
         if (esp_log_timestamp() - timestamp_SlowLoopLastRun > 5000)
         {
@@ -143,12 +184,14 @@ void controlledArmchair::startHandleLoop()
 }
 
 
+
 //-------------------------------------
 //---------- Handle control -----------
 //-------------------------------------
 // function that repeatedly generates motor commands and runs actions depending on the current mode
 void controlledArmchair::handle()
 {
+    //note: mode specific delays are outsourced to startHandleLoop() to not block the mutex
 
     switch (mode)
     {
@@ -159,7 +202,6 @@ void controlledArmchair::handle()
 
     //------- handle IDLE -------
     case controlMode_t::IDLE:
-        vTaskDelay(500 / portTICK_PERIOD_MS);
         // TODO repeatedly set motors to idle, in case driver bugs? Currently 15s motorctl timeout would have to pass
 #ifdef JOYSTICK_LOG_IN_IDLE
         // get joystick data and log it
@@ -173,7 +215,6 @@ void controlledArmchair::handle()
 
     //------- handle JOYSTICK mode -------
     case controlMode_t::JOYSTICK:
-        vTaskDelay(50 / portTICK_PERIOD_MS);
         // get current joystick data with getData method of evaluatedJoystick
         stickDataLast = stickData;
         stickData = joystick_l->getData();
@@ -198,7 +239,6 @@ void controlledArmchair::handle()
 
     //------- handle MASSAGE mode -------
     case controlMode_t::MASSAGE:
-        vTaskDelay(10 / portTICK_PERIOD_MS);
         //--- read joystick ---
         // only update joystick data when input not frozen
         stickDataLast = stickData;
@@ -243,7 +283,6 @@ void controlledArmchair::handle()
 
     //------- handle AUTO mode -------
     case controlMode_t::AUTO:
-        vTaskDelay(20 / portTICK_PERIOD_MS);
         // generate commands
         commands = automatedArmchair->generateCommands(&instruction);
         //--- apply commands to motors ---
@@ -284,7 +323,6 @@ void controlledArmchair::handle()
 
     //------- handle ADJUST_CHAIR mode -------
     case controlMode_t::ADJUST_CHAIR:
-        vTaskDelay(100 / portTICK_PERIOD_MS);
         //--- read joystick ---
         stickDataLast = stickData;
         stickData = joystick_l->getData();
@@ -301,7 +339,6 @@ void controlledArmchair::handle()
     case controlMode_t::MENU_SETTINGS:
     case controlMode_t::MENU_MODE_SELECT:
         // nothing to do here, display task handles the menu
-        vTaskDelay(500 / portTICK_PERIOD_MS);
         break;
 
         // TODO: add other modes here
@@ -434,7 +471,7 @@ void controlledArmchair::handleTimeout()
 //----------- changeMode ------------
 //-----------------------------------
 //function to change to a specified control mode
-void controlledArmchair::changeMode(controlMode_t modeNew)
+void controlledArmchair::changeMode(controlMode_t modeNew, bool noBeep)
 {
     // variable to store configured accel limit before entering massage mode, to restore it later
     static uint32_t massagePreviousAccel = motorLeft->getFade(fadeType_t::ACCEL);
@@ -450,8 +487,10 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
     // mutex to wait for current handle iteration (control-task) to finish
     // prevents race conditions where operations when changing mode are run but old mode gets handled still
     ESP_LOGI(TAG, "changeMode: waiting for current handle() iteration to finish...");
+    ESP_LOGV(TAG, "changemode(): requesting mutex...");
     if (xSemaphoreTake(handleIteration_mutex, MUTEX_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE)
     {
+        ESP_LOGV(TAG, "changemode(): got mutex!");
         // copy previous mode
         modePrevious = mode;
         // store time changed (needed for timeout)
@@ -472,7 +511,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
             ESP_LOGI(TAG, "disabling debug output for 'evaluatedJoystick'");
             esp_log_level_set("evaluatedJoystick", ESP_LOG_WARN); // FIXME: loglevel from config
 #endif
-            buzzer->beep(1, 200, 100);
+            if (!noBeep) buzzer->beep(1, 200, 100);
             break;
 
         case controlMode_t::HTTP:
@@ -507,8 +546,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
         case controlMode_t::ADJUST_CHAIR:
             ESP_LOGW(TAG, "switching from ADJUST_CHAIR mode => turning off adjustment motors...");
             // prevent motors from being always on in case of mode switch while joystick is not in center thus motors currently moving
-            legRest->setState(REST_OFF);
-            backRest->setState(REST_OFF);
+            legRest->requestStateChange(REST_OFF);
+            backRest->requestStateChange(REST_OFF);
             break;
         }
 
@@ -523,7 +562,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
         case controlMode_t::IDLE:
             ESP_LOGW(TAG, "switching to IDLE mode: turning both motors off, beep");
             idleBothMotors();
-            buzzer->beep(1, 900, 0);
+            if (!noBeep) buzzer->beep(1, 900, 0);
             break;
 
         case controlMode_t::HTTP:
@@ -534,7 +573,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
         case controlMode_t::ADJUST_CHAIR:
             ESP_LOGW(TAG, "switching to ADJUST_CHAIR mode: turning both motors off, beep");
             idleBothMotors();
-            buzzer->beep(3, 100, 50);
+            if (!noBeep) buzzer->beep(3, 100, 50);
             break;
 
         case controlMode_t::MENU_SETTINGS:
@@ -562,6 +601,7 @@ void controlledArmchair::changeMode(controlMode_t modeNew)
         mode = modeNew;
 
         // unlock mutex for control task to continue handling modes
+        ESP_LOGV(TAG, "changemode(): releasing mutex");
         xSemaphoreGive(handleIteration_mutex);
     } // end mutex
     else

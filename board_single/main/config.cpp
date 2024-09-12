@@ -39,7 +39,7 @@ void setLoglevels(void)
     esp_log_level_set("wifi", ESP_LOG_INFO);
     esp_log_level_set("http", ESP_LOG_INFO);
     // esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
-    esp_log_level_set("display", ESP_LOG_INFO);
+    esp_log_level_set("display", ESP_LOG_WARN);
     // esp_log_level_set("current-sensors", ESP_LOG_INFO);
     esp_log_level_set("speedSensor", ESP_LOG_WARN);
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
@@ -135,7 +135,9 @@ motorctl_config_t configMotorControlRight = {
 //------- control config -------
 //------------------------------
 control_config_t configControl = {
-    .defaultMode = controlMode_t::JOYSTICK, // default mode after startup and toggling IDLE
+    .defaultMode = controlMode_t::ADJUST_CHAIR, // default mode after startup and toggling IDLE
+    .idleAfterStartup = false,  //when true: armchair is in IDLE mode after startup (2x press switches to defaultMode)
+                                //when false: immediately switches to active defaultMode after startup
     //--- timeouts ---
     .timeoutSwitchToIdleMs = 5 * 60 * 1000, // time of inactivity after which the mode gets switched to IDLE
     .timeoutNotifyPowerStillOnMs = 6 * 60 * 60 * 1000 // time in IDLE after which buzzer beeps in certain interval (notify "forgot to turn off")

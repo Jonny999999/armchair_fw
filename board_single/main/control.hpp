@@ -29,6 +29,8 @@ extern const uint8_t controlModeMaxCount;
 //struct with config parameters
 typedef struct control_config_t {
     controlMode_t defaultMode;  //default mode after startup and toggling IDLE
+    bool idleAfterStartup;  //when true: armchair is in IDLE mode after startup (2x press switches to defaultMode)
+                            //when false: immediately switches to active defaultMode after startup when set to false
     //timeout options
     uint32_t timeoutSwitchToIdleMs;         //time of inactivity after which the mode gets switched to IDLE
     uint32_t timeoutNotifyPowerStillOnMs;
@@ -79,7 +81,7 @@ class controlledArmchair {
         void startHandleLoop();
 
         //function that changes to a specified control mode
-        void changeMode(controlMode_t modeNew);
+        void changeMode(controlMode_t modeNew, bool noBeep = false);
 
         //function that toggle between IDLE and previous active mode (or default if not switched to certain mode yet)
         void toggleIdle();

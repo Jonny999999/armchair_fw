@@ -10,8 +10,8 @@ The projects in the folders `board_control/` and `board_motorctl/` are no longer
 <img src="doc/2023.09.09_armchair-frame.jpg" alt="Photo machine" style="width:60%;"><br>
 *Photo of the built frame that carries the armchair*
 
+<br>
 
-# Overview
 ## Current Features
 - **Control Modes:**
   - **Joystick:** Control movement via hardware joystick mounted on the right armrest
@@ -46,7 +46,7 @@ The projects in the folders `board_control/` and `board_motorctl/` are no longer
 - **Electric Chair Adjustment:** Control 4 Relays powering motors that adjust the chair rest positions
 - **Wi-Fi:**
   - Hosts wireless network
-  - Webserver with webroot in SPIFFS
+  - Web server with webroot in SPIFFS
   - HTTP API for controlling the chair (remote control)
 - **React web-app:** Virtual joystick sending data to http-API (placed in SPIFFS)
 
@@ -69,15 +69,31 @@ The projects in the folders `board_control/` and `board_motorctl/` are no longer
   - Chair adjustment
 - Simple App
 
+<br>
 
 ## Hardware Setup / Electrical
-### PCB
+### Control-PCB
 The firmware is designed for an ESP32 microcontroller integrated into a custom PCB developed here: [Project Work 2020](https://pfusch.zone/project-work-2020)
 
 ### Connection Plan
 A detailed diagram illustrating all components and wiring can be found in the file [connection-plan.drawio.pdf](connection-plan.drawio.pdf).   
 For more details refer to the documentation on the [website](https://pfusch.zone/electric-armchair-v2).
 
+### Chair-Adjust Relay-Board
+A custom pcb with relays and protection for controlling the 2 motors that adjust the rest positions of the armchair was created in this repository as well:
+Date: 2024.09.08  
+Folder: [hardware/chairAdjust-relayBoard](hardware/chairAdjust-relayBoard)  
+Schematic: [hardware/chairAdjust-relayBoard/export/schematic.pdf](hardware/chairAdjust-relayBoard/export/schematic.pdf)
+<br>
+<br>
+<p align="center">
+<img src="hardware/chairAdjust-relayBoard/export/layout.svg" style="width: 40%;">
+<img src="hardware/chairAdjust-relayBoard/export/layout.jpg" width="36%" />
+</p>
+
+
+<br>
+<br>
 
 
 # Installation
@@ -99,6 +115,10 @@ Navigate to the react-app directory and install required packages using npm:
 cd react-app
 npm install
 ```
+
+
+<br>
+<br>
 
 
 # Building the Project
@@ -148,16 +168,43 @@ idf.py monitor
 ```
 
 
+<br>
+<br>
+
 
 # Usage / User Interface
 
-## Encoder Functions
+## Quickstart
+- **Browse / select any mode**
+  - `[long press]` opens menu for selecting the desired mode (*JOYSTICK* for driving)
+- **Driving**
+  - `[3x click]` enters *JOYSTICK* mode
+- **Rest position**
+  - `[rotate]` adjusts the leg rest position  
+  - `[press + rotate]` at the same time: adjusts the back rest position
+  - alternatively enter *ADJUST* mode and control rests via joystick
 
-**When not in MENU mode**, the button (encoder click) has the following functions:
+<br>
+
+## Encoder Functions
+- *When not in MENU mode*, **rotating the encoder** has the following functions:
+
+|     Encoder Event   |          Action           |
+|---------------------|---------------------------|
+| rotate left         | Move leg rest up by 10%   |
+| rotate right        | Move leg rest DOWN by 10% |
+| press + rotate left | Move back rest down by 5% |
+| press + rotate left | Move back rest up by 5%   |
+
+Note: first tick is ignored -> quickly rotate 2 ticks at first
+
+<br>
+
+- *When not in MENU mode*, **clicking the encoder** has the following functions:
 
 | Count | Type          | Action               | Description                                                                                 |
 |-------|---------------|----------------------|---------------------------------------------------------------------------------------------|
-| 1x long | switch mode | **MENU_MODE_SELECT** | Open menu for selecting the current control mode                                            |
+| 1x long | switch mode | **MENU_MODE_SELECT** | Open **menu for selecting the current control mode**                                            |
 | 1x      | control     | [MASSAGE] **freeze** input  | When in massage mode: lock or unlock joystick input at current position.             |
 | 1x short, 1x long | switch mode | **ADJUST-CHAIR**  | Switch to mode where the armchair leg and backrest are controlled via joystick.      |
 | 2x      | toggle mode | **IDLE** <=> previous| Enable/disable chair armchair (e.g., enable after startup or switch to previous mode after timeout). |
@@ -169,7 +216,10 @@ idf.py monitor
 | 8x      | toggle option| **deceleration limit** | Disable/enable deceleration limit (default on) => more responsive.                       |
 | 12x     | toggle option| **alt stick mapping** | Toggle between default and alternative stick mapping (reverse direction swapped).         |
 
-**When in MENU_SETTINGS mode** (5x click), the encoder controls the settings menu: (similar in MENU_MODE_SELECT)
+
+<br>
+
+- When in **MENU_SETTINGS mode** (5x click), the encoder controls the settings menu: (similar in MENU_MODE_SELECT)
 
 | Encoder Event | Current Menu | Action                                                       |
 |---------------|--------------|--------------------------------------------------------------|
@@ -179,6 +229,8 @@ idf.py monitor
 | click         | value-select | Confirm value / run action.                                  |
 | rotate        | main-menu    | Scroll through menu items.                                   |
 | rotate        | value-select | Change value.                                                |
+
+<br>
 
 ## HTTP Mode
 Control the armchair via a virtual joystick on the web interface.

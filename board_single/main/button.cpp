@@ -23,7 +23,7 @@ void task_button(void *task_button_parameters)
     task_button_parameters_t *objects = (task_button_parameters_t *)task_button_parameters;
     ESP_LOGI(TAG, "Initializing command-button and starting handle loop");
     // create button instance
-    buttonCommands commandButton(objects->control, objects->joystick, objects->encoderQueue, objects->motorLeft, objects->motorRight, objects->buzzer);
+    buttonCommands commandButton(objects->control, objects->joystick, objects->encoderQueue, objects->motorLeft, objects->motorRight, objects->legRest, objects->backRest, objects->buzzer);
     // start handle loop
     commandButton.startHandleLoop();
 }
@@ -35,8 +35,10 @@ buttonCommands::buttonCommands(
     controlledArmchair *control_f,
     evaluatedJoystick *joystick_f,
     QueueHandle_t encoderQueue_f,
-    controlledMotor *motorLeft_f,
+    controlledMotor * motorLeft_f,
     controlledMotor *motorRight_f,
+    cControlledRest *legRest_f,
+    cControlledRest *backRest_f,
     buzzer_t *buzzer_f)
 {
     // copy object pointers
@@ -46,6 +48,8 @@ buttonCommands::buttonCommands(
     motorLeft = motorLeft_f;
     motorRight = motorRight_f;
     buzzer = buzzer_f;
+    legRest = legRest_f;
+    backRest = backRest_f;
     // TODO declare / configure evaluatedSwitch here instead of config (unnecessary that button object is globally available - only used here)?
 }
 
@@ -141,6 +145,12 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
             control->changeMode(controlMode_t::MASSAGE); //switch to MASSAGE mode
             break;
 
+        case 7:
+            legRest->setTargetPercent(100);
+            backRest->setTargetPercent(0);
+            ESP_LOGW(TAG, "7x TESTING: set leg/back rest to 100/0");
+            break;
+
         case 8:
         // ## toggle "sport-mode" ##
             //toggle deceleration fading between on and off
@@ -172,12 +182,16 @@ void buttonCommands::action (uint8_t count, bool lastPressLong){
 // when not in MENU_SETTINGS mode, repeatedly receives events from encoder button
 // and takes the corresponding action
 // this function has to be started once in a separate task
-#define INPUT_TIMEOUT 500 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
+#define INPUT_TIMEOUT 600 // duration of no button events, after which action is run (implicitly also is 'long-press' time)
+#define IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE 2600 // time that has to be passed since last encoder rotate click for button count command to be accepted (e.g. prevent long press action after PRESS+ROTATE was used)
+#define IGNORE_ROTATE_COUNT 1 //amount of ignored clicks before action is actually taken (ignore accidental touches)
 void buttonCommands::startHandleLoop()
 {
     //-- variables --
-    bool isPressed = false;
+    static bool isPressed = false;
     static rotary_encoder_event_t event; // store event data
+    int rotateCount = 0; // temporary count clicks encoder was rotated
+    uint32_t timestampLastAdjustChange = 0;
     // int count = 0; (from class)
 
     while (1)
@@ -210,17 +224,46 @@ void buttonCommands::startHandleLoop()
                 ESP_LOGD(TAG, "Button released");
                 isPressed = false; // rest stored state
                 break;
-            case RE_ET_CHANGED: // scroll through status pages when simply rotating encoder
-                if (event.diff > 0)
-                {
-                    display_rotateStatusPage(true, true); //select NEXT status screen, stau at last element (dont rotate to first)
-                    buzzer->beep(1, 65, 0);
+            case RE_ET_CHANGED:
+                // ignore first clicks (dont ignore when changed position recently)
+                if ((rotateCount++ < IGNORE_ROTATE_COUNT) && ((esp_log_timestamp() - timestampLastAdjustChange) > IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE))
+                    {
+                        buzzer->beep(1, 20, 0);
+                        break;
+                    }
+                    else {
+                        timestampLastAdjustChange = esp_log_timestamp();
+                    }
+                if (isPressed){
+                    /////### scroll through status pages when PRESSED + ROTATED ###
+                    ///if (event.diff > 0)
+                    ///    display_rotateStatusPage(true, true); // select NEXT status screen, stay at last element (dont rotate to first)
+                    ///else
+                    ///    display_rotateStatusPage(false, true); // select PREVIOUS status screen, stay at first element (dont rotate to last)
+                //### adjust back support when PRESSED + ROTATED ###
+                    if (event.diff > 0)
+                        backRest->setTargetPercent(backRest->getTargetPercent() - 5);
+                    else
+                        backRest->setTargetPercent(backRest->getTargetPercent() + 5);
+                    // show temporary notification on display
+                    char buf[8];
+                    snprintf(buf, 8, "%.0f%%", backRest->getTargetPercent());
+                    display_showNotification(IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE, "moving Rest:", "BACK", buf);
                 }
+                //### adjust leg support when ROTATED ###
                 else
                 {
-                    display_rotateStatusPage(false, true); //select PREVIOUS status screen, stay at first element (dont rotate to last)
-                    buzzer->beep(1, 65, 0);
+                    // increment target position each click
+                    if (event.diff > 0)
+                        legRest->setTargetPercent(legRest->getTargetPercent() - 10);
+                    else
+                        legRest->setTargetPercent(legRest->getTargetPercent() + 10);
+                    // show temporary notification on display
+                    char buf[8];
+                    snprintf(buf, 8, "%.0f%%", legRest->getTargetPercent());
+                    display_showNotification(2500, "moving Rest:", "LEG", buf);
                 }
+                buzzer->beep(1, 40, 0);
                 break;
             case RE_ET_BTN_LONG_PRESSED:
             case RE_ET_BTN_CLICKED:
@@ -230,7 +273,15 @@ void buttonCommands::startHandleLoop()
         }
         else // timeout (no event received within TIMEOUT)
         {
-            if (count > 0)
+            rotateCount = 0; // reset rotate count
+            // ignore button click events when "ROTATE+PRESSED" was just used
+            if (count > 0 && (esp_log_timestamp() - timestampLastAdjustChange < IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE))
+            {
+                ESP_LOGW(TAG, "ignoring button count %d because encoder was rotated less than %d ms ago", count, IGNORE_BUTTON_TIME_SINCE_LAST_ROTATE);
+                count = 0;
+            }
+            // encoder was pressed
+            else if (count > 0)
             {
                 //-- run action with count of presses --
                 ESP_LOGI(TAG, "timeout: count=%d, lastPressLong=%d -> running action", count, isPressed);
