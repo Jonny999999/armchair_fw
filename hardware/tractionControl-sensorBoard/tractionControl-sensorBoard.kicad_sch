@@ -1251,6 +1251,28 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "MA732\n- hard to get\n- simple SPI interface (MISO + SCK + CS only)\n- read only automatically starts at CS edge\n- abs angle only\nhttps://www.farnell.com/datasheets/3437340.pdf"
+		(exclude_from_sim no)
+		(at 27.94 187.452 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "0086f52e-939b-49ec-888b-9d4b3b1925ff")
+	)
+	(text "As5600\n- [already available]\n- i2c \n- read angle only\n- NOT addressable -> i2c multiplexer necessary\nhttps://www.mouser.de/datasheet/2/588/asset_pdf_25493149-3419514.pdf"
+		(exclude_from_sim no)
+		(at 26.416 143.51 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "068aae1b-2168-4125-ab8f-e3c58365e1c6")
+	)
 	(text "New idea: use MCU next to sensor for communication via MODBUS instead of SSC\nSensor --SSC--->  ATiny4313  --UART-->  MAX485     ---MODBUS--->      MAX3485 ----UART---> ESP32"
 		(exclude_from_sim no)
 		(at 25.908 22.606 0)
@@ -1262,6 +1284,29 @@
 		)
 		(uuid "068fdfe3-d718-4a44-a1f6-08046b097206")
 	)
+	(text "I2c extender  P82B715\nhttps://www.horter.de/doku/P82B715.pdf"
+		(exclude_from_sim no)
+		(at 169.164 135.382 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.1588)
+			)
+			(justify left)
+		)
+		(uuid "07977372-ea82-4716-8e38-a37407ef450d")
+	)
+	(text "AS5047P\n- standard SPI (miso, mosi, clk, cs)\n- request -> response\nhttps://www.mouser.de/datasheet/2/588/asset_pdf_25493104-3419339.pdf"
+		(exclude_from_sim no)
+		(at 27.178 172.974 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "0f5222c0-f657-4f08-8359-7852174741a0")
+	)
 	(text "Fail: SSC (SPI where MISO/MOSI merged on one data line) not possible with this transciever... \nAlso halfduplex RS485 /  RS422 not possible due to needed control of DE pin..."
 		(exclude_from_sim no)
 		(at 148.59 43.688 0)
@@ -1272,6 +1317,77 @@
 			(justify left)
 		)
 		(uuid "3d73f460-5f00-4d45-9167-2bb3420ba476")
+	)
+	(text "AS5048B\n- ABS angle only\n- AS5048A - SPI (daisy chain possible (4 pin spi for multiple)\n- AS5048B - I2C (custom address via pin)\nhttps://www.mouser.de/datasheet/2/588/AS5048_DS000298_4_00-2324531.pdf"
+		(exclude_from_sim no)
+		(at 26.924 159.258 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "72a6acf9-9723-466a-8077-ba36fdf0a9a2")
+	)
+	(text "I2C tranciever - differential  PCA9600  / PCA9601\n- interface between 3V and 5V i2c\n- extend to 20m cable\n- MSOP8 TSSOP8 or SO8\nhttps://www.mouser.de/datasheet/2/302/PCA9600-2527437.pdf"
+		(exclude_from_sim no)
+		(at 169.926 147.066 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.1588)
+			)
+			(justify left)
+		)
+		(uuid "94ea2c54-5dbb-4228-9d9a-9ac43b34ce33")
+	)
+	(text "TLE5012B\n- [already ordered / available]\n- weird SPI single line interface SSC\n- => mcu necessary to transfer via modbus\n- directly outputs RPM value as well\nhttps://www.infineon.com/dgdl/Infineon-TLE5012B_Exxxx-DataSheet-v02_01-EN.pdf"
+		(exclude_from_sim no)
+		(at 26.416 127.254 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "ab9d90fa-a497-4cb4-822d-404f9a929d59")
+	)
+	(text "TCA9548A  I2C Multiplexer\n- 1 to 8\n- 1.6 to 5.5V\nhttps://www.ti.com/lit/ds/symlink/tca9548a.pdf"
+		(exclude_from_sim no)
+		(at 169.164 124.968 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "ade51259-43eb-4c34-97a1-bb7d44a49c08")
+	)
+	(text "Found sensors"
+		(exclude_from_sim no)
+		(at 42.926 120.396 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "c3546370-5a37-4b04-bec5-2f38f5bb26a0")
+	)
+	(text "Found Bus extenders"
+		(exclude_from_sim no)
+		(at 165.862 118.618 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "e195d961-33e4-4756-ad34-f50a564e33c4")
 	)
 	(wire
 		(pts
