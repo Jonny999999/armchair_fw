@@ -42,6 +42,7 @@ yarn-error.log*
 **/*-backups/*.zip
 \#auto_saved_files\#
 *.lck
+fp-info-cache
 
 
 # other
