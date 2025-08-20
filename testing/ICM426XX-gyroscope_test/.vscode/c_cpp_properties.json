@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/build/config/**",
+                "${workspaceFolder}/components/**",
+                "${workspaceFolder}/main/**",
+                "${env:IDF_PATH}/components/**",
+                "C:/Users/Bujtor.Bence/esp/esp-idf/components/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "intelliSenseMode": "msvc-x64"
+        }
+    ],
+    "version": 4
+}
