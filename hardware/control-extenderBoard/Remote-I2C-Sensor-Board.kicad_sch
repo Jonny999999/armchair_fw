@@ -195,6 +195,113 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Connector:TestPoint"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0.762)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "TP"
+				(at 0 6.858 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "TestPoint"
+				(at 0 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 5.08 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 5.08 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "test point"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "test point tp"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Pin* Test*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "TestPoint_0_1"
+				(circle
+					(center 0 3.302)
+					(radius 0.762)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "TestPoint_1_1"
+				(pin passive line
+					(at 0 0 90)
+					(length 2.54)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Device:C"
 			(pin_numbers
 				(hide yes)
@@ -1307,6 +1414,425 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Mechanical:MountingHole_Pad"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board yes)
+			(property "Reference" "H"
+				(at 0 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "MountingHole_Pad"
+				(at 0 4.445 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Mounting Hole with connection"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "mounting hole"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "MountingHole*Pad*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "MountingHole_Pad_0_1"
+				(circle
+					(center 0 1.27)
+					(radius 1.27)
+					(stroke
+						(width 1.27)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "MountingHole_Pad_1_1"
+				(pin input line
+					(at 0 -2.54 90)
+					(length 2.54)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "misc_libJonny:Shield_Landing_Pad"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J"
+				(at -2.032 3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify right)
+				)
+			)
+			(property "Value" "Cable-Shield"
+				(at 4.064 0.508 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "misc_libJonny:Shield_Landing_Pad_6mmCable_ZipTie"
+				(at -1.524 -8.89 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Connect shield of a cable to pcb pad + have footprint to fix it to pcb using e.g. zipties"
+				(at -0.254 -10.922 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "Cable mount shield CAT6"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "Shield_Landing_Pad_0_1"
+				(polyline
+					(pts
+						(xy -5.08 0) (xy -1.27 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 3.556) (xy 1.27 1.016)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 2.286) (xy 1.27 -0.254)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 1.016) (xy 1.27 -1.524)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -0.254) (xy 1.27 -2.794)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -1.524) (xy 0 -2.794)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 3.556) (xy -1.27 2.286)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 3.556) (xy 1.27 2.286)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 8.636) (xy 1.27 3.556) (xy -1.27 3.556) (xy -1.27 8.636)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(bezier
+					(pts
+						(xy 1.27 8.636) (xy 0 8.001) (xy 0 9.271) (xy -1.27 8.636)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 3.556) (xy -1.27 1.016)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 2.286) (xy -1.27 -0.254)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 1.016) (xy -1.27 -1.524)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 -0.254) (xy -1.27 -2.794)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 -1.524) (xy 0 -2.794)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start 1.27 -2.794)
+					(end -1.27 3.556)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 -7.874) (xy 1.27 -2.794) (xy -1.27 -2.794) (xy -1.27 -7.874)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(bezier
+					(pts
+						(xy 1.27 -7.874) (xy 0 -7.239) (xy 0 -8.509) (xy -1.27 -7.874)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "Shield_Landing_Pad_1_1"
+				(text "Cable"
+					(at 0 5.842 900)
+					(effects
+						(font
+							(size 0.8 0.8)
+						)
+					)
+				)
+				(text "Shield"
+					(at 2.2225 0.3175 900)
+					(effects
+						(font
+							(size 0.8 0.8)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at -7.62 0 0)
+					(length 2.54)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "modules_libJonny:AS5600_Breakout"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -2035,6 +2561,30 @@
 			(embedded_fonts no)
 		)
 	)
+	(rectangle
+		(start 40.64 144.78)
+		(end 86.36 182.88)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 27675f2f-1ee2-4773-864a-92f3368bac73)
+	)
+	(rectangle
+		(start 147.828 24.13)
+		(end 171.45 62.992)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 4f16d9de-545f-446d-b978-a71aaa8eb83c)
+	)
 	(text "Remote Board with AS5600 magnetic encoder near axle"
 		(exclude_from_sim no)
 		(at 70.866 32.512 0)
@@ -2046,6 +2596,36 @@
 			)
 		)
 		(uuid "8089af92-5d9a-449b-852c-f58ab82d1868")
+	)
+	(text "Cable mount"
+		(exclude_from_sim no)
+		(at 54.864 149.86 0)
+		(effects
+			(font
+				(size 2.2 2.2)
+				(thickness 0.44)
+				(bold yes)
+			)
+		)
+		(uuid "ea2e28bd-33cf-4ab8-a44a-d5fa0605db30")
+	)
+	(junction
+		(at 219.71 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "0c6c7cc8-d0df-4b38-b66e-757db2e14dfb")
+	)
+	(junction
+		(at 154.94 104.14)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "1cafaae0-1870-4a90-a3c1-9466e2479857")
+	)
+	(junction
+		(at 163.83 43.18)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "1d71b5a9-cc5c-4889-94f9-59056fff6fc5")
 	)
 	(junction
 		(at 57.15 50.8)
@@ -2096,6 +2676,12 @@
 		(uuid "56cbb58f-afd5-4355-9aa8-afb80395927d")
 	)
 	(junction
+		(at 163.83 48.26)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "5c4332e2-715c-4716-b6b9-ee39c90605a8")
+	)
+	(junction
 		(at 109.22 50.8)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2132,6 +2718,18 @@
 		(uuid "870396b3-7c6f-489a-a73d-dc641e61ffd9")
 	)
 	(junction
+		(at 222.25 96.52)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "872fb3d2-6513-4acf-a3e8-1ba9ae011a90")
+	)
+	(junction
+		(at 154.94 96.52)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "93164b68-970d-4c4e-bb31-c5518f6657dd")
+	)
+	(junction
 		(at 210.82 82.55)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2150,7 +2748,7 @@
 		(uuid "9e1f9cc5-bf12-4d6a-9f57-50fe94e98eea")
 	)
 	(junction
-		(at 151.13 125.73)
+		(at 151.13 130.81)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "ab7e0754-78bc-437a-946f-9f762fe808a0")
@@ -2162,10 +2760,16 @@
 		(uuid "ad4a9fd8-3670-45f9-a830-4de0cdc2f543")
 	)
 	(junction
-		(at 151.13 109.22)
+		(at 151.13 114.3)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "b0e32f80-9178-4370-a5a5-bde92a1bccca")
+	)
+	(junction
+		(at 40.64 50.8)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "bd4c3cbf-521b-4a62-a620-4273644dd57d")
 	)
 	(junction
 		(at 64.77 50.8)
@@ -2204,6 +2808,12 @@
 		(uuid "ddfe1d98-7161-421f-ac49-7ef580f3e8c2")
 	)
 	(junction
+		(at 163.83 38.1)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ee83c49b-03c9-4ae5-82c0-8d05fa636018")
+	)
+	(junction
 		(at 195.58 72.39)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2231,13 +2841,33 @@
 	)
 	(wire
 		(pts
-			(xy 146.05 109.22) (xy 151.13 109.22)
+			(xy 146.05 114.3) (xy 151.13 114.3)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "075e1d0e-ba1e-404c-98d0-9e5cb471e588")
+	)
+	(wire
+		(pts
+			(xy 162.56 43.18) (xy 163.83 43.18)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "138ef8d7-4b8e-4d5c-80fa-b2b2069d1754")
+	)
+	(wire
+		(pts
+			(xy 109.22 45.72) (xy 109.22 50.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "13dbd9d2-c0a7-4a03-910d-3bb175b2cc66")
 	)
 	(wire
 		(pts
@@ -2311,7 +2941,7 @@
 	)
 	(wire
 		(pts
-			(xy 29.21 50.8) (xy 45.72 50.8)
+			(xy 21.59 50.8) (xy 40.64 50.8)
 		)
 		(stroke
 			(width 0)
@@ -2321,7 +2951,7 @@
 	)
 	(wire
 		(pts
-			(xy 116.84 46.99) (xy 116.84 50.8)
+			(xy 116.84 41.91) (xy 116.84 50.8)
 		)
 		(stroke
 			(width 0)
@@ -2341,6 +2971,16 @@
 	)
 	(wire
 		(pts
+			(xy 163.83 43.18) (xy 163.83 48.26)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "23e964bf-bc26-4852-86e2-ce2dfbe999b9")
+	)
+	(wire
+		(pts
 			(xy 184.15 96.52) (xy 181.61 96.52)
 		)
 		(stroke
@@ -2348,6 +2988,16 @@
 			(type default)
 		)
 		(uuid "27ef82fb-0725-4ab0-ace3-1e77bec4666e")
+	)
+	(wire
+		(pts
+			(xy 162.56 38.1) (xy 163.83 38.1)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "29895ae0-f684-4ee4-b1d8-c204676d3383")
 	)
 	(wire
 		(pts
@@ -2361,7 +3011,7 @@
 	)
 	(wire
 		(pts
-			(xy 156.21 125.73) (xy 156.21 124.46)
+			(xy 156.21 130.81) (xy 156.21 129.54)
 		)
 		(stroke
 			(width 0)
@@ -2371,7 +3021,17 @@
 	)
 	(wire
 		(pts
-			(xy 146.05 125.73) (xy 151.13 125.73)
+			(xy 49.53 87.63) (xy 69.85 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2b02b488-5c42-4751-ad2a-bc94a7fde89d")
+	)
+	(wire
+		(pts
+			(xy 146.05 130.81) (xy 151.13 130.81)
 		)
 		(stroke
 			(width 0)
@@ -2381,7 +3041,17 @@
 	)
 	(wire
 		(pts
-			(xy 161.29 96.52) (xy 161.29 116.84)
+			(xy 162.56 48.26) (xy 163.83 48.26)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2db453ef-efcb-4772-a7ef-678bec5b7bbb")
+	)
+	(wire
+		(pts
+			(xy 161.29 96.52) (xy 161.29 121.92)
 		)
 		(stroke
 			(width 0)
@@ -2398,6 +3068,16 @@
 			(type default)
 		)
 		(uuid "2fbe0465-fb29-44c1-adc5-8cd154f0ba57")
+	)
+	(wire
+		(pts
+			(xy 154.94 96.52) (xy 161.29 96.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "304be79a-6085-4e22-a81f-dbc007efbc25")
 	)
 	(wire
 		(pts
@@ -2438,6 +3118,16 @@
 			(type default)
 		)
 		(uuid "32d485b3-d5d3-4343-8274-0d34522bb300")
+	)
+	(wire
+		(pts
+			(xy 219.71 101.6) (xy 227.33 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3308ee5e-5337-4135-beac-c58be3d0ba7d")
 	)
 	(wire
 		(pts
@@ -2511,6 +3201,16 @@
 	)
 	(wire
 		(pts
+			(xy 57.15 45.72) (xy 57.15 50.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "467e6ecc-dbb6-4d9a-a2fa-f86ae1320424")
+	)
+	(wire
+		(pts
 			(xy 52.07 107.95) (xy 52.07 115.57)
 		)
 		(stroke
@@ -2571,6 +3271,26 @@
 	)
 	(wire
 		(pts
+			(xy 162.56 33.02) (xy 163.83 33.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "59d9edf8-f53c-40f4-8248-f2bcb9bb791a")
+	)
+	(wire
+		(pts
+			(xy 222.25 96.52) (xy 227.33 96.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5cc8eabc-fc4e-4e2f-aed0-49e38041715c")
+	)
+	(wire
+		(pts
 			(xy 81.28 50.8) (xy 97.79 50.8)
 		)
 		(stroke
@@ -2611,7 +3331,7 @@
 	)
 	(wire
 		(pts
-			(xy 209.55 96.52) (xy 227.33 96.52)
+			(xy 209.55 96.52) (xy 222.25 96.52)
 		)
 		(stroke
 			(width 0)
@@ -2701,13 +3421,23 @@
 	)
 	(wire
 		(pts
-			(xy 212.09 101.6) (xy 227.33 101.6)
+			(xy 212.09 101.6) (xy 219.71 101.6)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "809b0724-2944-444e-9f9e-d9c89e077780")
+	)
+	(wire
+		(pts
+			(xy 81.28 107.95) (xy 81.28 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8310d0d0-8644-4a26-af4b-46a84913614f")
 	)
 	(wire
 		(pts
@@ -2751,17 +3481,7 @@
 	)
 	(wire
 		(pts
-			(xy 69.85 87.63) (xy 49.53 87.63)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9306781a-cd9b-440c-8318-4088ae47cbd3")
-	)
-	(wire
-		(pts
-			(xy 151.13 109.22) (xy 156.21 109.22)
+			(xy 151.13 114.3) (xy 156.21 114.3)
 		)
 		(stroke
 			(width 0)
@@ -2781,7 +3501,7 @@
 	)
 	(wire
 		(pts
-			(xy 140.97 104.14) (xy 140.97 116.84)
+			(xy 140.97 104.14) (xy 140.97 121.92)
 		)
 		(stroke
 			(width 0)
@@ -2791,7 +3511,17 @@
 	)
 	(wire
 		(pts
-			(xy 151.13 125.73) (xy 156.21 125.73)
+			(xy 163.83 48.26) (xy 163.83 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9667502d-e4a9-4335-b2b2-484eee9c8596")
+	)
+	(wire
+		(pts
+			(xy 151.13 130.81) (xy 156.21 130.81)
 		)
 		(stroke
 			(width 0)
@@ -2811,7 +3541,7 @@
 	)
 	(wire
 		(pts
-			(xy 151.13 107.95) (xy 151.13 109.22)
+			(xy 151.13 113.03) (xy 151.13 114.3)
 		)
 		(stroke
 			(width 0)
@@ -2941,7 +3671,7 @@
 	)
 	(wire
 		(pts
-			(xy 146.05 124.46) (xy 146.05 125.73)
+			(xy 146.05 129.54) (xy 146.05 130.81)
 		)
 		(stroke
 			(width 0)
@@ -2951,7 +3681,17 @@
 	)
 	(wire
 		(pts
-			(xy 116.84 96.52) (xy 161.29 96.52)
+			(xy 154.94 104.14) (xy 172.72 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c88df3e2-1825-4bae-8714-e160c72a6840")
+	)
+	(wire
+		(pts
+			(xy 116.84 96.52) (xy 154.94 96.52)
 		)
 		(stroke
 			(width 0)
@@ -2981,7 +3721,27 @@
 	)
 	(wire
 		(pts
-			(xy 64.77 46.99) (xy 64.77 50.8)
+			(xy 40.64 45.72) (xy 40.64 50.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ccf1fe23-1634-4cf0-ae32-8fdd4092e271")
+	)
+	(wire
+		(pts
+			(xy 163.83 38.1) (xy 163.83 43.18)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d5a5a1a7-c4dc-4532-9f44-70687882188d")
+	)
+	(wire
+		(pts
+			(xy 64.77 41.91) (xy 64.77 50.8)
 		)
 		(stroke
 			(width 0)
@@ -2991,13 +3751,23 @@
 	)
 	(wire
 		(pts
-			(xy 140.97 104.14) (xy 172.72 104.14)
+			(xy 140.97 104.14) (xy 154.94 104.14)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "d9a8f26f-e4e5-4be5-b600-a2b0130bee07")
+	)
+	(wire
+		(pts
+			(xy 163.83 33.02) (xy 163.83 38.1)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dd18a065-ca14-4e91-a98f-2bc3109dd020")
 	)
 	(wire
 		(pts
@@ -3008,6 +3778,16 @@
 			(type default)
 		)
 		(uuid "e0f55ebe-b82b-43cf-9176-2d8c7c72c372")
+	)
+	(wire
+		(pts
+			(xy 40.64 50.8) (xy 45.72 50.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e244f091-7837-49b9-87c6-cd2aa7d26124")
 	)
 	(wire
 		(pts
@@ -3130,7 +3910,7 @@
 		(uuid "235eecb7-8909-419f-88c7-8915bfd895b9")
 	)
 	(label "3V3_REMOTE-IN"
-		(at 29.21 50.8 0)
+		(at 21.59 50.8 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3327,6 +4107,73 @@
 		)
 	)
 	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 40.64 45.72 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "10f1b158-79c3-497f-be0e-c075454e5ef4")
+		(property "Reference" "TP21"
+			(at 39.878 41.91 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "3V3-IN"
+			(at 39.624 43.688 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 35.56 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 35.56 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 40.64 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "a8349424-4d62-4b3d-b844-3a49b0ddcc91")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP21")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C_Polarized")
 		(at 57.15 55.88 0)
 		(unit 1)
@@ -3390,6 +4237,138 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
 					(reference "C12")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 154.94 96.52 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "128b627c-dee8-4322-b959-9a71d59dd792")
+		(property "Reference" "TP24"
+			(at 154.178 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "SCL-in"
+			(at 153.924 94.488 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 149.86 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 149.86 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 154.94 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b5c22f9d-7a83-4827-ba33-6f66ce070d01")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP24")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
+		(at 160.02 33.02 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "133235b6-0544-4d44-81fd-e3aab575b7d2")
+		(property "Reference" "H5"
+			(at 158.75 26.67 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole_Pad"
+			(at 158.75 29.21 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
+			(at 160.02 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 160.02 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole with connection"
+			(at 160.02 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "e452ccbf-172b-4451-a53e-e8a6e578678c")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "H5")
 					(unit 1)
 				)
 			)
@@ -3602,6 +4581,71 @@
 		)
 	)
 	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
+		(at 160.02 43.18 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "2c50196c-3c19-46ee-aa62-f72421524608")
+		(property "Reference" "H7"
+			(at 158.75 36.83 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole_Pad"
+			(at 158.75 39.37 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
+			(at 160.02 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 160.02 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole with connection"
+			(at 160.02 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "c045d395-6cae-41c0-9c88-ded7943dd1ff")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "H7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GNDPWR")
 		(at 116.84 121.92 0)
 		(unit 1)
@@ -3662,6 +4706,70 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
 					(reference "#PWR083")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
+		(at 160.02 48.26 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "356085e3-ece9-4f52-ab5e-0f557a23864e")
+		(property "Reference" "H8"
+			(at 158.75 41.91 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole_Pad"
+			(at 158.75 44.45 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
+			(at 160.02 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 160.02 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole with connection"
+			(at 160.02 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1d748c10-2c67-4d3e-8177-c3132135b4f3")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "H8")
 					(unit 1)
 				)
 			)
@@ -3825,6 +4933,73 @@
 		)
 	)
 	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 154.94 104.14 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "44777ad7-6cd0-41e2-aca5-c364ca694274")
+		(property "Reference" "TP25"
+			(at 154.178 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "SDA-in"
+			(at 153.924 102.108 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 149.86 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 149.86 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 154.94 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "af2e8314-b54a-4558-8cdb-070d8a5920df")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP25")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Diode:SMAJ150A")
 		(at 116.84 113.03 90)
 		(mirror x)
@@ -3896,7 +5071,7 @@
 	)
 	(symbol
 		(lib_id "Diode:BAT54SW")
-		(at 146.05 116.84 270)
+		(at 146.05 121.92 270)
 		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
@@ -3905,7 +5080,7 @@
 		(dnp no)
 		(uuid "476245af-2369-42f5-a0ba-dcb1b7893a95")
 		(property "Reference" "D14"
-			(at 140.716 122.428 90)
+			(at 140.716 127.508 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3914,7 +5089,7 @@
 			)
 		)
 		(property "Value" "BAS70-04"
-			(at 135.636 124.46 90)
+			(at 135.636 129.54 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3923,7 +5098,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-23-3"
-			(at 149.225 114.935 0)
+			(at 149.225 120.015 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3933,7 +5108,7 @@
 			)
 		)
 		(property "Datasheet" "https://diotec.com/request/datasheet/bas70.pdf"
-			(at 146.05 119.888 0)
+			(at 146.05 124.968 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3942,7 +5117,7 @@
 			)
 		)
 		(property "Description" "high speed schottky diode, series array, 5pF"
-			(at 146.05 116.84 0)
+			(at 146.05 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4314,8 +5489,73 @@
 		)
 	)
 	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
+		(at 160.02 38.1 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "724f687d-d03c-4ce6-b03b-b2d4d30f3f4e")
+		(property "Reference" "H6"
+			(at 158.75 31.75 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole_Pad"
+			(at 158.75 34.29 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
+			(at 160.02 38.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 160.02 38.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole with connection"
+			(at 160.02 38.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "a5563f9c-a3b4-49d6-853a-4caf54180d82")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "H6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GNDPWR")
-		(at 151.13 125.73 0)
+		(at 151.13 130.81 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4324,7 +5564,7 @@
 		(fields_autoplaced yes)
 		(uuid "72f201de-bf16-451a-8755-960fbb1bda19")
 		(property "Reference" "#PWR092"
-			(at 151.13 130.81 0)
+			(at 151.13 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4333,7 +5573,7 @@
 			)
 		)
 		(property "Value" "GND_REMOTE"
-			(at 151.003 129.54 0)
+			(at 151.003 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4341,7 +5581,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 151.13 127 0)
+			(at 151.13 132.08 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4350,7 +5590,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 151.13 127 0)
+			(at 151.13 132.08 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4359,7 +5599,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GNDPWR\" , global ground"
-			(at 151.13 125.73 0)
+			(at 151.13 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4374,6 +5614,73 @@
 			(project ""
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
 					(reference "#PWR092")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 57.15 45.72 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7351096b-1957-4349-b285-6ea962b473ff")
+		(property "Reference" "TP22"
+			(at 56.388 41.91 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "3V3-Filtered"
+			(at 56.134 43.688 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 52.07 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 52.07 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 57.15 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "3126c2e2-3245-4f9a-a70d-c20a87af46d5")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP22")
 					(unit 1)
 				)
 			)
@@ -4516,7 +5823,7 @@
 	)
 	(symbol
 		(lib_id "power:+3V3")
-		(at 64.77 46.99 0)
+		(at 64.77 41.91 0)
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
@@ -4525,7 +5832,7 @@
 		(dnp no)
 		(uuid "7695b596-80a4-4192-b4d5-af8b7208fb64")
 		(property "Reference" "#PWR085"
-			(at 64.77 50.8 0)
+			(at 64.77 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4534,7 +5841,7 @@
 			)
 		)
 		(property "Value" "+3V3_REMOTE"
-			(at 64.77 43.18 0)
+			(at 64.77 38.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4542,7 +5849,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 64.77 46.99 0)
+			(at 64.77 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4551,7 +5858,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 64.77 46.99 0)
+			(at 64.77 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4560,7 +5867,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
-			(at 64.77 46.99 0)
+			(at 64.77 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4653,7 +5960,7 @@
 	)
 	(symbol
 		(lib_id "Diode:BAT54SW")
-		(at 156.21 116.84 90)
+		(at 156.21 121.92 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4661,7 +5968,7 @@
 		(dnp no)
 		(uuid "771754bd-09bb-48d8-a36e-0ce88c9f5e80")
 		(property "Reference" "D26"
-			(at 162.306 122.174 90)
+			(at 162.306 127.254 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4670,7 +5977,7 @@
 			)
 		)
 		(property "Value" "BAS70-04"
-			(at 166.878 124.46 90)
+			(at 166.878 129.54 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4679,7 +5986,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-23-3"
-			(at 153.035 114.935 0)
+			(at 153.035 120.015 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4689,7 +5996,7 @@
 			)
 		)
 		(property "Datasheet" "https://diotec.com/request/datasheet/bas70.pdf"
-			(at 156.21 119.888 0)
+			(at 156.21 124.968 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4698,7 +6005,7 @@
 			)
 		)
 		(property "Description" "high speed schottky diode, series array, 5pF"
-			(at 156.21 116.84 0)
+			(at 156.21 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4719,6 +6026,72 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
 					(reference "D26")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDPWR")
+		(at 81.28 107.95 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "78cbf0da-37e7-4438-a59b-04d3fb6fce42")
+		(property "Reference" "#PWR062"
+			(at 81.28 113.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND_REMOTE"
+			(at 81.153 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 81.28 109.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 81.28 109.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GNDPWR\" , global ground"
+			(at 81.28 107.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "13151f6f-483e-4c67-8671-5b43a2785016")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "#PWR062")
 					(unit 1)
 				)
 			)
@@ -4796,7 +6169,7 @@
 	)
 	(symbol
 		(lib_id "power:+12V")
-		(at 151.13 107.95 0)
+		(at 151.13 113.03 0)
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
@@ -4805,7 +6178,7 @@
 		(dnp no)
 		(uuid "7e52dcd1-4656-4247-8c8b-77ebf8ceedff")
 		(property "Reference" "#PWR0112"
-			(at 151.13 111.76 0)
+			(at 151.13 116.84 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4814,7 +6187,7 @@
 			)
 		)
 		(property "Value" "+12V_REMOTE"
-			(at 151.13 104.14 0)
+			(at 151.13 109.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4822,7 +6195,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 151.13 107.95 0)
+			(at 151.13 113.03 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4831,7 +6204,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 151.13 107.95 0)
+			(at 151.13 113.03 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4840,7 +6213,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+12V\""
-			(at 151.13 107.95 0)
+			(at 151.13 113.03 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4855,6 +6228,273 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
 					(reference "#PWR0112")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "misc_libJonny:Shield_Landing_Pad")
+		(at 53.34 172.72 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "8be0e854-8cca-48be-afb5-67c6c6fef249")
+		(property "Reference" "J2"
+			(at 48.006 169.926 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "CAT6-Shield"
+			(at 57.15 178.308 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "misc_libJonny:Shield_Landing_Pad_6mmCable_ZipTie"
+			(at 51.816 181.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 53.34 172.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Connect shield of a cable to pcb pad + have footprint to fix it to pcb using e.g. zipties"
+			(at 53.086 183.642 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "47456b43-c37a-4288-9e75-66be1599d74b")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "J2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 81.28 104.14 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "92c10706-a501-4848-b605-4cb7e5d9ae46")
+		(property "Reference" "TP12"
+			(at 80.518 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "GND"
+			(at 80.264 102.108 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 76.2 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 76.2 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 81.28 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b7c4783b-431c-4088-a580-15ec9164d8d5")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP12")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 219.71 101.6 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "947dec5e-3e6e-4dc2-95bd-304106de3ea1")
+		(property "Reference" "TP23"
+			(at 218.948 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "SDA"
+			(at 218.694 99.568 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 214.63 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 214.63 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 219.71 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "fa4233a5-56d6-4fab-b29e-9fb12abb1c05")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP23")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 109.22 45.72 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "9b557cf4-eb2b-4abc-a1f3-d0af1ddd9553")
+		(property "Reference" "TP20"
+			(at 108.458 41.91 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "12V-Filtered"
+			(at 108.204 43.688 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 104.14 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 104.14 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 109.22 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "aeb5827d-874f-4fba-a91a-454f0edcabc1")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP20")
 					(unit 1)
 				)
 			)
@@ -5010,6 +6650,73 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
 					(reference "U13")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 222.25 96.52 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "b19ab326-4ebd-431d-b26f-228732be29d6")
+		(property "Reference" "TP19"
+			(at 221.488 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "SCL"
+			(at 221.234 94.488 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 217.17 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 217.17 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 222.25 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1a8db163-c34e-411f-9771-5b141c30df6c")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP19")
 					(unit 1)
 				)
 			)
@@ -5354,6 +7061,72 @@
 	)
 	(symbol
 		(lib_id "power:GNDPWR")
+		(at 163.83 53.34 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d5019b0b-c82c-44f6-a2f2-65965e967fb7")
+		(property "Reference" "#PWR061"
+			(at 163.83 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND_REMOTE"
+			(at 163.703 57.15 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 163.83 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 163.83 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GNDPWR\" , global ground"
+			(at 163.83 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "06a1bf13-7e22-4887-968c-cda7bae35980")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "#PWR061")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDPWR")
 		(at 109.22 62.23 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5691,7 +7464,7 @@
 	)
 	(symbol
 		(lib_id "power:+12V")
-		(at 116.84 46.99 0)
+		(at 116.84 41.91 0)
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5700,7 +7473,7 @@
 		(dnp no)
 		(uuid "f552f84e-3507-4fb4-abcc-0ceb6ec76d59")
 		(property "Reference" "#PWR089"
-			(at 116.84 50.8 0)
+			(at 116.84 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5709,7 +7482,7 @@
 			)
 		)
 		(property "Value" "+12V_REMOTE"
-			(at 116.84 43.18 0)
+			(at 116.84 38.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5717,7 +7490,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 116.84 46.99 0)
+			(at 116.84 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5726,7 +7499,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 116.84 46.99 0)
+			(at 116.84 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5735,7 +7508,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+12V\""
-			(at 116.84 46.99 0)
+			(at 116.84 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)

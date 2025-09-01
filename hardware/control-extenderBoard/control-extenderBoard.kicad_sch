@@ -168,210 +168,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Connector:Conn_01x03_Pin"
-			(pin_names
-				(offset 1.016)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "J"
-				(at 0 5.08 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "Conn_01x03_Pin"
-				(at 0 -5.08 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "~"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Generic connector, single row, 01x03, script generated"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_locked" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_keywords" "connector"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "Connector*:*_1x??_*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "Conn_01x03_Pin_1_1"
-				(rectangle
-					(start 0.8636 2.667)
-					(end 0 2.413)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
-					(start 0.8636 0.127)
-					(end 0 -0.127)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
-					(start 0.8636 -2.413)
-					(end 0 -2.667)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 2.54) (xy 0.8636 2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 0) (xy 0.8636 0)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 -2.54) (xy 0.8636 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(pin passive line
-					(at 5.08 2.54 180)
-					(length 3.81)
-					(name "Pin_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 5.08 0 180)
-					(length 3.81)
-					(name "Pin_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 5.08 -2.54 180)
-					(length 3.81)
-					(name "Pin_3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "Connector:Screw_Terminal_01x02"
 			(pin_names
 				(offset 1.016)
@@ -20177,9 +19973,9 @@
 		(at 300.99 119.38 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "0571474a-317b-482b-8d3f-4059290ac600")
 		(property "Reference" "R13"
 			(at 295.656 118.872 0)
@@ -20246,9 +20042,9 @@
 		(at 364.49 152.4 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "059d0e2c-8b58-4932-97ec-15a751030c5a")
 		(property "Reference" "R11"
 			(at 366.014 150.876 0)
@@ -20580,9 +20376,9 @@
 		(at 292.1 149.86 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "09655496-67a1-4f68-af0f-8eb800cc480c")
 		(property "Reference" "#PWR060"
 			(at 292.1 156.21 0)
@@ -20998,7 +20794,7 @@
 				)
 			)
 		)
-		(property "Value" "RX TX"
+		(property "Value" "RX DIR"
 			(at 293.37 233.172 0)
 			(effects
 				(font
@@ -21454,9 +21250,9 @@
 		(at 353.06 163.83 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "1a35a62c-633f-4ca4-b5ac-a7e8479dea03")
 		(property "Reference" "#PWR025"
 			(at 353.06 170.18 0)
@@ -22252,9 +22048,9 @@
 		(at 364.49 160.02 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "1f10a551-df4c-4741-945b-362b77656511")
 		(property "Reference" "R12"
 			(at 366.014 158.496 0)
@@ -22593,9 +22389,9 @@
 		(at 321.31 125.73 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "228e8092-40cb-4928-8d23-3e7696a31dfd")
 		(property "Reference" "#PWR026"
 			(at 321.31 132.08 0)
@@ -22811,7 +22607,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "SDA6"
+		(property "Value" "SDA7"
 			(at 181.356 200.406 0)
 			(effects
 				(font
@@ -22933,9 +22729,9 @@
 		(at 341.63 121.92 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "28af217b-7a70-42fc-8d61-ff8e51e1bddf")
 		(property "Reference" "U7"
 			(at 341.63 108.712 0)
@@ -23018,9 +22814,9 @@
 		(at 321.31 157.48 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "28c26077-aff6-4be4-89ab-78d50b4aebde")
 		(property "Reference" "#PWR027"
 			(at 321.31 163.83 0)
@@ -23295,7 +23091,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "I2C Reserve SDA/GND"
+		(property "Value" "I2C6 Reserve SDA/GND"
 			(at 187.96 256.5399 0)
 			(effects
 				(font
@@ -23827,9 +23623,9 @@
 		(at 326.39 124.46 270)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "3711fd04-18d5-4546-b3b9-736c7a18a63e")
 		(property "Reference" "R5"
 			(at 323.596 122.174 90)
@@ -23910,7 +23706,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "SDA6 + GND (TP)"
+		(property "Value" "SDA1 + GND (TP)"
 			(at 270.51 63.4999 0)
 			(effects
 				(font
@@ -24380,7 +24176,7 @@
 				)
 			)
 		)
-		(property "Value" "DIR, GND"
+		(property "Value" "TX, GND"
 			(at 292.354 237.744 0)
 			(effects
 				(font
@@ -24644,9 +24440,9 @@
 		(at 328.93 142.24 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "43d616aa-c3e6-4054-acae-79e76ef25660")
 		(property "Reference" "#PWR035"
 			(at 328.93 146.05 0)
@@ -24774,9 +24570,9 @@
 		(at 308.61 119.38 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "45d8c068-f4eb-4f2a-9c5d-380b3a751846")
 		(property "Reference" "R16"
 			(at 310.134 120.396 0)
@@ -24985,9 +24781,9 @@
 		(at 303.53 119.38 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "4a15b795-9770-420b-9920-b819d071adfb")
 		(property "Reference" "R14"
 			(at 295.656 120.65 0)
@@ -25119,9 +24915,9 @@
 		(at 354.33 132.08 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "4e6a0832-c72a-48ce-a18d-ec4b1ce19fe2")
 		(property "Reference" "#PWR028"
 			(at 354.33 138.43 0)
@@ -25630,9 +25426,9 @@
 		(at 292.1 127 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "543a72cb-9653-4429-961a-22c362c1cf21")
 		(property "Reference" "#PWR059"
 			(at 292.1 130.81 0)
@@ -25778,7 +25574,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "I2C Reserve SDA/GND"
+		(property "Value" "I2C7 Reserve SDA/GND"
 			(at 191.77 204.4699 0)
 			(effects
 				(font
@@ -26030,9 +25826,9 @@
 		(at 306.07 119.38 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "5cefb734-2613-4bd6-9cbc-252e8e111894")
 		(property "Reference" "R15"
 			(at 310.134 118.618 0)
@@ -26501,9 +26297,9 @@
 		(at 364.49 132.08 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "6569bd26-4c5d-46d7-8afc-bec25ac1fbd5")
 		(property "Reference" "#PWR031"
 			(at 364.49 138.43 0)
@@ -27653,9 +27449,9 @@
 		(at 364.49 109.22 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "762f1581-b363-4a8b-a00c-4198eadc8907")
 		(property "Reference" "#PWR030"
 			(at 364.49 113.03 0)
@@ -28120,9 +27916,9 @@
 		(at 364.49 140.97 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "7bdcc959-487d-426a-b6d3-351c672e60e3")
 		(property "Reference" "#PWR024"
 			(at 364.49 144.78 0)
@@ -30026,9 +29822,9 @@
 		(at 378.46 151.13 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "9efae3f0-ec5d-4fa2-a4d0-2f2c9626157a")
 		(property "Reference" "J7"
@@ -30224,77 +30020,6 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
 					(reference "#PWR051")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:Conn_01x03_Pin")
-		(at 173.99 97.79 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "a2496bc8-5044-42d7-8cce-eaba512e3964")
-		(property "Reference" "J9"
-			(at 174.625 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "Conn_01x03_Pin"
-			(at 174.625 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
-			(at 173.99 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 173.99 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x03, script generated"
-			(at 173.99 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "cc0e6806-1d62-4a08-83f6-265861aec945")
-		)
-		(pin "1"
-			(uuid "2b7bb21e-d49c-4fc7-81b1-e6efe7a29444")
-		)
-		(pin "3"
-			(uuid "ec35b52d-d34c-45f5-a716-bcc3a8f32380")
-		)
-		(instances
-			(project "control-extenderBoard"
-				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
-					(reference "J9")
 					(unit 1)
 				)
 			)
@@ -30507,9 +30232,9 @@
 		(at 364.49 128.27 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "a6954fb3-6342-4d3a-8a0a-e2dcbc8b7867")
 		(property "Reference" "R9"
 			(at 366.014 126.746 0)
@@ -30590,7 +30315,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "SCL6 + GND (TP)"
+		(property "Value" "SCL1 + GND (TP)"
 			(at 270.51 55.8799 0)
 			(effects
 				(font
@@ -30844,9 +30569,9 @@
 		(at 292.1 138.43 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "ac4523b2-16c3-4593-8279-c24b8b05385a")
 		(property "Reference" "U5"
 			(at 294.386 149.352 0)
@@ -31148,7 +30873,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "I2C Reserve SCL/GND"
+		(property "Value" "I2C7 Reserve SCL/GND"
 			(at 191.77 198.1199 0)
 			(effects
 				(font
@@ -31204,9 +30929,9 @@
 		(at 275.59 127 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "b38cccf5-b2a7-4cfd-ade8-c7bb05a0b20c")
 		(property "Reference" "R19"
 			(at 270.51 125.476 0)
@@ -32316,9 +32041,9 @@
 		(at 328.93 110.49 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "bf04fbba-e571-4536-987e-463bff79a281")
 		(property "Reference" "#PWR033"
 			(at 328.93 114.3 0)
@@ -32464,7 +32189,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "I2C Reserve SCL/GND"
+		(property "Value" "I2C6 Reserve SCL/GND"
 			(at 187.96 250.1899 0)
 			(effects
 				(font
@@ -32657,9 +32382,9 @@
 		(at 275.59 119.38 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "c0564d79-1d81-43f6-9e3f-5ed5cd6bfc6a")
 		(property "Reference" "#PWR057"
 			(at 275.59 123.19 0)
@@ -32925,9 +32650,9 @@
 		(at 364.49 113.03 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "c2486dcc-96ba-41fb-ae69-914db7b0e01c")
 		(property "Reference" "R7"
 			(at 366.014 111.506 0)
@@ -33388,9 +33113,9 @@
 		(at 304.8 110.49 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "c76bbbb5-c653-4e75-a386-dd19782ea94b")
 		(property "Reference" "#PWR034"
 			(at 304.8 114.3 0)
@@ -34055,9 +33780,9 @@
 		(at 279.4 127 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "d0049bbc-7a3d-44d9-a28c-6b3c3018d82b")
 		(property "Reference" "R20"
 			(at 280.924 125.476 0)
@@ -34675,9 +34400,9 @@
 		(at 364.49 163.83 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "da07363b-4e85-4eef-b583-e8e36043fecf")
 		(property "Reference" "#PWR032"
 			(at 364.49 170.18 0)
@@ -34943,9 +34668,9 @@
 		(at 326.39 156.21 270)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "df07892d-d5a3-4553-972d-787fe2757a9c")
 		(property "Reference" "R6"
 			(at 323.596 153.924 90)
@@ -35240,7 +34965,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "SCL6"
+		(property "Value" "SCL7"
 			(at 180.594 193.548 0)
 			(effects
 				(font
@@ -36151,9 +35876,9 @@
 		(at 378.46 119.38 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "f5ca248d-0f80-4f77-902b-ade14f1d49e2")
 		(property "Reference" "J6"
@@ -36291,9 +36016,9 @@
 		(at 364.49 120.65 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "f721c9c5-e315-428b-a40d-ce54200249a7")
 		(property "Reference" "R8"
 			(at 366.014 119.126 0)
@@ -36561,9 +36286,9 @@
 		(at 364.49 144.78 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "f9085fd7-446e-43c5-a31a-95e91edf897a")
 		(property "Reference" "R10"
 			(at 366.014 143.256 0)
@@ -36630,9 +36355,9 @@
 		(at 341.63 153.67 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
+		(in_bom no)
+		(on_board no)
+		(dnp yes)
 		(uuid "f98f6f62-2b3f-4260-b7fc-e3c4755d7d40")
 		(property "Reference" "U6"
 			(at 341.376 140.716 0)
