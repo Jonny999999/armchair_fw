@@ -1521,318 +1521,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "misc_libJonny:Shield_Landing_Pad"
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "J"
-				(at -2.032 3.81 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify right)
-				)
-			)
-			(property "Value" "Cable-Shield"
-				(at 4.064 0.508 90)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" "misc_libJonny:Shield_Landing_Pad_6mmCable_ZipTie"
-				(at -1.524 -8.89 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Connect shield of a cable to pcb pad + have footprint to fix it to pcb using e.g. zipties"
-				(at -0.254 -10.922 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "Cable mount shield CAT6"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "Shield_Landing_Pad_0_1"
-				(polyline
-					(pts
-						(xy -5.08 0) (xy -1.27 0)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 3.556) (xy 1.27 1.016)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 2.286) (xy 1.27 -0.254)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 1.016) (xy 1.27 -1.524)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -0.254) (xy 1.27 -2.794)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -1.524) (xy 0 -2.794)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 3.556) (xy -1.27 2.286)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 3.556) (xy 1.27 2.286)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 8.636) (xy 1.27 3.556) (xy -1.27 3.556) (xy -1.27 8.636)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(bezier
-					(pts
-						(xy 1.27 8.636) (xy 0 8.001) (xy 0 9.271) (xy -1.27 8.636)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 3.556) (xy -1.27 1.016)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 2.286) (xy -1.27 -0.254)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 1.016) (xy -1.27 -1.524)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 -0.254) (xy -1.27 -2.794)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 -1.524) (xy 0 -2.794)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(rectangle
-					(start 1.27 -2.794)
-					(end -1.27 3.556)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 -7.874) (xy 1.27 -2.794) (xy -1.27 -2.794) (xy -1.27 -7.874)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(bezier
-					(pts
-						(xy 1.27 -7.874) (xy 0 -7.239) (xy 0 -8.509) (xy -1.27 -7.874)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "Shield_Landing_Pad_1_1"
-				(text "Cable"
-					(at 0 5.842 900)
-					(effects
-						(font
-							(size 0.8 0.8)
-						)
-					)
-				)
-				(text "Shield"
-					(at 2.2225 0.3175 900)
-					(effects
-						(font
-							(size 0.8 0.8)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at -7.62 0 0)
-					(length 2.54)
-					(name ""
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "modules_libJonny:AS5600_Breakout"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -2562,18 +2250,6 @@
 		)
 	)
 	(rectangle
-		(start 40.64 144.78)
-		(end 86.36 182.88)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(fill
-			(type none)
-		)
-		(uuid 27675f2f-1ee2-4773-864a-92f3368bac73)
-	)
-	(rectangle
 		(start 147.828 24.13)
 		(end 171.45 62.992)
 		(stroke
@@ -2596,18 +2272,6 @@
 			)
 		)
 		(uuid "8089af92-5d9a-449b-852c-f58ab82d1868")
-	)
-	(text "Cable mount"
-		(exclude_from_sim no)
-		(at 54.864 149.86 0)
-		(effects
-			(font
-				(size 2.2 2.2)
-				(thickness 0.44)
-				(bold yes)
-			)
-		)
-		(uuid "ea2e28bd-33cf-4ab8-a44a-d5fa0605db30")
 	)
 	(junction
 		(at 219.71 101.6)
@@ -2688,12 +2352,6 @@
 		(uuid "606225b3-fd2d-47a1-a2c2-fb17c5567a8b")
 	)
 	(junction
-		(at 212.09 101.6)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "625113aa-44fb-4807-895c-7e9eac5dacad")
-	)
-	(junction
 		(at 140.97 104.14)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2748,6 +2406,18 @@
 		(uuid "9e1f9cc5-bf12-4d6a-9f57-50fe94e98eea")
 	)
 	(junction
+		(at 210.82 96.52)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a5dc0748-d154-40a3-be5e-051dc1cdde03")
+	)
+	(junction
+		(at 213.36 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a7b7b23e-6909-420b-9215-0414fa461615")
+	)
+	(junction
 		(at 151.13 130.81)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2796,12 +2466,6 @@
 		(uuid "d9d827a2-6e6e-4be2-80bb-85bc4e7e2aec")
 	)
 	(junction
-		(at 209.55 96.52)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "db007101-a847-4c57-9f38-630c09bb48d0")
-	)
-	(junction
 		(at 172.72 104.14)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2814,6 +2478,12 @@
 		(uuid "ee83c49b-03c9-4ae5-82c0-8d05fa636018")
 	)
 	(junction
+		(at 81.28 104.14)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "f04d69b6-5eb8-4cf1-8dea-a8de0971088b")
+	)
+	(junction
 		(at 195.58 72.39)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2821,7 +2491,7 @@
 	)
 	(wire
 		(pts
-			(xy 199.39 101.6) (xy 212.09 101.6)
+			(xy 199.39 101.6) (xy 213.36 101.6)
 		)
 		(stroke
 			(width 0)
@@ -3101,7 +2771,7 @@
 	)
 	(wire
 		(pts
-			(xy 212.09 82.55) (xy 212.09 83.82)
+			(xy 213.36 82.55) (xy 213.36 83.82)
 		)
 		(stroke
 			(width 0)
@@ -3111,7 +2781,7 @@
 	)
 	(wire
 		(pts
-			(xy 212.09 91.44) (xy 212.09 101.6)
+			(xy 213.36 91.44) (xy 213.36 101.6)
 		)
 		(stroke
 			(width 0)
@@ -3131,7 +2801,7 @@
 	)
 	(wire
 		(pts
-			(xy 209.55 82.55) (xy 209.55 83.82)
+			(xy 210.82 82.55) (xy 210.82 83.82)
 		)
 		(stroke
 			(width 0)
@@ -3141,7 +2811,7 @@
 	)
 	(wire
 		(pts
-			(xy 199.39 96.52) (xy 209.55 96.52)
+			(xy 199.39 96.52) (xy 210.82 96.52)
 		)
 		(stroke
 			(width 0)
@@ -3241,7 +2911,7 @@
 	)
 	(wire
 		(pts
-			(xy 209.55 91.44) (xy 209.55 96.52)
+			(xy 210.82 91.44) (xy 210.82 96.52)
 		)
 		(stroke
 			(width 0)
@@ -3331,13 +3001,13 @@
 	)
 	(wire
 		(pts
-			(xy 209.55 96.52) (xy 222.25 96.52)
+			(xy 213.36 101.6) (xy 219.71 101.6)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "6a18ab12-5f22-4339-a88b-42a21bfdd25b")
+		(uuid "6bcb9b1e-79f2-43e9-a96e-10277fbb41a2")
 	)
 	(wire
 		(pts
@@ -3421,17 +3091,7 @@
 	)
 	(wire
 		(pts
-			(xy 212.09 101.6) (xy 219.71 101.6)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "809b0724-2944-444e-9f9e-d9c89e077780")
-	)
-	(wire
-		(pts
-			(xy 81.28 107.95) (xy 81.28 104.14)
+			(xy 81.28 104.14) (xy 81.28 107.95)
 		)
 		(stroke
 			(width 0)
@@ -3441,7 +3101,17 @@
 	)
 	(wire
 		(pts
-			(xy 212.09 82.55) (xy 210.82 82.55)
+			(xy 87.63 104.14) (xy 81.28 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "851888c8-c8cd-4b37-a2e3-83c3c9bf485b")
+	)
+	(wire
+		(pts
+			(xy 213.36 82.55) (xy 210.82 82.55)
 		)
 		(stroke
 			(width 0)
@@ -3541,6 +3211,16 @@
 	)
 	(wire
 		(pts
+			(xy 210.82 96.52) (xy 222.25 96.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9e531924-cea7-44e2-bb5c-33e931389681")
+	)
+	(wire
+		(pts
 			(xy 151.13 113.03) (xy 151.13 114.3)
 		)
 		(stroke
@@ -3568,16 +3248,6 @@
 			(type default)
 		)
 		(uuid "a6f450c2-18da-46c4-a44c-91b82e440506")
-	)
-	(wire
-		(pts
-			(xy 210.82 82.55) (xy 209.55 82.55)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ab4074ea-ab3f-4916-820e-bf8b513798b7")
 	)
 	(wire
 		(pts
@@ -3939,6 +3609,16 @@
 		)
 		(uuid "4ebcd0c1-d061-4976-a941-d114ac8e90bd")
 	)
+	(label "SCL_AS5600"
+		(at 199.39 96.52 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "5622a67c-6223-4bce-99d3-3c97f1fbe1b0")
+	)
 	(label "SCL_REMOTE-IN"
 		(at 97.79 96.52 0)
 		(effects
@@ -3959,6 +3639,16 @@
 		)
 		(uuid "a57b99ae-6956-4690-bd46-a45def2ae035")
 	)
+	(label "SDA_AS5600"
+		(at 199.39 101.6 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "aab052bf-7991-4f04-8ae4-e4eb74b4d560")
+	)
 	(label "12V_REMOTE-IN"
 		(at 69.85 87.63 180)
 		(effects
@@ -3971,17 +3661,15 @@
 	)
 	(symbol
 		(lib_id "Connector:Screw_Terminal_01x02")
-		(at 44.45 100.33 0)
-		(mirror y)
+		(at 44.45 102.87 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "04e041e7-2d9f-4033-9659-c9f9688ddfcc")
 		(property "Reference" "J20"
-			(at 41.91 100.3299 0)
+			(at 41.91 102.8701 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3990,7 +3678,7 @@
 			)
 		)
 		(property "Value" "SCL6 + GND (TP)"
-			(at 41.91 102.8699 0)
+			(at 41.91 100.3301 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3999,7 +3687,7 @@
 			)
 		)
 		(property "Footprint" "terminals_libJonny:ScrewTerminal_P3.5mm_2Pin_FP7x7"
-			(at 44.45 100.33 0)
+			(at 44.45 102.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4008,7 +3696,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 44.45 100.33 0)
+			(at 44.45 102.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4017,7 +3705,7 @@
 			)
 		)
 		(property "Description" "Generic screw terminal, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
-			(at 44.45 100.33 0)
+			(at 44.45 102.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4168,6 +3856,73 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
 					(reference "TP21")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 87.63 104.14 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "1120fa37-ac22-4a93-bd03-fb63467fabea")
+		(property "Reference" "TP26"
+			(at 86.868 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "GND"
+			(at 86.614 102.108 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 82.55 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 82.55 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 87.63 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "8e834bd9-a93b-4e97-8977-fe00e67946f3")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
+					(reference "TP26")
 					(unit 1)
 				)
 			)
@@ -5349,7 +5104,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 212.09 87.63 0)
+		(at 213.36 87.63 0)
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5358,7 +5113,7 @@
 		(dnp no)
 		(uuid "6341ecba-ef21-4d64-8ef5-693a628c2268")
 		(property "Reference" "R28"
-			(at 217.424 86.36 0)
+			(at 218.694 86.36 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5367,7 +5122,7 @@
 			)
 		)
 		(property "Value" "2k2"
-			(at 217.424 88.138 0)
+			(at 218.694 88.138 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5376,7 +5131,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
-			(at 213.868 87.63 90)
+			(at 215.138 87.63 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5385,7 +5140,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 212.09 87.63 0)
+			(at 213.36 87.63 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5394,7 +5149,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 212.09 87.63 0)
+			(at 213.36 87.63 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5419,17 +5174,15 @@
 	)
 	(symbol
 		(lib_id "Connector:Screw_Terminal_01x02")
-		(at 44.45 107.95 0)
-		(mirror y)
+		(at 44.45 110.49 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "6ae5f71e-58c1-4654-8a41-388c1563ba8b")
 		(property "Reference" "J21"
-			(at 41.91 107.9499 0)
+			(at 41.91 110.4901 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5438,7 +5191,7 @@
 			)
 		)
 		(property "Value" "SDA6 + GND (TP)"
-			(at 41.91 110.4899 0)
+			(at 41.91 107.9501 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5447,7 +5200,7 @@
 			)
 		)
 		(property "Footprint" "terminals_libJonny:ScrewTerminal_P3.5mm_2Pin_FP7x7"
-			(at 44.45 107.95 0)
+			(at 44.45 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5456,7 +5209,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 44.45 107.95 0)
+			(at 44.45 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5465,7 +5218,7 @@
 			)
 		)
 		(property "Description" "Generic screw terminal, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
-			(at 44.45 107.95 0)
+			(at 44.45 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6234,72 +5987,6 @@
 		)
 	)
 	(symbol
-		(lib_id "misc_libJonny:Shield_Landing_Pad")
-		(at 53.34 172.72 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "8be0e854-8cca-48be-afb5-67c6c6fef249")
-		(property "Reference" "J2"
-			(at 48.006 169.926 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "CAT6-Shield"
-			(at 57.15 178.308 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "misc_libJonny:Shield_Landing_Pad_6mmCable_ZipTie"
-			(at 51.816 181.61 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 53.34 172.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Connect shield of a cable to pcb pad + have footprint to fix it to pcb using e.g. zipties"
-			(at 53.086 183.642 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "47456b43-c37a-4288-9e75-66be1599d74b")
-		)
-		(instances
-			(project "control-extenderBoard"
-				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059/246abe15-ec2a-4d65-af0f-025db67f32a6"
-					(reference "J2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Connector:TestPoint")
 		(at 81.28 104.14 0)
 		(mirror y)
@@ -6790,7 +6477,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 209.55 87.63 0)
+		(at 210.82 87.63 0)
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
@@ -6799,7 +6486,7 @@
 		(dnp no)
 		(uuid "b9c416ec-fc89-4b77-a439-e172f46ea362")
 		(property "Reference" "R29"
-			(at 208.026 86.106 0)
+			(at 209.296 86.106 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6808,7 +6495,7 @@
 			)
 		)
 		(property "Value" "2k2"
-			(at 208.026 88.138 0)
+			(at 209.296 88.138 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6817,7 +6504,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
-			(at 211.328 87.63 90)
+			(at 212.598 87.63 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6826,7 +6513,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 87.63 0)
+			(at 210.82 87.63 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6835,7 +6522,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 209.55 87.63 0)
+			(at 210.82 87.63 0)
 			(effects
 				(font
 					(size 1.27 1.27)
