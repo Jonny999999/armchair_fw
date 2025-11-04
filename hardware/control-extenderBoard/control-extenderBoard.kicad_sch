@@ -6681,8 +6681,8 @@
 		(uuid 0d61e1ac-2be4-4d14-b58f-d5bcf3762d21)
 	)
 	(rectangle
-		(start 18.034 244.348)
-		(end 93.726 297.18)
+		(start 15.494 249.428)
+		(end 105.41 281.94)
 		(stroke
 			(width 0.4)
 			(type solid)
@@ -6718,7 +6718,7 @@
 	)
 	(rectangle
 		(start 77.978 196.85)
-		(end 101.6 235.712)
+		(end 105.41 235.712)
 		(stroke
 			(width 0)
 			(type default)
@@ -6989,7 +6989,7 @@
 		)
 		(uuid "37014c9f-08cc-487b-b38d-5ea921c2d8f5")
 	)
-	(text "TODO:\n- Add SPI Transciever?\n- Add 5V regulator?\n- Add gpio multiplexer / i2c extender?\n- Any other fixed i2c slave?\n- testpoints\n- decouple C at every IC\n- jumpers to bypass features?\n- additional terminals / testpoints for all I2C ifs?\n\n- Additional large terminal for connecting Shield of cat6 cables -> frame?\n- protection i2c -> esp32 board as well? (diodes)"
+	(text "TODO:\n- verify inductor availability\n- decouple C at every IC\n- jumpers to bypass features?\n- protection i2c -> esp32 board as well? (diodes)\nDROPPED:\n- Add SPI Transciever?"
 		(exclude_from_sim no)
 		(at 217.17 266.7 0)
 		(effects
@@ -7166,7 +7166,7 @@
 	)
 	(text "Separate PCB with i2c slave\ni2c magnetic encoder mounted at axle\n(see subsheet)"
 		(exclude_from_sim no)
-		(at 20.32 253.746 0)
+		(at 18.288 256.286 0)
 		(effects
 			(font
 				(size 2.2 2.2)
@@ -7609,12 +7609,6 @@
 		(uuid "4b37bf8f-476e-468b-84a5-c38341f88872")
 	)
 	(junction
-		(at 93.98 218.44)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "4da9b03c-d555-4e2c-bc44-7870bb1416a4")
-	)
-	(junction
 		(at 64.77 212.09)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7717,10 +7711,22 @@
 		(uuid "70592bcb-3122-4fe2-95f4-d1dea70d45c4")
 	)
 	(junction
+		(at 93.98 219.71)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "70a5a462-a41f-4f8b-a90a-abd2104c3f66")
+	)
+	(junction
 		(at 313.69 54.61)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "7106b958-938b-4bbf-bba1-da4d5b466b91")
+	)
+	(junction
+		(at 93.98 214.63)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "712ec9c6-d0f1-4f3f-99d1-85a0f04f844e")
 	)
 	(junction
 		(at 45.72 210.82)
@@ -7763,6 +7769,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "79cba121-1227-4965-994a-f239def316ac")
+	)
+	(junction
+		(at 85.09 226.06)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "7a4a8f9c-6e87-4470-af6b-22327804891e")
 	)
 	(junction
 		(at 227.33 55.88)
@@ -8053,6 +8065,12 @@
 		(uuid "c2683dea-30e0-4c1d-9aa8-991016e6a0ff")
 	)
 	(junction
+		(at 93.98 209.55)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c61b720b-5054-4d23-a868-5c7a0816149d")
+	)
+	(junction
 		(at 83.82 85.09)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -8105,6 +8123,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "d30a2539-c779-41a8-bf89-f13c52beffdb")
+	)
+	(junction
+		(at 93.98 217.17)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d3708cbb-fc6d-44a4-adc4-c1c1762cc15f")
 	)
 	(junction
 		(at 304.8 114.3)
@@ -8548,16 +8572,6 @@
 	)
 	(wire
 		(pts
-			(xy 161.29 86.36) (xy 148.59 86.36)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0e82baf6-9736-4930-a566-ba3500dc7db3")
-	)
-	(wire
-		(pts
 			(xy 69.85 127) (xy 73.66 127)
 		)
 		(stroke
@@ -8638,16 +8652,6 @@
 	)
 	(wire
 		(pts
-			(xy 134.62 86.36) (xy 121.92 86.36)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "13c0743b-d141-4531-a204-adc2c5cd1fb8")
-	)
-	(wire
-		(pts
 			(xy 342.9 39.37) (xy 342.9 40.64)
 		)
 		(stroke
@@ -8715,16 +8719,6 @@
 			(type default)
 		)
 		(uuid "172c11ca-11f8-4ed5-8a95-6b8b9b95aec9")
-	)
-	(wire
-		(pts
-			(xy 93.98 218.44) (xy 93.98 228.6)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "180be2c7-dbc8-4a4b-b922-c39eb5825cef")
 	)
 	(wire
 		(pts
@@ -8995,16 +8989,6 @@
 			(type default)
 		)
 		(uuid "26f4871c-e9f6-4382-a6ea-32ad03fb73b4")
-	)
-	(wire
-		(pts
-			(xy 132.08 101.6) (xy 119.38 101.6)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "27aa39a9-e68e-48cd-b339-43aa7175be86")
 	)
 	(wire
 		(pts
@@ -9335,16 +9319,6 @@
 			(type default)
 		)
 		(uuid "386d3f7f-baaa-4fa3-92ce-e95db4a65ae6")
-	)
-	(wire
-		(pts
-			(xy 93.98 205.74) (xy 93.98 212.09)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "386fa653-daf5-4e01-942b-a5c93b00a653")
 	)
 	(wire
 		(pts
@@ -10558,7 +10532,7 @@
 	)
 	(wire
 		(pts
-			(xy 92.71 218.44) (xy 93.98 218.44)
+			(xy 92.71 217.17) (xy 93.98 217.17)
 		)
 		(stroke
 			(width 0)
@@ -10848,6 +10822,16 @@
 	)
 	(wire
 		(pts
+			(xy 93.98 207.01) (xy 93.98 209.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7f2bd9df-73f7-484a-bd6f-83345cf6a0c7")
+	)
+	(wire
+		(pts
 			(xy 347.98 207.01) (xy 347.98 213.36)
 		)
 		(stroke
@@ -11028,7 +11012,7 @@
 	)
 	(wire
 		(pts
-			(xy 93.98 212.09) (xy 93.98 218.44)
+			(xy 93.98 212.09) (xy 93.98 214.63)
 		)
 		(stroke
 			(width 0)
@@ -11098,7 +11082,7 @@
 	)
 	(wire
 		(pts
-			(xy 92.71 205.74) (xy 93.98 205.74)
+			(xy 92.71 207.01) (xy 93.98 207.01)
 		)
 		(stroke
 			(width 0)
@@ -11288,16 +11272,6 @@
 	)
 	(wire
 		(pts
-			(xy 134.62 88.9) (xy 121.92 88.9)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "94d90c94-4679-40ff-8b8d-eefbe8062340")
-	)
-	(wire
-		(pts
 			(xy 170.18 201.93) (xy 181.61 201.93)
 		)
 		(stroke
@@ -11468,6 +11442,16 @@
 	)
 	(wire
 		(pts
+			(xy 93.98 209.55) (xy 93.98 212.09)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9b03af33-4a29-4dfb-a6c5-c32b5b04d23c")
+	)
+	(wire
+		(pts
 			(xy 170.18 201.93) (xy 170.18 207.01)
 		)
 		(stroke
@@ -11555,16 +11539,6 @@
 			(type default)
 		)
 		(uuid "9d59e003-23c3-4d77-8ad3-9d4b97bc0c07")
-	)
-	(wire
-		(pts
-			(xy 132.08 104.14) (xy 119.38 104.14)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9d6bf011-51d5-46b4-bbec-fcf0a7acbebe")
 	)
 	(wire
 		(pts
@@ -12688,6 +12662,16 @@
 	)
 	(wire
 		(pts
+			(xy 93.98 214.63) (xy 93.98 217.17)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "cebde416-3740-436c-a680-b2c41190423b")
+	)
+	(wire
+		(pts
 			(xy 132.08 127) (xy 132.08 133.35)
 		)
 		(stroke
@@ -12705,6 +12689,16 @@
 			(type default)
 		)
 		(uuid "cfee656b-be78-45e3-82f7-0a2ba898ddb4")
+	)
+	(wire
+		(pts
+			(xy 93.98 217.17) (xy 93.98 219.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d08934a2-ac29-4cea-b093-572c327782ba")
 	)
 	(wire
 		(pts
@@ -13358,7 +13352,7 @@
 	)
 	(wire
 		(pts
-			(xy 87.63 228.6) (xy 87.63 226.06)
+			(xy 85.09 228.6) (xy 85.09 226.06)
 		)
 		(stroke
 			(width 0)
@@ -13395,16 +13389,6 @@
 			(type default)
 		)
 		(uuid "f0018b91-a81b-45b5-81ce-67203625c5ba")
-	)
-	(wire
-		(pts
-			(xy 161.29 88.9) (xy 148.59 88.9)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f020c71a-bac0-48bd-9011-78afaf68ed6a")
 	)
 	(wire
 		(pts
@@ -13695,6 +13679,16 @@
 			(type default)
 		)
 		(uuid "fd42c94b-db33-4316-ab9f-8f8e312dfd6b")
+	)
+	(wire
+		(pts
+			(xy 93.98 219.71) (xy 93.98 228.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fe03a315-9f04-43bd-9926-2b939cf22744")
 	)
 	(wire
 		(pts
@@ -19260,16 +19254,6 @@
 		)
 		(uuid "052641a6-d802-427c-9d4e-06266dc15811")
 	)
-	(label "I2C4_SCL"
-		(at 132.08 101.6 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "0b47345f-6551-43e4-ab33-f421d04edf4c")
-	)
 	(label "MASTER_SDA"
 		(at 152.4 133.35 0)
 		(effects
@@ -19309,26 +19293,6 @@
 			(justify left bottom)
 		)
 		(uuid "27c244e6-337a-44c6-835d-8926ba9fe97e")
-	)
-	(label "I2C2_SDA"
-		(at 134.62 88.9 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "3865ddfa-c189-4c43-b742-ec4d8764c1bb")
-	)
-	(label "I2C3_SDA"
-		(at 161.29 88.9 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "3ac6976b-9234-4663-b89e-91cbc91323a1")
 	)
 	(label "RS485_RX"
 		(at 292.1 215.9 0)
@@ -19450,16 +19414,6 @@
 		)
 		(uuid "54b1a578-0ac0-4f17-9da3-fec56f4ef7a8")
 	)
-	(label "I2C3_SCL"
-		(at 161.29 86.36 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "560b5aa6-bf9a-4bb1-9151-befe53dad964")
-	)
 	(label "RS485_TX"
 		(at 292.1 226.06 0)
 		(effects
@@ -19469,16 +19423,6 @@
 			(justify left bottom)
 		)
 		(uuid "5aee9b14-3299-4d7b-baae-000cf7705231")
-	)
-	(label "I2C4_SDA"
-		(at 132.08 104.14 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "5f0bea88-e9b3-4f56-812c-f4b714ca32a1")
 	)
 	(label "RS485_DIR"
 		(at 314.96 233.68 180)
@@ -19560,7 +19504,7 @@
 		)
 		(uuid "868c585a-4a8c-4142-89a5-ca72d3f1fcda")
 	)
-	(label "SCL_Boost1"
+	(label "SCL0_Boost"
 		(at 345.44 54.61 0)
 		(effects
 			(font
@@ -19570,17 +19514,7 @@
 		)
 		(uuid "871c9777-3a60-424e-b47c-32b3a5ff24c6")
 	)
-	(label "I2C2_SCL"
-		(at 134.62 86.36 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "896436b1-1f72-4305-a625-f3c5f357f3a2")
-	)
-	(label "SCL_Boost2"
+	(label "SCL1_Boost"
 		(at 231.14 55.88 0)
 		(effects
 			(font
@@ -19620,7 +19554,7 @@
 		)
 		(uuid "a1bb0b69-c5dc-4fed-98d7-defeff9d6e85")
 	)
-	(label "SDA_Boost1"
+	(label "SDA0_Boost"
 		(at 345.44 62.23 0)
 		(effects
 			(font
@@ -19650,7 +19584,7 @@
 		)
 		(uuid "ba5188b2-c510-41b3-bacd-80d9200d150c")
 	)
-	(label "SDA_Boost2"
+	(label "SDA1_Boost"
 		(at 231.14 63.5 0)
 		(effects
 			(font
@@ -20424,6 +20358,71 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
 					(reference "#PWR039")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
+		(at 96.52 219.71 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "07ac63f2-759f-4d9c-b12b-259f0ba01d17")
+		(property "Reference" "H15"
+			(at 101.6 219.456 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole_Pad"
+			(at 97.79 223.52 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
+			(at 96.52 219.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 96.52 219.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole with connection"
+			(at 96.52 219.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f6921eb4-ad6c-4d53-834f-528a470b2d54")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
+					(reference "H15")
 					(unit 1)
 				)
 			)
@@ -21230,6 +21229,71 @@
 		)
 	)
 	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
+		(at 96.52 209.55 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "177eee29-d013-452d-8787-3b2ed7839ad7")
+		(property "Reference" "H13"
+			(at 101.6 209.296 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole_Pad"
+			(at 97.79 213.36 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
+			(at 96.52 209.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 96.52 209.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole with connection"
+			(at 96.52 209.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "42000022-fc1e-4839-836b-8eae66149dac")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
+					(reference "H13")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "misc_libJonny:Shield_Landing_Pad")
 		(at 139.7 167.64 0)
 		(unit 1)
@@ -21713,7 +21777,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "SCL6 + GND (TP)"
+		(property "Value" "SCL0 + GND (TP)"
 			(at 384.81 54.6099 0)
 			(effects
 				(font
@@ -22845,7 +22909,7 @@
 	)
 	(symbol
 		(lib_id "power:Earth")
-		(at 87.63 228.6 0)
+		(at 85.09 228.6 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -22853,7 +22917,7 @@
 		(dnp no)
 		(uuid "288815ea-0488-4adc-83f1-4868f97c1292")
 		(property "Reference" "#PWR0136"
-			(at 87.63 234.95 0)
+			(at 85.09 234.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22862,7 +22926,7 @@
 			)
 		)
 		(property "Value" "Chassis"
-			(at 87.63 232.156 0)
+			(at 85.09 232.156 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22870,7 +22934,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 87.63 228.6 0)
+			(at 85.09 228.6 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22879,7 +22943,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 87.63 228.6 0)
+			(at 85.09 228.6 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22888,7 +22952,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"Earth\""
-			(at 87.63 228.6 0)
+			(at 85.09 228.6 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -23152,7 +23216,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Connector_PinHeader_1.00mm:PinHeader_1x01_P1.00mm_Vertical"
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
 			(at 77.47 31.75 0)
 			(effects
 				(font
@@ -23193,7 +23257,7 @@
 	)
 	(symbol
 		(lib_id "Mechanical:MountingHole_Pad")
-		(at 90.17 205.74 90)
+		(at 90.17 207.01 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -23201,7 +23265,7 @@
 		(dnp no)
 		(uuid "2a56a217-b5d3-4bad-84d7-f9aaa2a5fe91")
 		(property "Reference" "H1"
-			(at 84.582 205.74 90)
+			(at 84.582 207.01 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -23209,7 +23273,7 @@
 			)
 		)
 		(property "Value" "MountingHole_Pad"
-			(at 88.9 201.93 90)
+			(at 88.9 203.2 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -23217,7 +23281,7 @@
 			)
 		)
 		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
-			(at 90.17 205.74 0)
+			(at 90.17 207.01 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -23226,7 +23290,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 90.17 205.74 0)
+			(at 90.17 207.01 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -23235,7 +23299,7 @@
 			)
 		)
 		(property "Description" "Mounting Hole with connection"
-			(at 90.17 205.74 0)
+			(at 90.17 207.01 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27430,7 +27494,7 @@
 	)
 	(symbol
 		(lib_id "Mechanical:MountingHole_Pad")
-		(at 90.17 218.44 90)
+		(at 90.17 217.17 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27438,7 +27502,7 @@
 		(dnp no)
 		(uuid "74f6ff18-9170-42e6-a03f-5dd23f2c535b")
 		(property "Reference" "H4"
-			(at 85.09 218.694 90)
+			(at 85.09 217.424 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27446,7 +27510,7 @@
 			)
 		)
 		(property "Value" "MountingHole_Pad"
-			(at 88.9 214.63 90)
+			(at 88.9 213.36 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27455,7 +27519,7 @@
 			)
 		)
 		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
-			(at 90.17 218.44 0)
+			(at 90.17 217.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27464,7 +27528,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 90.17 218.44 0)
+			(at 90.17 217.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27473,7 +27537,7 @@
 			)
 		)
 		(property "Description" "Mounting Hole with connection"
-			(at 90.17 218.44 0)
+			(at 90.17 217.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27577,7 +27641,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "SDA6 + GND (TP)"
+		(property "Value" "SDA0 + GND (TP)"
 			(at 384.81 62.2299 0)
 			(effects
 				(font
@@ -27959,6 +28023,71 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
 					(reference "L2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
+		(at 87.63 226.06 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "790d8f00-bafc-4856-a9bb-607327b541b7")
+		(property "Reference" "H16"
+			(at 88.646 223.266 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole_Pad"
+			(at 88.9 229.87 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
+			(at 87.63 226.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 87.63 226.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole with connection"
+			(at 87.63 226.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "8f9065b9-4f44-4232-91b9-d5afa9fceaa1")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
+					(reference "H16")
 					(unit 1)
 				)
 			)
@@ -28435,7 +28564,7 @@
 	)
 	(symbol
 		(lib_id "Mechanical:MountingHole_Pad")
-		(at 85.09 226.06 90)
+		(at 82.55 226.06 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -28443,7 +28572,7 @@
 		(dnp no)
 		(uuid "82d9ced0-4602-434a-b635-4961603d3f49")
 		(property "Reference" "H2"
-			(at 83.82 223.012 90)
+			(at 81.28 223.012 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28451,7 +28580,7 @@
 			)
 		)
 		(property "Value" "MountingHole_Pad"
-			(at 83.82 222.25 90)
+			(at 81.28 222.25 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28460,7 +28589,7 @@
 			)
 		)
 		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
-			(at 85.09 226.06 0)
+			(at 82.55 226.06 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28469,7 +28598,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 85.09 226.06 0)
+			(at 82.55 226.06 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28478,7 +28607,7 @@
 			)
 		)
 		(property "Description" "Mounting Hole with connection"
-			(at 85.09 226.06 0)
+			(at 82.55 226.06 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -29050,6 +29179,71 @@
 			(project "control-extenderBoard"
 				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
 					(reference "R47")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
+		(at 96.52 214.63 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "8b5a47ca-42c0-4303-b47c-c7c7c56eedba")
+		(property "Reference" "H14"
+			(at 101.6 214.376 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole_Pad"
+			(at 97.79 218.44 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" "mountingHoles_libJonny:MountingHole_2.2mm_NPTH-with-pad_DRC-clearance-error"
+			(at 96.52 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 96.52 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole with connection"
+			(at 96.52 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "cbae76e5-2ee2-495d-a4bc-bb7680681784")
+		)
+		(instances
+			(project "control-extenderBoard"
+				(path "/e3fc34d4-dad6-4201-965b-dc5b1bdae059"
+					(reference "H14")
 					(unit 1)
 				)
 			)
@@ -36361,7 +36555,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Connector_PinHeader_1.00mm:PinHeader_1x01_P1.00mm_Vertical"
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
 			(at 41.91 31.75 0)
 			(effects
 				(font
@@ -37152,7 +37346,7 @@
 		)
 	)
 	(sheet
-		(at 20.32 265.43)
+		(at 19.05 265.43)
 		(size 40.894 8.89)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -37168,7 +37362,7 @@
 		)
 		(uuid "246abe15-ec2a-4d65-af0f-025db67f32a6")
 		(property "Sheetname" "Remote-I2C-Sensor-Board"
-			(at 20.32 264.7184 0)
+			(at 19.05 264.7184 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -37177,7 +37371,7 @@
 			)
 		)
 		(property "Sheetfile" "Remote-I2C-Sensor-Board.kicad_sch"
-			(at 20.32 274.9046 0)
+			(at 19.05 274.9046 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -37194,7 +37388,7 @@
 		)
 	)
 	(sheet
-		(at 21.59 283.21)
+		(at 62.23 265.43)
 		(size 40.894 8.89)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -37210,7 +37404,7 @@
 		)
 		(uuid "cef7b739-6e11-4dbf-8153-c7b9d6654bbd")
 		(property "Sheetname" "Remote-I2C-Sensor-Board1"
-			(at 21.59 282.4984 0)
+			(at 62.23 264.7184 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -37219,7 +37413,7 @@
 			)
 		)
 		(property "Sheetfile" "Remote-I2C-Sensor-Board.kicad_sch"
-			(at 21.59 292.6846 0)
+			(at 62.23 274.9046 0)
 			(effects
 				(font
 					(size 1.27 1.27)
