@@ -47,3 +47,13 @@ fp-info-cache
 
 # other
 octave-workspace
+
+
+
+# === project specific ===
+# kicad exports
+**/export/**/*.gbr
+**/export/**/*.drl
+**/export/**/*.dxf
+
+**/pcb2gcode/out
