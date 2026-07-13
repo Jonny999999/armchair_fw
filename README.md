@@ -4,8 +4,8 @@ Detailed project information and documentation is available on the website:
 - ~~V1: [Electric Armchair V1](https://pfusch.zone/electric-armchair)~~
 - V2: [Electric Armchair V2](https://pfusch.zone/electric-armchair-v2)
 
-**Note:** In the current version _V2.2_, only the esp-project in the [board_single/](board_single) folder and the custom libraries in [common/](common) are used.  
-The projects in the folders `board_control/` and `board_motorctl/` are no longer compatible and are legacy from _V2.1_.
+**Note:** Only the esp-project in the [board_single/](board_single) folder and the custom libraries in [common/](common) are used.  
+The two-board V2.1 approach (`board_control`/`board_motorctl`) was dropped and its code removed; see tag `V2.2_new-driver` or earlier if that history is ever needed again.
 
 <img src="doc/2023.09.09_armchair-frame.jpg" alt="Photo machine" style="width:60%;"><br>
 *Photo of the built frame that carries the armchair*

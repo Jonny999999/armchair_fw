@@ -1,9 +1,0 @@
-idf_component_register(
-    SRCS 
-        "main.cpp"
-        "config.cpp"
-        "fan.cpp"
-		"uart.cpp"
-    INCLUDE_DIRS 
-        "."
-    )
