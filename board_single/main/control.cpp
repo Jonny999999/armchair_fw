@@ -232,7 +232,6 @@ void controlledArmchair::handle()
         }
         else
         {
-            vTaskDelay(20 / portTICK_PERIOD_MS);
             ESP_LOGV(TAG, "analog joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
         }
         break;
