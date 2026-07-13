@@ -10,7 +10,6 @@ extern "C"
 #include "buzzer.hpp"
 #include "http.hpp"
 #include "auto.hpp"
-#include "speedsensor.hpp"
 #include "chairAdjust.hpp"
 
 //percentage stick has to be moved in the opposite driving direction of current motor direction for braking to start

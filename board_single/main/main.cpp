@@ -23,7 +23,6 @@ extern "C"
 #include "uart_common.hpp"
 #include "motordrivers.hpp"
 #include "http.hpp"
-#include "speedsensor.hpp"
 #include "motorctl.hpp"
 
 //folder single_board
@@ -60,9 +59,6 @@ controlledArmchair *control;
 automatedArmchair_c *automatedArmchair;
 
 httpJoystick *httpJoystickMain;
-
-speedSensor *speedLeft;
-speedSensor *speedRight;
 
 cControlledRest *legRest;
 cControlledRest *backRest;
@@ -140,15 +136,10 @@ void createObjects()
     // with configuration above
 	//sabertoothDriver = new sabertooth2x60a(sabertoothConfig);
 
-    // create speedsensor instances
-    // with configurations from config.cpp
-    speedLeft = new speedSensor(speedLeft_config);
-    speedRight = new speedSensor(speedRight_config);
-
 	// create controlled motor instances (motorctl.hpp)
     // with configurations from config.cpp
-    motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft, &nvsHandle, speedLeft, &motorRight); //note: ptr to ptr of controlledMotor since it isnt defined yet
-    motorRight = new controlledMotor(setRightFunc, configMotorControlRight, &nvsHandle, speedRight, &motorLeft);
+    motorLeft = new controlledMotor(setLeftFunc, configMotorControlLeft, &nvsHandle);
+    motorRight = new controlledMotor(setRightFunc, configMotorControlRight, &nvsHandle);
 
     // create joystick instance (joystick.hpp)
     joystick = new evaluatedJoystick(configJoystick, &nvsHandle);
@@ -280,7 +271,7 @@ extern "C" void app_main(void) {
 	//----- create task for display -----
 	//-----------------------------------
 	//task that handles the display (show stats, handle menu in 'MENU_SETTINGS' and 'MENU_MODE_SELECT' mode)
-	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, speedLeft, speedRight, buzzer, &nvsHandle};
+	display_task_parameters_t display_param = {display_config, control, joystick, encoderQueue, motorLeft, motorRight, buzzer, &nvsHandle};
 	xTaskCreate(&display_task, "display_task", 3*2048, &display_param, 3, NULL);
 	
 	//-------------------------------------

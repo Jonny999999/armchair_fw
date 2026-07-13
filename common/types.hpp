@@ -46,7 +46,6 @@ typedef struct motorctl_config_t {
     uint32_t msFadeAccel; //acceleration of the motor (ms it takes from 0% to 100%)
     uint32_t msFadeDecel; //deceleration of the motor (ms it takes from 100% to 0%)
 	bool currentLimitEnabled;
-    bool tractionControlSystemEnabled;
 	adc1_channel_t currentSensor_adc;
 	float currentSensor_ratedCurrent;
     float currentMax;

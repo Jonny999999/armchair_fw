@@ -268,17 +268,6 @@ void showStatusScreenOverview(display_task_parameters_t *objects)
 	//print large line
 	displayTextLine(&dev, 4, true, false, "%s ", objects->control->getCurrentModeStr());
 
-	//-- speed and RPM --
-	displayTextLine(&dev, 7, false, false, "%3.1fkm/h %03.0f:%03.0fR",
-				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
-				   objects->speedLeft->getRpm(),
-				   objects->speedRight->getRpm());
-
-	// debug speed sensors
-	ESP_LOGD(TAG, "%3.1fkm/h %03.0f:%03.0fR",
-				   fabs((objects->speedLeft->getKmph() + objects->speedRight->getKmph()) / 2),
-				   objects->speedLeft->getRpm(),
-				   objects->speedRight->getRpm());
 	vTaskDelay(STATUS_SCREEN_OVERVIEW_UPDATE_INTERVAL / portTICK_PERIOD_MS);
 
 	//-- brightness test --
@@ -292,27 +281,6 @@ void showStatusScreenOverview(display_task_parameters_t *objects)
 	ESP_LOGW(TAG, "TEST BRIGHTNESS, setting to %d", displayConfig.contrastNormal);
 #endif
 }
-
-
-//############################
-//##### showScreen Speed #####
-//############################
-// shows speed of each motor in km/h large in two lines and RPM in last line
-#define STATUS_SCREEN_SPEED_UPDATE_INTERVAL 300
-void showStatusScreenSpeed(display_task_parameters_t * objects)
-{
-	// title
-	displayTextLine(&dev, 0, false, false, "Speed L,R - km/h");
-	// show km/h large in two lines
-	displayTextLine(&dev, 1, true, false, "%+.2f", objects->speedLeft->getKmph());
-	displayTextLine(&dev, 4, true, false, "%+.2f", objects->speedRight->getKmph());
-	// show both rotational speeds in one line
-	displayTextLineCentered(&dev, 7, false, false, "%+04.0f:%+04.0f RPM",
-				   objects->speedLeft->getRpm(),
-				   objects->speedRight->getRpm());
-	vTaskDelay(STATUS_SCREEN_SPEED_UPDATE_INTERVAL / portTICK_PERIOD_MS);
-}
-
 
 
 //#############################
@@ -350,9 +318,6 @@ void showStatusScreenMotors(display_task_parameters_t *objects)
 		displayTextLineCentered(&dev, 6, false, false, "%+03.0f%% | %+03.0f%% DTY",
 						objects->motorLeft->getStatus().duty,
 						objects->motorRight->getStatus().duty);
-		displayTextLineCentered(&dev, 7, false, false, "%+04.0f | %+04.0f RPM",
-								objects->speedLeft->getRpm(),
-								objects->speedRight->getRpm());
 		vTaskDelay(STATUS_SCREEN_MOTORS_UPDATE_INTERVAL / portTICK_PERIOD_MS);
 }
 
@@ -533,9 +498,6 @@ void handleStatusScreen(display_task_parameters_t *objects)
 	default:
 	case STATUS_SCREEN_OVERVIEW:
 		showStatusScreenOverview(objects);
-		break;
-	case STATUS_SCREEN_SPEED:
-		showStatusScreenSpeed(objects);
 		break;
 	case STATUS_SCREEN_JOYSTICK:
 		showStatusScreenJoystick(objects);

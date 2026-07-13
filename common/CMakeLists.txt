@@ -9,7 +9,6 @@ idf_component_register(
 		"currentsensor.cpp"
 		"joystick.cpp"
 		"http.cpp"
-		"speedsensor.cpp"
         "chairAdjust.cpp"
     INCLUDE_DIRS 
         "."

@@ -18,7 +18,6 @@ extern "C" {
 
 #include "joystick.hpp"
 #include "control.hpp"
-#include "speedsensor.hpp"
 
 // configuration for initializing display (passed to task as well)
 typedef struct display_config_t {
@@ -46,15 +45,13 @@ typedef struct display_task_parameters_t {
     QueueHandle_t encoderQueue;
     controlledMotor * motorLeft;
     controlledMotor * motorRight;
-    speedSensor * speedLeft;
-    speedSensor * speedRight;
     buzzer_t *buzzer;
     nvs_handle_t * nvsHandle;
 } display_task_parameters_t;
 
 
 // enum for selecting the currently shown status page (display content when not in MENU_SETTINGS mode)
-typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_SPEED, STATUS_SCREEN_JOYSTICK, STATUS_SCREEN_MOTORS, STATUS_SCREEN_SCREENSAVER, __NUMBER_OF_AVAILABLE_SCREENS} displayStatusPage_t; //note: SCREENSAVER has to be last one since it is ignored by rotate and used to determine count
+typedef enum displayStatusPage_t {STATUS_SCREEN_OVERVIEW=0, STATUS_SCREEN_JOYSTICK, STATUS_SCREEN_MOTORS, STATUS_SCREEN_SCREENSAVER, __NUMBER_OF_AVAILABLE_SCREENS} displayStatusPage_t; //note: SCREENSAVER has to be last one since it is ignored by rotate and used to determine count
 
 // get precise battery voltage (using lookup table)
 float getBatteryVoltage();

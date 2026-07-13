@@ -9,7 +9,6 @@ extern "C"
 #include "motorctl.hpp"
 #include "joystick.hpp"
 #include "http.hpp"
-#include "speedsensor.hpp"
 #include "buzzer.hpp"
 #include "control.hpp"
 #include "fan.hpp"
@@ -41,7 +40,6 @@ void setLoglevels(void)
     // esp_log_level_set("automatedArmchair", ESP_LOG_DEBUG);
     esp_log_level_set("display", ESP_LOG_WARN);
     // esp_log_level_set("current-sensors", ESP_LOG_INFO);
-    esp_log_level_set("speedSensor", ESP_LOG_WARN);
     esp_log_level_set("chair-adjustment", ESP_LOG_INFO);
     esp_log_level_set("menu", ESP_LOG_INFO);
     esp_log_level_set("encoder", ESP_LOG_INFO);
@@ -102,7 +100,6 @@ motorctl_config_t configMotorControlLeft = {
     .msFadeAccel = 1800, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1600, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
-    .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_4, // GPIO32
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -120,7 +117,6 @@ motorctl_config_t configMotorControlRight = {
     .msFadeAccel = 1800, // acceleration of the motor (ms it takes from 0% to 100%)
     .msFadeDecel = 1600, // deceleration of the motor (ms it takes from 100% to 0%)
     .currentLimitEnabled = false,
-    .tractionControlSystemEnabled = false,
     .currentSensor_adc = ADC1_CHANNEL_5, // GPIO33
     .currentSensor_ratedCurrent = 50,
     .currentMax = 30,
@@ -185,32 +181,6 @@ fan_config_t configFans = {
     .minOnMs = 3500, // time motor duty has to be above the threshold for fans to turn on
     .minOffMs = 5000, // min time fans have to be off to be able to turn on again
     .turnOffDelayMs = 3000, // time fans continue to be on after duty is below threshold 
-};
-
-
-
-//--------------------------------------------
-//-------- speed sensor configuration --------
-//--------------------------------------------
-speedSensor_config_t speedLeft_config{
-    .gpioPin = GPIO_NUM_5,
-    .degreePerGroup = 360 / 16,
-	.minPulseDurationUs = 3000, //smallest possible pulse duration (< time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
-    //measured wihth scope while tires in the air:
-    // 5-groups: 12ms
-    // 16-groups: 3.7ms
-    .tireCircumferenceMeter = 0.81,
-    .directionInverted = true,
-    .logName = "speedLeft"
-};
-
-speedSensor_config_t speedRight_config{
-    .gpioPin = GPIO_NUM_14,
-    .degreePerGroup = 360 / 12,
-	.minPulseDurationUs = 4000, //smallest possible pulse duration (< time from start small-pulse to start long-pulse at full speed). Set to 0 to disable this noise detection
-    .tireCircumferenceMeter = 0.81,
-    .directionInverted = false,
-    .logName = "speedRight"
 };
 
 
