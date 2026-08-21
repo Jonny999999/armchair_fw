@@ -49,7 +49,9 @@ The two-board V2.1 approach (`board_control`/`board_motorctl`) was dropped and i
   - Web server with webroot in SPIFFS
   - HTTP API for controlling the chair (remote control)
   - Captive portal + mDNS (`armchair.local`): the web-app opens automatically after connecting
-- **React web-app:** Virtual joystick sending data to http-API (placed in SPIFFS)
+- **React web-app:** (placed in SPIFFS)
+  - Virtual joystick for driving, sending data to the http-API
+  - Controls for the leg- and back-rest (hold-buttons, position slider, live position)
 
 
 ## Planned Features
@@ -67,7 +69,6 @@ The two-board V2.1 approach (`board_control`/`board_motorctl`) was dropped and i
 #### UI
 - Improved Web Interface
   - Settings
-  - Chair adjustment
 - Simple App
 
 <br>
@@ -130,12 +131,16 @@ These files are then served via HTTP in the Wi-Fi network "armchair" created by 
 Initially, or when changing the React code, you need to manually build the React app:
 ```bash
 cd react-app
-#compile
 npm run build
-#remove unwanted license file (filename too long for spiffs)
-rm build/static/js/main.8f9aec76.js.LICENSE.txt
 ```
-**Note:** For testing the app locally, use `npm start`
+Note: the build script also deletes the generated `*.LICENSE.txt` (its filename is too long for spiffs).
+
+**Testing locally:** `npm start` serves the app on the pc. To let it talk to the actual
+armchair (connected to wifi `armchair`, HTTP mode) set the api host:
+```bash
+REACT_APP_API_HOST=http://192.168.4.1 npm start
+```
+**Tests:** `npm test` runs a few smoke-tests of the web-app (rendering, heartbeat, rest-buttons)
 
 
 ## Firmware
@@ -249,8 +254,30 @@ Control the armchair via a virtual joystick on the web interface.
 
 Note: use **http**, NOT https - some browsers automatically add https, which does not work.
 
+**Features of the web-app:**
+- **Driving:** virtual joystick
+  - The controller stops the motors when it receives no data for 2.5s (safety, e.g. lost
+    connection). Coordinates are sent on joystick events *and* repeated once per second as
+    heartbeat, so holding the stick still while driving straight does not stop the chair.
+- **Chair adjustment:** leg- and back-rest
+  - hold `up`/`down` to move the rest as long as the button is pressed
+  - slider / presets to move to a certain position
+  - the position tracked by the controller is shown live (also updates when the rest is
+    moved with the encoder)
+  - Note: sending `0%`/`100%` while already at that position is not ignored - the motor runs
+    into the limit switch again, which re-syncs the (time based) position tracking
+
 **How it works:** while in HTTP mode the ESP32 runs a captive portal - a DNS server
 answering every query with its own IP ([common/dns_server.c](common/dns_server.c)) plus an
 HTTP redirect for all foreign hosts ([common/http.cpp](common/http.cpp)). That is exactly what
 phones use to detect "this network requires sign in", which makes them offer/open the
 web-app on their own. Additionally mDNS provides the hostname `armchair.local`.
+
+**HTTP-API** (see [common/http.cpp](common/http.cpp)):
+
+| Method | Endpoint        | Payload / Response                                                        |
+|--------|-----------------|---------------------------------------------------------------------------|
+| POST   | `/api/joystick` | `{"x":0.5,"y":-0.2}` - coordinates -1 to 1                                |
+| POST   | `/api/chair`    | `{"rest":"leg"\|"back", "action":"up"\|"down"\|"stop"}` - move while held |
+| POST   | `/api/chair`    | `{"rest":"leg"\|"back", "percent":0-100}` - move to position              |
+| GET    | `/api/chair`    | `{"leg":{"percent":..,"target":..,"state":".."},"back":{...}}`            |

@@ -276,6 +276,10 @@ void controlledArmchair::handle()
         }
         else
         {
+            // note: the web-app repeats the last command in a fixed interval (heartbeat), thus unchanged
+            // data still means the user is holding the stick -> prevent the timeout switching to IDLE while driving
+            if (stickData.position != joystickPos_t::CENTER)
+                resetTimeout();
             ESP_LOGD(TAG, "http joystick data unchanged at %s not updating commands", joystickPosStr[(int)stickData.position]);
         }
         break;
@@ -514,7 +518,10 @@ void controlledArmchair::changeMode(controlMode_t modeNew, bool noBeep)
             break;
 
         case controlMode_t::HTTP:
-            ESP_LOGW(TAG, "switching from HTTP mode -> stopping captive-portal and wifi-ap");
+            ESP_LOGW(TAG, "switching from HTTP mode -> stopping rest-motors, captive-portal and wifi-ap");
+            // rests can be moved from the web-app -> make sure they dont keep running when leaving the mode
+            legRest->requestStateChange(REST_OFF);
+            backRest->requestStateChange(REST_OFF);
             http_stop_captivePortal();
             wifi_stop_ap();
             break;

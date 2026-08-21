@@ -35,7 +35,7 @@ public:
     const char * getName() const {return name;};
     void setTargetPercent(float targetPercent); //mutex
     float getTargetPercent() const {return positionTarget;};
-    float getPercent(); //TODO update position first
+    float getPercent(); //current position in percent (updates tracked position first when currently moving)
 
     // required for task controlling the rest:
     void setTaskHandle(TaskHandle_t handle) {taskHandle = handle;};

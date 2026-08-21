@@ -167,6 +167,147 @@ static esp_err_t on_default_url(httpd_req_t *req)
 
 
 
+//====================================
+//===== chair adjustment endpoint ====
+//====================================
+// endpoint for controlling the leg- and back-rest from the web-app
+// (previously only possible locally via encoder or ADJUST_CHAIR mode)
+//
+//   POST /api/chair   {"rest":"leg"|"back", "action":"up"|"down"|"stop"}   hold-button
+//   POST /api/chair   {"rest":"leg"|"back", "percent":0-100}               move to position
+//   GET  /api/chair   -> {"leg":{"percent":..,"target":..,"state":".."}, "back":{...}}
+//
+// note: sending 100/0 again while already at that position is intentionally not
+// ignored - it re-runs the motor into the limit switch to re-sync the tracked position
+
+//--- local variables ---
+static cControlledRest *legRest_l = NULL;
+static cControlledRest *backRest_l = NULL;
+
+//----------------------------
+//----- restFromJsonItem -----
+//----------------------------
+// get the rest object the request refers to ("leg" or "back")
+static cControlledRest *getRestFromName(const char *name)
+{
+    if (name == NULL)
+        return NULL;
+    if (strcasecmp(name, "leg") == 0)
+        return legRest_l;
+    if (strcasecmp(name, "back") == 0)
+        return backRest_l;
+    return NULL;
+}
+
+
+//--------------------------
+//--- on_chairAdjust_post --
+//--------------------------
+static esp_err_t on_chairAdjust_post(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+
+    //--- get data from http request ---
+    char buffer[100];
+    memset(&buffer, 0, sizeof(buffer));
+    if (req->content_len >= sizeof(buffer))
+    {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "payload too large");
+        return ESP_OK;
+    }
+    httpd_req_recv(req, buffer, req->content_len);
+    ESP_LOGD(TAG, "/api/chair: received data: %s", buffer);
+
+    //--- parse json ---
+    cJSON *payload = cJSON_Parse(buffer);
+    if (payload == NULL)
+    {
+        ESP_LOGE(TAG, "/api/chair: failed parsing json '%s'", buffer);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid json");
+        return ESP_OK;
+    }
+
+    //--- which rest? ---
+    cJSON *rest_json = cJSON_GetObjectItem(payload, "rest");
+    cControlledRest *rest = getRestFromName(cJSON_IsString(rest_json) ? rest_json->valuestring : NULL);
+    if (rest == NULL)
+    {
+        ESP_LOGE(TAG, "/api/chair: item 'rest' missing or not 'leg'/'back'");
+        cJSON_Delete(payload);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "item 'rest' has to be 'leg' or 'back'");
+        return ESP_OK;
+    }
+
+    //--- run requested action ---
+    cJSON *action_json = cJSON_GetObjectItem(payload, "action");
+    cJSON *percent_json = cJSON_GetObjectItem(payload, "percent");
+    esp_err_t result = ESP_OK;
+
+    // move to a certain position
+    if (cJSON_IsNumber(percent_json))
+    {
+        ESP_LOGI(TAG, "/api/chair: [%s] set target position to %.1f%%", rest->getName(), percent_json->valuedouble);
+        rest->setTargetPercent((float)percent_json->valuedouble);
+    }
+    // hold-button pressed/released (move until stopped or limit reached)
+    else if (cJSON_IsString(action_json))
+    {
+        const char *action = action_json->valuestring;
+        ESP_LOGI(TAG, "/api/chair: [%s] action '%s'", rest->getName(), action);
+        if (strcasecmp(action, "up") == 0)
+            rest->setTargetPercent(100);
+        else if (strcasecmp(action, "down") == 0)
+            rest->setTargetPercent(0);
+        else if (strcasecmp(action, "stop") == 0)
+            rest->requestStateChange(REST_OFF);
+        else
+        {
+            ESP_LOGE(TAG, "/api/chair: unknown action '%s'", action);
+            result = ESP_FAIL;
+        }
+    }
+    else
+    {
+        ESP_LOGE(TAG, "/api/chair: neither 'action' nor 'percent' provided");
+        result = ESP_FAIL;
+    }
+
+    cJSON_Delete(payload);
+
+    if (result != ESP_OK)
+    {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "provide 'percent' (0-100) or 'action' (up/down/stop)");
+        return ESP_OK;
+    }
+
+    httpd_resp_set_status(req, "204 NO CONTENT");
+    httpd_resp_send(req, NULL, 0);
+    return ESP_OK;
+}
+
+
+//-------------------------
+//--- on_chairAdjust_get --
+//-------------------------
+// current position of both rests, used by the web-app to show the actual position live
+static esp_err_t on_chairAdjust_get(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_type(req, "application/json");
+
+    char response[220];
+    snprintf(response, sizeof(response),
+             "{\"leg\":{\"percent\":%.1f,\"target\":%.1f,\"state\":\"%s\"},"
+             "\"back\":{\"percent\":%.1f,\"target\":%.1f,\"state\":\"%s\"}}",
+             legRest_l->getPercent(), legRest_l->getTargetPercent(), restStateStr[legRest_l->getState()],
+             backRest_l->getPercent(), backRest_l->getTargetPercent(), restStateStr[backRest_l->getState()]);
+
+    httpd_resp_sendstr(req, response);
+    return ESP_OK;
+}
+
+
+
 //==============================
 //===== httpJoystick class =====
 //==============================
@@ -191,22 +332,38 @@ esp_err_t httpJoystick::receiveHttpData(httpd_req_t *req){
     //--- get data from http request ---
     char buffer[100];
     memset(&buffer, 0, sizeof(buffer));
-    httpd_req_recv(req, buffer, req->content_len);
+    // note: limit the length, req->content_len is controlled by the client (was a stack overflow before)
+    size_t receiveLen = req->content_len < sizeof(buffer) - 1 ? req->content_len : sizeof(buffer) - 1;
+    httpd_req_recv(req, buffer, receiveLen);
     ESP_LOGD(TAG, "/api/joystick: received data: %s", buffer);
 
     //--- parse received json string to json object ---
     cJSON *payload = cJSON_Parse(buffer);
-    ESP_LOGV(TAG, "parsed json: \n %s", cJSON_Print(payload));
+    if (payload == NULL)
+    {
+        ESP_LOGE(TAG, "/api/joystick: failed parsing json '%s'", buffer);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid json");
+        return ESP_OK;
+    }
 
     //--- extract relevant items from json object ---
     cJSON *x_json = cJSON_GetObjectItem(payload, "x");  
     cJSON *y_json = cJSON_GetObjectItem(payload, "y");  
 
+    //--- verify received data ---
+    // note: everything connected to the ap can send requests here, dont crash on malformed data
+    if (!cJSON_IsNumber(x_json) || !cJSON_IsNumber(y_json))
+    {
+        ESP_LOGE(TAG, "/api/joystick: items 'x' and 'y' missing or not numbers: '%s'", buffer);
+        cJSON_Delete(payload);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "expecting numbers 'x' and 'y'");
+        return ESP_OK;
+    }
+
     //--- save items to struct ---
     joystickData_t data = { };
 
-    //note cjson can only interpret values as numbers when there are no quotes around the values in json (are removed from json on client side)
-    //convert json to double to float
+    //convert json double to float (note: the web-app has to send actual numbers, not strings)
     data.x = static_cast<float>(x_json->valuedouble);
     data.y = static_cast<float>(y_json->valuedouble);
     //log received and parsed values
@@ -282,8 +439,11 @@ joystickData_t httpJoystick::getData(){
 
 //parameter: provide pointer to function that handle incomming joystick data (for configuring the url)
 //TODO add handle functions to future additional endpoints/urls here too
-void http_init_server(http_handler_t onJoystickUrl)
+void http_init_server(http_handler_t onJoystickUrl, cControlledRest *legRest, cControlledRest *backRest)
 {
+  legRest_l = legRest;
+  backRest_l = backRest;
+
   ESP_LOGI(TAG, "initializing HTTP-Server...");
 
   // note: spiffs (webroot) is mounted once at startup in main.cpp and stays mounted
@@ -309,6 +469,21 @@ void http_init_server(http_handler_t onJoystickUrl)
       };
   httpd_register_uri_handler(server, &joystick_url);
 
+    httpd_uri_t chairAdjust_post_url = {
+      .uri = "/api/chair",
+      .method = HTTP_POST,
+      .handler = on_chairAdjust_post,
+      };
+  httpd_register_uri_handler(server, &chairAdjust_post_url);
+
+    httpd_uri_t chairAdjust_get_url = {
+      .uri = "/api/chair",
+      .method = HTTP_GET,
+      .handler = on_chairAdjust_get,
+      };
+  httpd_register_uri_handler(server, &chairAdjust_get_url);
+
+  // note: the wildcard handler has to be registered LAST, the first matching handler wins
   httpd_uri_t default_url = {
       .uri = "/*",
       .method = HTTP_GET,

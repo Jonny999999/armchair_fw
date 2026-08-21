@@ -6,6 +6,7 @@ extern "C"
 }
 
 #include "joystick.hpp"
+#include "chairAdjust.hpp"
 
 
 
@@ -16,7 +17,8 @@ extern "C"
 //parameter: provide pointer to function that handles incomming joystick data (for configuring the url)
 //TODO add handle functions to future additional endpoints/urls here too
 typedef esp_err_t (*http_handler_t)(httpd_req_t *req);
-void http_init_server(http_handler_t onJoystickUrl);
+//note: the rest objects are needed for the '/api/chair' endpoint (control leg/back-rest from web-app)
+void http_init_server(http_handler_t onJoystickUrl, cControlledRest *legRest, cControlledRest *backRest);
 
 //example with lambda function to pass method of a class instance:
 //esp_err_t (httpJoystick::*pointerToReceiveFunc)(httpd_req_t *req) = &httpJoystick::receiveHttpData;

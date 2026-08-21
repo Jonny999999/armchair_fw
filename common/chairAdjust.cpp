@@ -146,6 +146,29 @@ void cControlledRest::setTargetPercent(float targetPercent)
 
 
 
+//========================
+//===== getPercent =======
+//========================
+// get current position in percent (updates the tracked position first, when currently moving)
+float cControlledRest::getPercent()
+{
+    // lock the mutex before accessing shared variables
+    if (xSemaphoreTakeRecursive(mutex, MUTEX_TIMEOUT) == pdTRUE)
+    {
+        // when currently running the stored position is outdated -> update first
+        if (state != REST_OFF)
+            updatePosition();
+        float position = positionNow;
+        xSemaphoreGiveRecursive(mutex);
+        return position;
+    }
+    ESP_LOGE(TAG, "mutex timeout while waiting in getPercent -> RESTART");
+    esp_restart();
+    return 0;
+}
+
+
+
 //============================
 //==== requestStateChange ====
 //============================

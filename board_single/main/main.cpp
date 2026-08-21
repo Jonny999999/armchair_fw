@@ -144,10 +144,6 @@ void createObjects()
     // create joystick instance (joystick.hpp)
     joystick = new evaluatedJoystick(configJoystick, &nvsHandle);
 
-    // create httpJoystick object (http.hpp)
-    httpJoystickMain = new httpJoystick(configHttpJoystickMain);
-    http_init_server(on_joystick_url);
-
     // create buzzer object on pin 12 with gap between queued events of 1ms
     buzzer = new buzzer_t(GPIO_NUM_12, 1);
 
@@ -155,6 +151,11 @@ void createObjects()
     //                       gpio_up, gpio_down, travelDuration, name, defaultPosition
     legRest = new cControlledRest(GPIO_NUM_2, GPIO_NUM_15, 11000, "legRest");
     backRest = new cControlledRest(GPIO_NUM_16, GPIO_NUM_4, 12000, "backRest", 5); //default position "100% up"
+
+    // create httpJoystick object and start the webserver (http.hpp)
+    // note: has to be created after the rests, the '/api/chair' endpoint controls them
+    httpJoystickMain = new httpJoystick(configHttpJoystickMain);
+    http_init_server(on_joystick_url, legRest, backRest);
 
     // create control object (control.hpp)
     // with configuration from config.cpp

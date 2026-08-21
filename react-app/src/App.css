@@ -1,0 +1,183 @@
+/* armchair remote control - mobile first, matches the dark theme of index.html */
+
+:root {
+    --bg: #001427;
+    --panel: #04223c;
+    --accent: #8d0801;
+    --accent-light: #bf1a12;
+    --ok: #708d81;
+    --text: #ffffff;
+    --muted: #8fa6bb;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    /* dragging the joystick or holding a button must not scroll/select/zoom the page */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0.5rem 0.75rem 2rem;
+}
+
+/* --- header --- */
+.app-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.app-header h1 {
+    font-size: 1.4rem;
+    margin: 0.4rem 0;
+}
+
+.connection {
+    font-size: 0.8rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 1rem;
+}
+
+.connection.ok {
+    color: var(--ok);
+    border: 1px solid var(--ok);
+}
+
+.connection.lost {
+    color: var(--text);
+    background-color: var(--accent);
+}
+
+/* --- panels --- */
+.panel {
+    background-color: var(--panel);
+    border-radius: 0.6rem;
+    padding: 0.8rem;
+    margin-top: 0.75rem;
+}
+
+.joystick-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* prevent the browser from scrolling/zooming while dragging the stick */
+    touch-action: none;
+}
+
+.coordinates {
+    margin-top: 0.6rem;
+    font-family: monospace;
+    color: var(--muted);
+}
+
+/* --- chair adjustment --- */
+.rest-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.rest-label {
+    font-weight: 600;
+}
+
+.rest-position {
+    font-family: monospace;
+    color: var(--muted);
+}
+
+.rest-position.moving {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.rest-bar {
+    height: 0.4rem;
+    margin: 0.5rem 0 0.8rem;
+    border-radius: 0.2rem;
+    background-color: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+}
+
+.rest-bar-fill {
+    height: 100%;
+    background-color: var(--ok);
+    transition: width 0.3s linear;
+}
+
+.rest-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+button {
+    flex: 1;
+    color: var(--text);
+    background-color: var(--accent);
+    border: none;
+    border-radius: 0.4rem;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+    touch-action: none;
+    cursor: pointer;
+}
+
+button:active {
+    background-color: var(--accent-light);
+}
+
+/* buttons that have to be held down to keep the motor running */
+.hold-button {
+    padding: 1.1rem 0.5rem;
+    font-size: 1.1rem;
+}
+
+.rest-slider {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+}
+
+.rest-slider input[type="range"] {
+    flex: 1;
+    accent-color: var(--ok);
+    height: 1.8rem;
+}
+
+.rest-target {
+    font-family: monospace;
+    color: var(--muted);
+    min-width: 3rem;
+    text-align: right;
+}
+
+.rest-presets {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+}
+
+.rest-presets button {
+    background-color: transparent;
+    border: 1px solid var(--muted);
+    color: var(--muted);
+    padding: 0.4rem;
+    font-size: 0.85rem;
+}
+
+.rest-presets button:active {
+    background-color: var(--muted);
+    color: var(--bg);
+}
