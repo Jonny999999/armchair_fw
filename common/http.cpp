@@ -181,8 +181,8 @@ static esp_err_t on_default_url(httpd_req_t *req)
 // ignored - it re-runs the motor into the limit switch to re-sync the tracked position
 
 //--- local variables ---
-static cControlledRest *legRest_l = NULL;
-static cControlledRest *backRest_l = NULL;
+//config with the objects/functions the endpoints operate on (set in http_init_server)
+static http_config_t config_l = {};
 
 //----------------------------
 //----- restFromJsonItem -----
@@ -193,9 +193,9 @@ static cControlledRest *getRestFromName(const char *name)
     if (name == NULL)
         return NULL;
     if (strcasecmp(name, "leg") == 0)
-        return legRest_l;
+        return config_l.legRest;
     if (strcasecmp(name, "back") == 0)
-        return backRest_l;
+        return config_l.backRest;
     return NULL;
 }
 
@@ -299,10 +299,93 @@ static esp_err_t on_chairAdjust_get(httpd_req_t *req)
     snprintf(response, sizeof(response),
              "{\"leg\":{\"percent\":%.1f,\"target\":%.1f,\"state\":\"%s\"},"
              "\"back\":{\"percent\":%.1f,\"target\":%.1f,\"state\":\"%s\"}}",
-             legRest_l->getPercent(), legRest_l->getTargetPercent(), restStateStr[legRest_l->getState()],
-             backRest_l->getPercent(), backRest_l->getTargetPercent(), restStateStr[backRest_l->getState()]);
+             config_l.legRest->getPercent(), config_l.legRest->getTargetPercent(), restStateStr[config_l.legRest->getState()],
+             config_l.backRest->getPercent(), config_l.backRest->getTargetPercent(), restStateStr[config_l.backRest->getState()]);
 
     httpd_resp_sendstr(req, response);
+    return ESP_OK;
+}
+
+
+
+//===============================
+//===== settings endpoint =======
+//===============================
+// lets the web-app read and change the same 'max duty' setting as the encoder-menu
+// (limits the top speed - often changed to get finer control in tight spaces)
+//
+//   GET  /api/settings   -> {"maxDuty":65}
+//   POST /api/settings   {"maxDuty":65}
+//
+// note: the value is stored in nvs by control.cpp -> only send it when actually
+// changed (e.g. when the slider is released), not while dragging
+
+#define MAX_DUTY_MIN 1   // same range as in the encoder-menu (menu.cpp)
+#define MAX_DUTY_MAX 100
+
+//-----------------------
+//--- on_settings_get ---
+//-----------------------
+static esp_err_t on_settings_get(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_type(req, "application/json");
+
+    char response[64];
+    snprintf(response, sizeof(response), "{\"maxDuty\":%.0f}", config_l.getMaxDuty());
+    httpd_resp_sendstr(req, response);
+    return ESP_OK;
+}
+
+
+//------------------------
+//--- on_settings_post ---
+//------------------------
+static esp_err_t on_settings_post(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+
+    //--- get data from http request ---
+    char buffer[100];
+    memset(&buffer, 0, sizeof(buffer));
+    size_t receiveLen = req->content_len < sizeof(buffer) - 1 ? req->content_len : sizeof(buffer) - 1;
+    httpd_req_recv(req, buffer, receiveLen);
+    ESP_LOGD(TAG, "/api/settings: received data: %s", buffer);
+
+    //--- parse json ---
+    cJSON *payload = cJSON_Parse(buffer);
+    if (payload == NULL)
+    {
+        ESP_LOGE(TAG, "/api/settings: failed parsing json '%s'", buffer);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid json");
+        return ESP_OK;
+    }
+
+    //--- apply max duty ---
+    cJSON *maxDuty_json = cJSON_GetObjectItem(payload, "maxDuty");
+    if (!cJSON_IsNumber(maxDuty_json))
+    {
+        ESP_LOGE(TAG, "/api/settings: item 'maxDuty' missing or not a number");
+        cJSON_Delete(payload);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "expecting number 'maxDuty'");
+        return ESP_OK;
+    }
+
+    float maxDuty = (float)maxDuty_json->valuedouble;
+    cJSON_Delete(payload);
+
+    // limit to the same range the encoder-menu allows
+    if (maxDuty < MAX_DUTY_MIN)
+        maxDuty = MAX_DUTY_MIN;
+    else if (maxDuty > MAX_DUTY_MAX)
+        maxDuty = MAX_DUTY_MAX;
+
+    ESP_LOGI(TAG, "/api/settings: setting max duty to %.0f%%", maxDuty);
+    // note: also stores the value in nvs and updates the brake thresholds (control.cpp)
+    config_l.setMaxDuty(maxDuty);
+
+    httpd_resp_set_status(req, "204 NO CONTENT");
+    httpd_resp_send(req, NULL, 0);
     return ESP_OK;
 }
 
@@ -439,10 +522,9 @@ joystickData_t httpJoystick::getData(){
 
 //parameter: provide pointer to function that handle incomming joystick data (for configuring the url)
 //TODO add handle functions to future additional endpoints/urls here too
-void http_init_server(http_handler_t onJoystickUrl, cControlledRest *legRest, cControlledRest *backRest)
+void http_init_server(http_config_t config_f)
 {
-  legRest_l = legRest;
-  backRest_l = backRest;
+  config_l = config_f;
 
   ESP_LOGI(TAG, "initializing HTTP-Server...");
 
@@ -465,7 +547,7 @@ void http_init_server(http_handler_t onJoystickUrl, cControlledRest *legRest, cC
     httpd_uri_t joystick_url = {
       .uri = "/api/joystick",
       .method = HTTP_POST,
-      .handler = onJoystickUrl,
+      .handler = config_f.onJoystickUrl,
       };
   httpd_register_uri_handler(server, &joystick_url);
 
@@ -482,6 +564,20 @@ void http_init_server(http_handler_t onJoystickUrl, cControlledRest *legRest, cC
       .handler = on_chairAdjust_get,
       };
   httpd_register_uri_handler(server, &chairAdjust_get_url);
+
+    httpd_uri_t settings_post_url = {
+      .uri = "/api/settings",
+      .method = HTTP_POST,
+      .handler = on_settings_post,
+      };
+  httpd_register_uri_handler(server, &settings_post_url);
+
+    httpd_uri_t settings_get_url = {
+      .uri = "/api/settings",
+      .method = HTTP_GET,
+      .handler = on_settings_get,
+      };
+  httpd_register_uri_handler(server, &settings_get_url);
 
   // note: the wildcard handler has to be registered LAST, the first matching handler wins
   httpd_uri_t default_url = {

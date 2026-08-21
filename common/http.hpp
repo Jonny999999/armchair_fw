@@ -14,11 +14,24 @@ extern "C"
 //===== init http server =====
 //============================
 //function that initializes http server and configures available urls
-//parameter: provide pointer to function that handles incomming joystick data (for configuring the url)
-//TODO add handle functions to future additional endpoints/urls here too
+//parameter: config struct with everything the endpoints need access to (see below)
 typedef esp_err_t (*http_handler_t)(httpd_req_t *req);
-//note: the rest objects are needed for the '/api/chair' endpoint (control leg/back-rest from web-app)
-void http_init_server(http_handler_t onJoystickUrl, cControlledRest *legRest, cControlledRest *backRest);
+
+//--- http_config_t ---
+//everything the endpoints need access to
+typedef struct http_config_t {
+    //'/api/joystick': function that handles incomming joystick data
+    http_handler_t onJoystickUrl;
+    //'/api/chair': the rests that get controlled from the web-app
+    cControlledRest *legRest;
+    cControlledRest *backRest;
+    //'/api/settings': access to the max-duty setting (same value as in the encoder-menu).
+    //note: passed as functions because the control object is board specific (control.hpp)
+    float (*getMaxDuty)(void);
+    void (*setMaxDuty)(float maxDuty);
+} http_config_t;
+
+void http_init_server(http_config_t config_f);
 
 //example with lambda function to pass method of a class instance:
 //esp_err_t (httpJoystick::*pointerToReceiveFunc)(httpd_req_t *req) = &httpJoystick::receiveHttpData;

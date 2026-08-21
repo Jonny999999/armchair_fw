@@ -89,6 +89,12 @@ esp_err_t on_joystick_url(httpd_req_t *req)
     return (httpJoystickMain->*pointerToReceiveFunc)(req);
 }
 
+//--- functions for the http settings endpoint ---
+// the http server (common/) can not access the control object (board specific) directly,
+// thus the max-duty setting is passed as functions (see http_config_t)
+float getMaxDuty_http() { return control->getMaxDuty(); }
+void setMaxDuty_http(float maxDuty) { control->setMaxDuty(maxDuty); }
+
 //--- tag for logging ---
 static const char * TAG = "main";
 
@@ -155,7 +161,15 @@ void createObjects()
     // create httpJoystick object and start the webserver (http.hpp)
     // note: has to be created after the rests, the '/api/chair' endpoint controls them
     httpJoystickMain = new httpJoystick(configHttpJoystickMain);
-    http_init_server(on_joystick_url, legRest, backRest);
+    http_config_t configHttp = {
+        .onJoystickUrl = on_joystick_url,
+        .legRest = legRest,
+        .backRest = backRest,
+        // note: 'control' is created below, the functions are only called once a request arrives
+        .getMaxDuty = getMaxDuty_http,
+        .setMaxDuty = setMaxDuty_http,
+    };
+    http_init_server(configHttp);
 
     // create control object (control.hpp)
     // with configuration from config.cpp

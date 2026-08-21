@@ -20,4 +20,12 @@ export const config = {
     //--- chair adjustment ---
     restPollIntervalMs: 1000, // interval the actual rest positions are fetched
     restSliderStep: 5,        // step size of the position slider in percent
+
+    //--- settings ---
+    // max duty limits the top speed - same setting as 'Set max Duty' in the encoder-menu.
+    // Note: the controller stores it in nvs -> only send it when the slider is released
+    settingsPollIntervalMs: 5000, // interval the max-duty is fetched (can also be changed at the encoder)
+    maxDutyMin: 10,
+    maxDutyMax: 100,
+    maxDutyStep: 5,
 };

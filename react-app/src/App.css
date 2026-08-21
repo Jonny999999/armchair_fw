@@ -27,7 +27,18 @@ body {
 .app {
     max-width: 480px;
     margin: 0 auto;
-    padding: 0.5rem 0.75rem 2rem;
+    padding: 0.5rem 0.75rem 1rem;
+    /* fill the screen so the joystick can be anchored at the bottom (dvh: without browser-chrome) */
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 /* --- header --- */
@@ -57,6 +68,63 @@ body {
 .connection.lost {
     color: var(--text);
     background-color: var(--accent);
+}
+
+/* --- tabs --- */
+.tabs {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+}
+
+.tab {
+    background-color: transparent;
+    border: 1px solid var(--muted);
+    color: var(--muted);
+    padding: 0.55rem;
+    font-size: 1rem;
+}
+
+.tab.active {
+    background-color: var(--panel);
+    border-color: var(--ok);
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* --- drive view: speed on top, joystick at the bottom (away from the speed slider) --- */
+.drive-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.drive-view .joystick-panel {
+    flex: 1;
+    justify-content: flex-end;
+}
+
+/* --- speed limit (max duty) --- */
+.speed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.3rem;
+}
+
+.speed-label {
+    font-weight: 600;
+}
+
+.speed-value {
+    font-family: monospace;
+    font-size: 1.3rem;
+}
+
+.speed-panel input[type="range"] {
+    width: 100%;
+    accent-color: var(--ok);
+    height: 1.8rem;
 }
 
 /* --- panels --- */

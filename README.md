@@ -50,8 +50,8 @@ The two-board V2.1 approach (`board_control`/`board_motorctl`) was dropped and i
   - HTTP API for controlling the chair (remote control)
   - Captive portal + mDNS (`armchair.local`): the web-app opens automatically after connecting
 - **React web-app:** (placed in SPIFFS)
-  - Virtual joystick for driving, sending data to the http-API
-  - Controls for the leg- and back-rest (hold-buttons, position slider, live position)
+  - *Drive* tab: virtual joystick + slider for the speed limit (max duty)
+  - *Chair* tab: controls for the leg- and back-rest (hold-buttons, position slider, live position)
 
 
 ## Planned Features
@@ -255,11 +255,18 @@ Control the armchair via a virtual joystick on the web interface.
 Note: use **http**, NOT https - some browsers automatically add https, which does not work.
 
 **Features of the web-app:**
-- **Driving:** virtual joystick
+
+The app has two tabs, so nothing except the joystick is tappable while driving blindly.
+
+- ***Drive* tab:** virtual joystick + speed limit
   - The controller stops the motors when it receives no data for 2.5s (safety, e.g. lost
     connection). Coordinates are sent on joystick events *and* repeated once per second as
     heartbeat, so holding the stick still while driving straight does not stop the chair.
-- **Chair adjustment:** leg- and back-rest
+  - The **speed limit** slider changes the same *max duty* setting as the encoder-menu.
+    It sits at the top, far away from the joystick at the bottom, and is only sent when
+    the slider is *released* (the controller stores the value in NVS flash).
+  - Leaving the tab sends a final "center" - the chair stops instead of waiting for the timeout.
+- ***Chair* tab:** leg- and back-rest
   - hold `up`/`down` to move the rest as long as the button is pressed
   - slider / presets to move to a certain position
   - the position tracked by the controller is shown live (also updates when the rest is
@@ -281,3 +288,5 @@ web-app on their own. Additionally mDNS provides the hostname `armchair.local`.
 | POST   | `/api/chair`    | `{"rest":"leg"\|"back", "action":"up"\|"down"\|"stop"}` - move while held |
 | POST   | `/api/chair`    | `{"rest":"leg"\|"back", "percent":0-100}` - move to position              |
 | GET    | `/api/chair`    | `{"leg":{"percent":..,"target":..,"state":".."},"back":{...}}`            |
+| POST   | `/api/settings` | `{"maxDuty":65}` - top speed limit 1-100 (stored in nvs)                   |
+| GET    | `/api/settings` | `{"maxDuty":65}`                                                          |

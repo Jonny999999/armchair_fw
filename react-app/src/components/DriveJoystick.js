@@ -36,7 +36,12 @@ export default function DriveJoystick({ send }) {
             const { x, y } = lastSent.current;
             send(x, y);
         }, config.heartbeatIntervalMs);
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            // leaving the drive-view stops the heartbeat -> stop the chair right away
+            // instead of letting it run into the timeout
+            send(0, 0);
+        };
     }, [send]);
 
     //--- joystick events ---

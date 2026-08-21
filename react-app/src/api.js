@@ -54,3 +54,19 @@ export const fetchRestStatus = async () => {
         throw new Error(`GET /api/chair failed with status ${response.status}`);
     return response.json();
 };
+
+
+//---------------------------
+//--------- settings --------
+//---------------------------
+// max duty in percent (top speed limit, same value as in the encoder-menu)
+export const fetchSettings = async () => {
+    const response = await fetch(HOST + '/api/settings');
+    if (!response.ok)
+        throw new Error(`GET /api/settings failed with status ${response.status}`);
+    return response.json();
+};
+
+// note: the controller writes this to nvs flash -> only send when actually changed
+// (e.g. when the slider is released), not on every intermediate value while dragging
+export const sendMaxDuty = (maxDuty) => postJson('/api/settings', { maxDuty });
