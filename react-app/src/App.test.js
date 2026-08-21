@@ -72,6 +72,51 @@ test('speed slider sends the new max duty when released', async () => {
 });
 
 
+test('a cancelled joystick gesture centers the chair instead of driving on', async () => {
+    jest.useFakeTimers();
+    render(<App />);
+    await act(async () => {});
+
+    // drag the stick, then let the browser cancel the gesture instead of emitting pointerup
+    const stick = document.querySelector('.joystick-panel button');
+    stick.setPointerCapture = () => {}; // not implemented by jsdom
+    fireEvent.pointerDown(stick, { pointerId: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 0, clientY: -100 });
+    requests = [];
+    fireEvent.pointerCancel(window, { pointerId: 1 });
+
+    expect(postedTo('/api/joystick')).toEqual([{ x: 0, y: 0 }]);
+
+    // and the heartbeat repeats the centered position, not the last driving one
+    requests = [];
+    act(() => { jest.advanceTimersByTime(1000); });
+    expect(postedTo('/api/joystick')).toEqual([{ x: 0, y: 0 }]);
+    jest.useRealTimers();
+});
+
+
+test('the pull-to-refresh gesture is cancelled, except on sliders and the chair-view', async () => {
+    render(<App />);
+    await act(async () => {});
+
+    // dragging anywhere in the drive view (joystick, empty space, header) must not reach the browser
+    const onJoystick = new TouchEvent('touchmove', { bubbles: true, cancelable: true });
+    document.querySelector('.joystick-panel button').dispatchEvent(onJoystick);
+    expect(onJoystick.defaultPrevented).toBe(true);
+
+    // the speed slider still has to be draggable
+    const onSlider = new TouchEvent('touchmove', { bubbles: true, cancelable: true });
+    screen.getByRole('slider').dispatchEvent(onSlider);
+    expect(onSlider.defaultPrevented).toBe(false);
+
+    // ... and the chair view has to stay scrollable
+    await openChairTab();
+    const onChairView = new TouchEvent('touchmove', { bubbles: true, cancelable: true });
+    document.querySelector('.chair-view').dispatchEvent(onChairView);
+    expect(onChairView.defaultPrevented).toBe(false);
+});
+
+
 //========== chair view ==========
 
 test('switching to the chair tab stops the chair and shows the rest positions', async () => {
@@ -112,4 +157,48 @@ test('preset button sends the target position', async () => {
     fireEvent.click(screen.getAllByText('100%')[1]); // [0] is the slider value of the leg rest
 
     expect(postedTo('/api/chair')).toEqual([{ rest: 'leg', percent: 100 }]);
+});
+
+
+test('pressing the same preset again re-sends it (re-syncs the position at the limit switch)', async () => {
+    render(<App />);
+    await openChairTab();
+    requests = [];
+
+    const preset0 = screen.getAllByText('0%')[0]; // leg rest
+    fireEvent.click(preset0);
+    fireEvent.click(preset0);
+
+    expect(postedTo('/api/chair')).toEqual([
+        { rest: 'leg', percent: 0 },
+        { rest: 'leg', percent: 0 },
+    ]);
+});
+
+
+test('releasing the rest slider sends even when the value was not changed', async () => {
+    render(<App />);
+    await openChairTab();
+    requests = [];
+
+    // leg rest slider, already at its current target (100%) -> no 'change' event at all
+    const slider = screen.getAllByRole('slider')[0];
+    fireEvent.pointerUp(slider);
+
+    expect(postedTo('/api/chair')).toEqual([{ rest: 'leg', percent: 100 }]);
+});
+
+
+test('dragging the rest slider only sends once, on release', async () => {
+    render(<App />);
+    await openChairTab();
+    requests = [];
+
+    const slider = screen.getAllByRole('slider')[0];
+    fireEvent.change(slider, { target: { value: '40' } });
+    fireEvent.change(slider, { target: { value: '60' } });
+    expect(postedTo('/api/chair')).toEqual([]); // nothing while dragging
+
+    fireEvent.pointerUp(slider);
+    expect(postedTo('/api/chair')).toEqual([{ rest: 'leg', percent: 60 }]);
 });

@@ -244,9 +244,11 @@ Control the armchair via a virtual joystick on the web interface.
 **Usage:**
 - Switch to HTTP mode (4 button presses or via mode-select menu).
 - Connect to WiFi `armchair`, no password.
-- The web-app should open **automatically**:
+- A sign-in page should open **automatically**:
   - *iOS:* the "sign in to network" window pops up on its own
   - *Android / Windows:* a notification "Sign in to Wi-Fi network" appears, tap it
+- That page shows the address to copy into the browser (long-press or the copy button).
+  It is only a sign-in window, not a real browser - the joystick misbehaves in it (see below).
 - If it does not open automatically, any of these work:
   - open http://armchair.local
   - open http://192.168.4.1
@@ -278,7 +280,22 @@ The app has two tabs, so nothing except the joystick is tappable while driving b
 answering every query with its own IP ([common/dns_server.c](common/dns_server.c)) plus an
 HTTP redirect for all foreign hosts ([common/http.cpp](common/http.cpp)). That is exactly what
 phones use to detect "this network requires sign in", which makes them offer/open the
-web-app on their own. Additionally mDNS provides the hostname `armchair.local`.
+sign-in page on their own. Additionally mDNS provides the hostname `armchair.local`.
+
+The window the phone opens it in is *not* the browser of the user but a stripped down webview
+("captive network assistant"), which e.g. fires its pull-to-refresh while dragging the
+joystick downwards and does not let the page disable it. A page can not open the real browser
+either - `target="_blank"` and `intent://` urls are both blocked there. So that window only
+gets a small landing page handing out the address to copy over manually.
+
+The sign-in is never confirmed automatically: confirming it closes that window, and while it
+is unconfirmed the page stays reachable through the notification. The "confirm sign-in" link
+at the bottom of it does so manually (`/portal/done`) - from then on the connectivity-probes
+are answered like a working internet connection (`204` / `Success`) and the phone stops
+nagging. It is armed again whenever a station joins the access-point.
+
+Note that only the well-known probe URLs are answered that way; browsing to any other
+address (e.g. `google.com`) keeps redirecting to the web-app the whole time.
 
 **HTTP-API** (see [common/http.cpp](common/http.cpp)):
 

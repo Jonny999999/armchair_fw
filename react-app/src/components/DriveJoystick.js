@@ -50,6 +50,34 @@ export default function DriveJoystick({ send }) {
 
     const handleStop = () => sendCoordinates(0, 0);
 
+    //--- safety net ---
+    // The joystick element only emits its 'stop' on pointerup. When the browser cancels the
+    // gesture instead (finger dragged off-screen, phone call, tab hidden, ...) that never
+    // arrives and the heartbeat would keep repeating the last position -> chair keeps driving.
+    // -> center on anything that ends a touch outside of the joystick as well.
+    useEffect(() => {
+        const stop = () => {
+            if (lastSent.current.x !== 0 || lastSent.current.y !== 0)
+                sendCoordinates(0, 0);
+        };
+        const stopWhenHidden = () => { if (document.hidden) stop(); };
+
+        window.addEventListener('pointercancel', stop);
+        window.addEventListener('pointerup', stop);
+        window.addEventListener('touchend', stop);
+        window.addEventListener('touchcancel', stop);
+        window.addEventListener('blur', stop);
+        document.addEventListener('visibilitychange', stopWhenHidden);
+        return () => {
+            window.removeEventListener('pointercancel', stop);
+            window.removeEventListener('pointerup', stop);
+            window.removeEventListener('touchend', stop);
+            window.removeEventListener('touchcancel', stop);
+            window.removeEventListener('blur', stop);
+            document.removeEventListener('visibilitychange', stopWhenHidden);
+        };
+    }, [sendCoordinates]);
+
     return (
         <section className="panel joystick-panel">
             <Joystick

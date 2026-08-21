@@ -122,7 +122,12 @@ void cControlledRest::setTargetPercent(float targetPercent)
 
         // update actual position positionNow first when already running
         if (state != REST_OFF)
+        {
             updatePosition();
+            // new target while moving -> the remaining travel is measured from here on
+            timestamp_travelStart = esp_log_timestamp();
+            positionAtTravelStart = positionNow;
+        }
 
         // start rest in required direction
         // TODO always run this check in handle()?
@@ -188,9 +193,13 @@ void cControlledRest::requestStateChange(restState_t targetState)
         ESP_LOGD(TAG, "[%s] requesting change to state '%s'", name, restStateStr[targetState]);
         nextState = targetState;
 
-        // activate task to change, when on running already
-        if (taskIsRunning == false)
-            xTaskNotifyGive(taskHandle); // activate handle task that handles state change and stops the rest-motor again 
+        // wake up the handle task, which applies the state change and stops the rest-motor again.
+        // Note: notified unconditionally on purpose - only notifying while the task is known to be
+        // sleeping used to lose the request when it arrived just as the task was going to sleep
+        // (e.g. pressing 0% again right after the rest stopped there -> motor never started).
+        // A notification while the task is already running is harmless, ulTaskNotifyTake() clears
+        // it and the task just does one extra pass that exits right away.
+        xTaskNotifyGive(taskHandle);
         // Release the mutex
         xSemaphoreGiveRecursive(mutex);
     }
@@ -323,7 +332,11 @@ void cControlledRest::changeState(restState_t newState)
         positionTarget = positionNow; // disable resuming - no unexpected pos when incrementing
     }
     else if (state == REST_OFF && newState != REST_OFF)// previously off (turning on now)
+    {
         timestamp_lastPosUpdate = now; // pos did not change during off time - reset timestamp
+        timestamp_travelStart = now;   // start of the travel the automatic stop is calculated from
+        positionAtTravelStart = positionNow;
+    }
 
     state = newState;
     timestamp_lastStateChange = now;
@@ -348,9 +361,12 @@ void cControlledRest::handleStopAtPosReached()
         }
 
         // calculate time already running
-        uint32_t timeRan = esp_log_timestamp() - timestamp_lastPosUpdate;
+        // Note: measured from timestamp_travelStart, NOT from timestamp_lastPosUpdate - the latter
+        // is also reset by every getPercent() call, so the web-app polling the position once per
+        // second used to restart this timer over and over and the motor never stopped by itself.
+        uint32_t timeRan = esp_log_timestamp() - timestamp_travelStart;
         // calculate needed time to reach target
-        uint32_t timeTarget = travelDuration * fabs(positionTarget - positionNow) / 100;
+        uint32_t timeTarget = travelDuration * fabs(positionTarget - positionAtTravelStart) / 100;
 
         // intentionally travel longer into limit - compensates inaccuracies in time based position tracking
         if (positionTarget == 0 || positionTarget == 100)
@@ -390,7 +406,6 @@ void chairAdjust_task(void *pvParameter)
     while (1)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait for wakeup by changeState() (rest-motor turned on)
-        rest->setTaskIsRunning();
         ESP_LOGD(TAG, "task %s: received notification -> activating task!", rest->getName());
         // running while 1. motor running  or  2. not in target state yet
         while ((rest->getState() != REST_OFF) || (rest->getNextState() != rest->getState()))
@@ -399,7 +414,6 @@ void chairAdjust_task(void *pvParameter)
             rest->handleStopAtPosReached();
             vTaskDelay(CHAIR_ADJUST_HANDLE_TASK_DELAY / portTICK_PERIOD_MS);
         }
-        rest->clearTaskIsRunning();
         ESP_LOGD(TAG, "task %s: motor-off and at target state -> sleeping task", rest->getName());
     }
 }

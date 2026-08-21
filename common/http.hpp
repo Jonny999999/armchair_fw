@@ -53,6 +53,9 @@ void http_init_server(http_config_t config_f);
 void http_start_captivePortal();
 void http_stop_captivePortal();
 
+//re-arm the sign-in page for the next connectivity-probe (called when a station joins the AP)
+extern "C" void http_armCaptivePortal(void);
+
 
 //============================
 //===== stop http server =====

@@ -39,8 +39,6 @@ public:
 
     // required for task controlling the rest:
     void setTaskHandle(TaskHandle_t handle) {taskHandle = handle;};
-    void setTaskIsRunning() {taskIsRunning = true;};
-    void clearTaskIsRunning() {taskIsRunning = false;};
     void handleStopAtPosReached(); //mutex
     void handleStateChange(); //mutex
     restState_t getNextState() const {return nextState;};
@@ -53,7 +51,6 @@ private:
 
     // task related:
     TaskHandle_t taskHandle = NULL; //task that repeatedly runs the handle() method, is assigned at task creation
-    bool taskIsRunning = false;
     SemaphoreHandle_t mutex;
 
     // config:
@@ -67,6 +64,10 @@ private:
     restState_t nextState = REST_OFF;
     uint32_t timestamp_lastStateChange = 0;
     uint32_t timestamp_lastPosUpdate = 0;
+    // reference the automatic stop is calculated from - deliberately separate from
+    // timestamp_lastPosUpdate, which also gets reset by readers calling getPercent()
+    uint32_t timestamp_travelStart = 0;
+    float positionAtTravelStart = 0;
     float positionTarget = 0;
     float positionNow = 0;
 
