@@ -48,6 +48,7 @@ The two-board V2.1 approach (`board_control`/`board_motorctl`) was dropped and i
   - Hosts wireless network
   - Web server with webroot in SPIFFS
   - HTTP API for controlling the chair (remote control)
+  - Captive portal + mDNS (`armchair.local`): the web-app opens automatically after connecting
 - **React web-app:** Virtual joystick sending data to http-API (placed in SPIFFS)
 
 
@@ -238,4 +239,18 @@ Control the armchair via a virtual joystick on the web interface.
 **Usage:**
 - Switch to HTTP mode (4 button presses or via mode-select menu).
 - Connect to WiFi `armchair`, no password.
-- Access http://192.168.4.1 (note: **http** NOT https, some browsers automatically add https!).
+- The web-app should open **automatically**:
+  - *iOS:* the "sign in to network" window pops up on its own
+  - *Android / Windows:* a notification "Sign in to Wi-Fi network" appears, tap it
+- If it does not open automatically, any of these work:
+  - open http://armchair.local
+  - open http://192.168.4.1
+  - simply enter **any** address (e.g. `http://a`) - all hostnames resolve to the armchair
+
+Note: use **http**, NOT https - some browsers automatically add https, which does not work.
+
+**How it works:** while in HTTP mode the ESP32 runs a captive portal - a DNS server
+answering every query with its own IP ([common/dns_server.c](common/dns_server.c)) plus an
+HTTP redirect for all foreign hosts ([common/http.cpp](common/http.cpp)). That is exactly what
+phones use to detect "this network requires sign in", which makes them offer/open the
+web-app on their own. Additionally mDNS provides the hostname `armchair.local`.

@@ -27,11 +27,16 @@ void http_init_server(http_handler_t onJoystickUrl);
 //http_init_server(on_joystick_url);
 
 
-//==============================
-//===== start mdns service =====
-//==============================
-//function that initializes and starts mdns server for host discovery
-void start_mdns_service();
+//===================================
+//===== start/stop captiveportal ====
+//===================================
+//start mdns (reachable as http://armchair.local) and a dns-server that resolves
+//every hostname to this device. Together with the redirect of foreign hosts in
+//http.cpp this forms a captive portal: the phone shows "network requires sign in"
+//or opens the web-app automatically, instead of the user having to type the ip
+//note: has to be called AFTER the access-point was started (see wifi.h)
+void http_start_captivePortal();
+void http_stop_captivePortal();
 
 
 //============================

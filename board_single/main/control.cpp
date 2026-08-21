@@ -514,7 +514,8 @@ void controlledArmchair::changeMode(controlMode_t modeNew, bool noBeep)
             break;
 
         case controlMode_t::HTTP:
-            ESP_LOGW(TAG, "switching from HTTP mode -> stopping wifi-ap");
+            ESP_LOGW(TAG, "switching from HTTP mode -> stopping captive-portal and wifi-ap");
+            http_stop_captivePortal();
             wifi_stop_ap();
             break;
 
@@ -565,8 +566,10 @@ void controlledArmchair::changeMode(controlMode_t modeNew, bool noBeep)
             break;
 
         case controlMode_t::HTTP:
-            ESP_LOGW(TAG, "switching to HTTP mode -> starting wifi-ap");
+            ESP_LOGW(TAG, "switching to HTTP mode -> starting wifi-ap and captive-portal");
             wifi_start_ap();
+            // makes the phone open the web-app on its own (no need to type the ip)
+            http_start_captivePortal();
             break;
 
         case controlMode_t::ADJUST_CHAIR:

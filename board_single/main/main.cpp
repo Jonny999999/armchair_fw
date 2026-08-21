@@ -115,7 +115,7 @@ void init_spiffs(){
     esp_spiffs_info(NULL, &total, &used);
 
     ESP_LOGI(TAG, "SPIFFS: total %d, used %d", total, used);
-    esp_vfs_spiffs_unregister(NULL);
+    // note: stays mounted, the http-server serves the web-app from here
 }
 
 
