@@ -67,6 +67,18 @@ export const fetchSettings = async () => {
     return response.json();
 };
 
+//---------------------------
+//--------- status ----------
+//---------------------------
+// live battery and motor readings shown below the joystick
+export const fetchStatus = async () => {
+    const response = await fetch(HOST + '/api/status');
+    if (!response.ok)
+        throw new Error(`GET /api/status failed with status ${response.status}`);
+    return response.json();
+};
+
+
 // note: the controller writes this to nvs flash -> only send when actually changed
 // (e.g. when the slider is released), not on every intermediate value while dragging
 export const sendMaxDuty = (maxDuty) => postJson('/api/settings', { maxDuty });

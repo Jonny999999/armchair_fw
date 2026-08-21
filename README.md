@@ -268,8 +268,12 @@ The app has two tabs, so nothing except the joystick is tappable while driving b
     It sits at the top, far away from the joystick at the bottom, and is only sent when
     the slider is *released* (the controller stores the value in NVS flash).
   - Leaving the tab sends a final "center" - the chair stops instead of waiting for the timeout.
+  - Below the joystick: battery percentage/voltage and the power the two motors are currently
+    drawing. Not tappable and of a fixed height, so it can not interfere with driving.
 - ***Chair* tab:** leg- and back-rest
-  - hold `up`/`down` to move the rest as long as the button is pressed
+  - hold the direction buttons to move the rest as long as they are pressed
+  - Note: for the back-rest `0%` is *upright* and `100%` is reclined, so its buttons are
+    labelled `flatten`/`upright` instead of up/down (which would be the wrong way round)
   - slider / presets to move to a certain position
   - the position tracked by the controller is shown live (also updates when the rest is
     moved with the encoder)
@@ -307,3 +311,4 @@ address (e.g. `google.com`) keeps redirecting to the web-app the whole time.
 | GET    | `/api/chair`    | `{"leg":{"percent":..,"target":..,"state":".."},"back":{...}}`            |
 | POST   | `/api/settings` | `{"maxDuty":65}` - top speed limit 1-100 (stored in nvs)                   |
 | GET    | `/api/settings` | `{"maxDuty":65}`                                                          |
+| GET    | `/api/status`   | battery percent/voltage + current, power and duty of both motors          |

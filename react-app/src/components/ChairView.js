@@ -34,12 +34,23 @@ export default function ChairView({ request }) {
         <div className="chair-view">
             <RestControl
                 label="Leg rest"
+                buttons={[
+                    { action: 'down', label: '\u25BC down' },
+                    { action: 'up', label: '\u25B2 up' },
+                ]}
                 status={restStatus ? restStatus.leg : null}
                 onAction={(action) => handleAction('leg', action)}
                 onPercent={(percent) => handlePercent('leg', percent)}
             />
+            {/* note: for the back-rest 0% is upright and 100% is reclined (see
+                controlChairAdjustment in chairAdjust.cpp), so 'up'/'down' mean the
+                opposite of what one would expect -> label the physical movement instead */}
             <RestControl
                 label="Back rest"
+                buttons={[
+                    { action: 'up', label: '\u25BC flatten' },
+                    { action: 'down', label: '\u25B2 upright' },
+                ]}
                 status={restStatus ? restStatus.back : null}
                 onAction={(action) => handleAction('back', action)}
                 onPercent={(percent) => handlePercent('back', percent)}

@@ -7,6 +7,12 @@ const restStatus = {
     back: { percent: 10, target: 10, state: 'REST_OFF' },
 };
 const settings = { maxDuty: 65 };
+const status = {
+    battery: { percent: 82.4, voltage: 27.35 },
+    motorLeft: { current: 3.2, power: 88, duty: 45 },
+    motorRight: { current: 2.9, power: 79, duty: 45 },
+    powerTotal: 167,
+};
 
 let requests = [];
 
@@ -20,7 +26,11 @@ beforeEach(() => {
         });
         return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve(url.endsWith('/api/settings') ? settings : restStatus),
+            json: () => {
+                if (url.endsWith('/api/settings')) return Promise.resolve(settings);
+                if (url.endsWith('/api/status')) return Promise.resolve(status);
+                return Promise.resolve(restStatus);
+            },
         });
     });
 });
@@ -117,6 +127,17 @@ test('the pull-to-refresh gesture is cancelled, except on sliders and the chair-
 });
 
 
+test('shows the live battery and motor stats below the joystick', async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByText('82%')).toBeInTheDocument());
+
+    expect(screen.getByText('27.4 V')).toBeInTheDocument();
+    expect(screen.getByText('167 W')).toBeInTheDocument(); // total
+    expect(screen.getByText('88 W')).toBeInTheDocument();  // left
+    expect(screen.getByText('79 W')).toBeInTheDocument();  // right
+});
+
+
 //========== chair view ==========
 
 test('switching to the chair tab stops the chair and shows the rest positions', async () => {
@@ -145,6 +166,31 @@ test('hold-button moves the rest while pressed and stops on release', async () =
     expect(postedTo('/api/chair')).toEqual([
         { rest: 'leg', action: 'up' },
         { rest: 'leg', action: 'stop' },
+    ]);
+});
+
+
+test('the back-rest buttons are labelled by the physical movement (0% is upright)', async () => {
+    render(<App />);
+    await openChairTab();
+    requests = [];
+
+    // 'flatten' has to send 'up' and 'upright' has to send 'down' - the other way round
+    // than for the leg rest, see ChairView
+    const flatten = screen.getByText(/flatten/);
+    const upright = screen.getByText(/upright/);
+    [flatten, upright].forEach((button) => { button.setPointerCapture = () => {}; });
+
+    fireEvent.pointerDown(flatten, { pointerId: 1 });
+    fireEvent.pointerUp(flatten, { pointerId: 1 });
+    fireEvent.pointerDown(upright, { pointerId: 1 });
+    fireEvent.pointerUp(upright, { pointerId: 1 });
+
+    expect(postedTo('/api/chair')).toEqual([
+        { rest: 'back', action: 'up' },
+        { rest: 'back', action: 'stop' },
+        { rest: 'back', action: 'down' },
+        { rest: 'back', action: 'stop' },
     ]);
 });
 

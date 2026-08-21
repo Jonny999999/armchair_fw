@@ -9,7 +9,10 @@ import { config } from '../config';
 //  - hold-buttons for moving up/down as long as pressed
 //  - slider for moving to a certain position
 //  - shows the position the controller currently tracks
-export default function RestControl({ label, status, onAction, onPercent }) {
+// buttons: which hold-buttons to show, in display order. The action is what the controller
+// gets ('up' = towards 100%), the label describes the *physical* movement - for the back-rest
+// those two are inverted (100% = reclined), see ChairView
+export default function RestControl({ label, buttons, status, onAction, onPercent }) {
     const [target, setTarget] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -49,8 +52,11 @@ export default function RestControl({ label, status, onAction, onPercent }) {
             </div>
 
             <div className="rest-buttons">
-                <button className="hold-button" {...holdButton('down')}>&#9660; down</button>
-                <button className="hold-button" {...holdButton('up')}>&#9650; up</button>
+                {buttons.map((button) => (
+                    <button key={button.action} className="hold-button" {...holdButton(button.action)}>
+                        {button.label}
+                    </button>
+                ))}
             </div>
 
             <div className="rest-slider">

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import DriveJoystick from './DriveJoystick';
 import SpeedControl from './SpeedControl';
+import StatusBar from './StatusBar';
 import { config } from '../config';
 import { fetchSettings, sendJoystick, sendMaxDuty } from '../api';
 
@@ -8,8 +9,8 @@ import { fetchSettings, sendJoystick, sendMaxDuty } from '../api';
 //====================================
 //============ DriveView =============
 //====================================
-// everything needed while driving: speed limit on top, joystick at the bottom
-// where the thumb rests - nothing else is tappable near the joystick
+// everything needed while driving: speed limit on top, joystick below it where the thumb
+// rests, live stats in the free space underneath - nothing else near the joystick is tappable
 export default function DriveView({ request }) {
     const [maxDuty, setMaxDuty] = useState(null);
 
@@ -37,6 +38,7 @@ export default function DriveView({ request }) {
         <div className="drive-view">
             <SpeedControl maxDuty={maxDuty} onChange={handleMaxDuty} />
             <DriveJoystick send={handleJoystick} />
+            <StatusBar request={request} />
         </div>
     );
 }

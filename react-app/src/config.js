@@ -21,6 +21,11 @@ export const config = {
     restPollIntervalMs: 1000, // interval the actual rest positions are fetched
     restSliderStep: 5,        // step size of the position slider in percent
 
+    //--- status ---
+    // battery/power readings below the joystick. Note: reading the battery voltage is an adc
+    // measurement on the controller -> no need to ask for it more often than this
+    statusPollIntervalMs: 2000,
+
     //--- settings ---
     // max duty limits the top speed - same setting as 'Set max Duty' in the encoder-menu.
     // Note: the controller stores it in nvs -> only send it when the slider is released

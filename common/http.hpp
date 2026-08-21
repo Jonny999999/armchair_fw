@@ -7,6 +7,7 @@ extern "C"
 
 #include "joystick.hpp"
 #include "chairAdjust.hpp"
+#include "motorctl.hpp"
 
 
 
@@ -29,6 +30,12 @@ typedef struct http_config_t {
     //note: passed as functions because the control object is board specific (control.hpp)
     float (*getMaxDuty)(void);
     void (*setMaxDuty)(float maxDuty);
+    //'/api/status': live stats shown in the web-app
+    controlledMotor *motorLeft;
+    controlledMotor *motorRight;
+    //note: passed as functions, the battery lookup-tables are board specific (display.hpp)
+    float (*getBatteryVoltage)(void);
+    float (*getBatteryPercent)(void);
 } http_config_t;
 
 void http_init_server(http_config_t config_f);

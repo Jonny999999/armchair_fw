@@ -3,6 +3,7 @@ extern "C"
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
+#include <math.h>
 #include "mdns.h"
 #include "cJSON.h"
 #include "esp_spiffs.h"
@@ -40,6 +41,9 @@ extern "C"
 //tag for logging
 static const char * TAG = "http";
 static httpd_handle_t server = NULL;
+
+//config with the objects/functions the endpoints operate on (set in http_init_server)
+static http_config_t config_l = {};
 
 // whether the user confirmed the sign-in on the portal page (see handleCaptivePortalProbe)
 static bool portalSignInDone = false;
@@ -240,6 +244,45 @@ extern "C" void http_armCaptivePortal(void)
 }
 
 
+//====================================
+//========= status endpoint ==========
+//====================================
+// live stats for the web-app: battery and what the two motors are currently drawing
+//
+//   GET /api/status -> {"battery":{"percent":..,"voltage":..},
+//                       "motorLeft":{"current":..,"power":..,"duty":..},
+//                       "motorRight":{...}, "powerTotal":..}
+//
+// note: power is calculated from the battery voltage, the motors are driven from it directly
+static esp_err_t on_status_get(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_type(req, "application/json");
+
+    float voltage = config_l.getBatteryVoltage ? config_l.getBatteryVoltage() : 0;
+    float percent = config_l.getBatteryPercent ? config_l.getBatteryPercent() : 0;
+    // absolute value: the sign only tells the direction the motor is running in
+    float currentLeft = config_l.motorLeft ? fabs(config_l.motorLeft->getCurrentA()) : 0;
+    float currentRight = config_l.motorRight ? fabs(config_l.motorRight->getCurrentA()) : 0;
+    float dutyLeft = config_l.motorLeft ? config_l.motorLeft->getDuty() : 0;
+    float dutyRight = config_l.motorRight ? config_l.motorRight->getDuty() : 0;
+
+    char response[280];
+    snprintf(response, sizeof(response),
+             "{\"battery\":{\"percent\":%.1f,\"voltage\":%.2f},"
+             "\"motorLeft\":{\"current\":%.2f,\"power\":%.0f,\"duty\":%.0f},"
+             "\"motorRight\":{\"current\":%.2f,\"power\":%.0f,\"duty\":%.0f},"
+             "\"powerTotal\":%.0f}",
+             percent, voltage,
+             currentLeft, currentLeft * voltage, dutyLeft,
+             currentRight, currentRight * voltage, dutyRight,
+             (currentLeft + currentRight) * voltage);
+
+    httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+
 //=================================
 //===== on_404_error ==============
 //=================================
@@ -342,10 +385,6 @@ static esp_err_t on_default_url(httpd_req_t *req)
 //
 // note: sending 100/0 again while already at that position is intentionally not
 // ignored - it re-runs the motor into the limit switch to re-sync the tracked position
-
-//--- local variables ---
-//config with the objects/functions the endpoints operate on (set in http_init_server)
-static http_config_t config_l = {};
 
 //----------------------------
 //----- restFromJsonItem -----
@@ -698,7 +737,7 @@ void http_init_server(http_config_t config_f)
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.uri_match_fn = httpd_uri_match_wildcard;
   config.stack_size = 6144;      // larger file-buffer is used in on_default_url()
-  config.max_uri_handlers = 10;
+  config.max_uri_handlers = 12;
   config.lru_purge_enable = true; // captive-portal probes open many connections - close the oldest instead of failing
 
   //---- start webserver ----
@@ -741,6 +780,13 @@ void http_init_server(http_config_t config_f)
       .handler = on_settings_get,
       };
   httpd_register_uri_handler(server, &settings_get_url);
+
+    httpd_uri_t status_get_url = {
+      .uri = "/api/status",
+      .method = HTTP_GET,
+      .handler = on_status_get,
+      };
+  httpd_register_uri_handler(server, &status_get_url);
 
     httpd_uri_t portal_url = {
       .uri = "/portal",

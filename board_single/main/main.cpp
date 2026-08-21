@@ -94,6 +94,9 @@ esp_err_t on_joystick_url(httpd_req_t *req)
 // thus the max-duty setting is passed as functions (see http_config_t)
 float getMaxDuty_http() { return control->getMaxDuty(); }
 void setMaxDuty_http(float maxDuty) { control->setMaxDuty(maxDuty); }
+// same for the battery stats shown in the web-app, the lookup-tables live in display.cpp
+float getBatteryVoltage_http() { return getBatteryVoltage(); }
+float getBatteryPercent_http() { return getBatteryPercent(); }
 
 //--- tag for logging ---
 static const char * TAG = "main";
@@ -168,6 +171,10 @@ void createObjects()
         // note: 'control' is created below, the functions are only called once a request arrives
         .getMaxDuty = getMaxDuty_http,
         .setMaxDuty = setMaxDuty_http,
+        .motorLeft = motorLeft,
+        .motorRight = motorRight,
+        .getBatteryVoltage = getBatteryVoltage_http,
+        .getBatteryPercent = getBatteryPercent_http,
     };
     http_init_server(configHttp);
 
