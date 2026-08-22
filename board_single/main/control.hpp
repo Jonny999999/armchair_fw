@@ -176,6 +176,10 @@ class controlledArmchair {
         joystickData_t stickData = joystickData_center;
         joystickData_t stickDataLast = joystickData_center;
 
+        //SAFETY: tracks whether the joystick disconnect/implausible-reading failsafe is currently active
+        //(used to beep + log only once on the rising/falling edge, see JOYSTICK mode in handle())
+        bool joystickFaultActive = false;
+
         //variables for http mode
         uint32_t http_timestamp_lastData = 0;
 

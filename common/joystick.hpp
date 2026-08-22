@@ -91,6 +91,9 @@ public:
 
     //--- functions ---
     joystickData_t getData(); // read joystick, calculate values and return the data in a struct
+    // SAFETY: returns false when the last getData() read was implausible (loose cable /
+    // disconnect / wrong calibration) and the joystick was therefore forced to CENTER (stop).
+    bool isConnected() { return connected; }
     // get raw adc value (inversion applied)
     int getRawX() { return readAdc(config.adc_x, config.x_inverted); }
     int getRawY() { return readAdc(config.adc_y, config.y_inverted); }
@@ -121,6 +124,10 @@ private:
         joystickData_t data;
         float x;
         float y;
+
+        // SAFETY: state for joystick disconnect / implausible-reading detection (see getData())
+        bool connected = true;        // false while last read was implausible (forced to CENTER)
+        uint32_t lastFaultLogMs = 0;  // timestamp of last throttled fault log
     };
 
 

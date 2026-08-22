@@ -218,6 +218,24 @@ void controlledArmchair::handle()
         // get current joystick data with getData method of evaluatedJoystick
         stickDataLast = stickData;
         stickData = joystick_l->getData();
+        // SAFETY: alert (beep + prominent log) when the joystick failsafe forced a stop
+        // (implausible reading -> getData() returned CENTER). Edge-triggered so it beeps
+        // once when it starts, and once when it recovers - not every cycle.
+        if (!joystick_l->isConnected())
+        {
+            if (!joystickFaultActive) // rising edge - failsafe just activated
+            {
+                joystickFaultActive = true;
+                ESP_LOGE(TAG, "JOYSTICK FAILSAFE ACTIVE -> forcing STOP! Implausible reading (loose cable/connector or wrong calibration). Check wiring or recalibrate the stick.");
+                buzzer->beep(4, 400, 150); // distinctive long alarm pattern
+            }
+        }
+        else if (joystickFaultActive) // falling edge - reading plausible again
+        {
+            joystickFaultActive = false;
+            ESP_LOGW(TAG, "joystick failsafe released - reading plausible again");
+            buzzer->beep(2, 100, 50);
+        }
         // additionaly scale coordinates (more detail in slower area)
         joystick_scaleCoordinatesLinear(&stickData, 0.7, 0.45); // TODO: add scaling parameters to config
         // generate motor commands
@@ -229,6 +247,16 @@ void controlledArmchair::handle()
             // apply motor commands
             motorRight->setTarget(commands.right);
             motorLeft->setTarget(commands.left);
+        }
+        // SAFETY: when the stick is centered/released, always re-assert the stop command
+        // every cycle - even if the (possibly frozen/stuck) value did not change. Without
+        // this the motors keep their last duty until the motorctl no-command timeout (15s)
+        // if the joystick signal ever freezes at center. Cheap: setTarget only overwrites a queue.
+        else if (stickData.position == joystickPos_t::CENTER)
+        {
+            motorRight->setTarget(cmd_motorIdle);
+            motorLeft->setTarget(cmd_motorIdle);
+            ESP_LOGV(TAG, "joystick centered - re-asserting idle");
         }
         else
         {

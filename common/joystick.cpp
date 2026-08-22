@@ -12,6 +12,13 @@ const char* joystickPosStr[7] = {"CENTER", "Y_AXIS", "X_AXIS", "TOP_RIGHT", "TOP
 static const char * TAG = "evaluatedJoystick";
 static const char * TAG_CMD = "joystickCommands";
 
+// SAFETY: margin (in raw 12-bit adc counts, full-scale 0..4095) allowed beyond the
+// calibrated axis travel (x_min..x_max / y_min..y_max) before a reading is treated as
+// implausible. A loose/disconnected wire on the input-only adc pins (GPIO36/39) makes
+// the pin float and latch a value near the rails - well outside this band - which must
+// NOT be interpreted as a driving command. See getData().
+#define JOYSTICK_DISCONNECT_MARGIN_ADC 500
+
 
 
 
@@ -85,20 +92,57 @@ joystickData_t evaluatedJoystick::getData() {
     //get coordinates
     //TODO individual tolerances for each axis? Otherwise some parameters can be removed
 	//TODO duplicate code for each axis below:
-    ESP_LOGV(TAG, "getting X coodrdinate...");
-	uint32_t adcRead;
-	adcRead = readAdc(config.adc_x, config.x_inverted);
-    float x = scaleCoordinate(readAdc(config.adc_x, config.x_inverted), x_min, x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
-    data.x = x;
-	ESP_LOGD(TAG, "X: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => x=%.3f",
-        adc1_get_raw(config.adc_x), adcRead,  x_min, x_max, x_center, config.x_inverted, x);
+    ESP_LOGV(TAG, "getting X and Y coordinate...");
+	// read raw adc value once per axis (inversion already applied inside readAdc)
+	int adcReadX = readAdc(config.adc_x, config.x_inverted);
+	int adcReadY = readAdc(config.adc_y, config.y_inverted);
 
-    ESP_LOGV(TAG, "getting Y coodrinate...");
-	adcRead = readAdc(config.adc_y, config.y_inverted);
-    float y = scaleCoordinate(adcRead, y_min, y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
+	//--- SAFETY: joystick disconnect / implausible reading detection ---
+	// A connected joystick always reads within its calibrated travel (roughly
+	// x_min..x_max / y_min..y_max, well inside 0..4095). A loose or disconnected wire on
+	// the input-only adc pins makes the pin float and latch a value near the rails. Do
+	// NOT interpret that as a driving command: force CENTER so the chair stops (fail-safe).
+	if (adcReadX < x_min - JOYSTICK_DISCONNECT_MARGIN_ADC || adcReadX > x_max + JOYSTICK_DISCONNECT_MARGIN_ADC
+	 || adcReadY < y_min - JOYSTICK_DISCONNECT_MARGIN_ADC || adcReadY > y_max + JOYSTICK_DISCONNECT_MARGIN_ADC)
+	{
+		// prominent log on the rising edge (fault just started), throttled repeat every 2s while active
+		uint32_t now = esp_log_timestamp();
+		if (connected || now - lastFaultLogMs > 2000)
+		{
+			lastFaultLogMs = now;
+			ESP_LOGE(TAG, "================== JOYSTICK FAILSAFE ==================");
+			ESP_LOGE(TAG, "IMPLAUSIBLE reading: adcX=%d (allowed %d..%d), adcY=%d (allowed %d..%d)",
+			         adcReadX, x_min - JOYSTICK_DISCONNECT_MARGIN_ADC, x_max + JOYSTICK_DISCONNECT_MARGIN_ADC,
+			         adcReadY, y_min - JOYSTICK_DISCONNECT_MARGIN_ADC, y_max + JOYSTICK_DISCONNECT_MARGIN_ADC);
+			ESP_LOGE(TAG, "-> forcing CENTER (STOP). Cause: loose cable/connector OR wrong calibration");
+			ESP_LOGE(TAG, "   => check joystick wiring or recalibrate the stick (settings menu)");
+			ESP_LOGE(TAG, "======================================================");
+		}
+		connected = false;
+		data.x = 0;
+		data.y = 0;
+		data.radius = 0;
+		data.angle = 0;
+		data.position = joystickPos_t::CENTER;
+		return data;
+	}
+	// reading plausible again -> release failsafe (log once on recovery edge)
+	if (!connected)
+	{
+		ESP_LOGW(TAG, "JOYSTICK FAILSAFE released - reading plausible again (adcX=%d, adcY=%d)", adcReadX, adcReadY);
+		connected = true;
+	}
+
+	//--- scale adc readings to coordinates (-1 to 1) ---
+    float x = scaleCoordinate(adcReadX, x_min, x_max, x_center,  config.tolerance_zeroX_per, config.tolerance_end_per);
+    data.x = x;
+	ESP_LOGD(TAG, "X: adc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => x=%.3f",
+        adcReadX,  x_min, x_max, x_center, config.x_inverted, x);
+
+    float y = scaleCoordinate(adcReadY, y_min, y_max, y_center,  config.tolerance_zeroY_per, config.tolerance_end_per);
     data.y = y;
-	ESP_LOGD(TAG, "Y: adc-raw=%d \tadc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => y=%.3lf",
-        adc1_get_raw(config.adc_y), adcRead,  y_min, y_max, y_center, config.y_inverted, y);
+	ESP_LOGD(TAG, "Y: adc-conv=%d \tmin=%d \t max=%d \tcenter=%d \tinverted=%d => y=%.3lf",
+        adcReadY,  y_min, y_max, y_center, config.y_inverted, y);
 
     //calculate radius
     data.radius = sqrt(pow(data.x,2) + pow(data.y,2));
