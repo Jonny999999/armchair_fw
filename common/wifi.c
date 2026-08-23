@@ -7,6 +7,8 @@
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_netif.h"
+#include "dhcpserver/dhcpserver.h" // dhcps_offer_t / OFFER_DNS (captive-portal DNS offer)
 #include "nvs_flash.h"
 
 #include "lwip/err.h"
@@ -125,6 +127,23 @@ void wifi_start_ap(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
+
+    //--- captive portal: advertise ourselves as the DNS server (DHCP option 6) ---
+    // Needed so the DNS-hijack captive portal also triggers on iOS/macOS: those only use the
+    // DHCP-provided DNS server, so without this they never resolve their probe (e.g.
+    // captive.apple.com) to us and no sign-in page opens. Android worked anyway because it
+    // falls back to the gateway as resolver. The DHCP server must be stopped to change options.
+    esp_netif_dhcps_stop(ap);
+    esp_netif_ip_info_t apIpInfo;
+    esp_netif_get_ip_info(ap, &apIpInfo);
+    esp_netif_dns_info_t dnsInfo = {
+        .ip = { .u_addr.ip4.addr = apIpInfo.ip.addr, .type = ESP_IPADDR_TYPE_V4 },
+    };
+    ESP_ERROR_CHECK(esp_netif_set_dns_info(ap, ESP_NETIF_DNS_MAIN, &dnsInfo));
+    dhcps_offer_t offerDns = OFFER_DNS; // enable sending the DNS-server option to clients
+    ESP_ERROR_CHECK(esp_netif_dhcps_option(ap, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &offerDns, sizeof(offerDns)));
+    ESP_ERROR_CHECK(esp_netif_dhcps_start(ap));
+    ESP_LOGI(TAG, "captive portal: offering " IPSTR " as DHCP DNS server (needed for iOS/macOS auto-open)", IP2STR(&apIpInfo.ip));
 
     ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
             EXAMPLE_ESP_WIFI_SSID_AP, EXAMPLE_ESP_WIFI_PASS_AP, EXAMPLE_ESP_WIFI_CHANNEL_AP);
